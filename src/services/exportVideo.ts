@@ -1,19 +1,21 @@
 import { toPng } from "html-to-image";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile } from "@ffmpeg/util";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 import type { PlayerRef } from "@remotion/player";
-import classWorkerURL from "@ffmpeg/ffmpeg/worker?url";
-import coreURL from "@ffmpeg/core?url";
-import coreWasmURL from "@ffmpeg/core/wasm?url";
-import coreMtURL from "@ffmpeg/core-mt?url";
-import coreMtWasmURL from "@ffmpeg/core-mt/wasm?url";
-import coreMtWorkerURL from "@ffmpeg/core-mt/worker?url";
+import coreURL from "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js?url";
+import coreWasmURL from "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url";
+import coreMtURL from "../../node_modules/@ffmpeg/core-mt/dist/esm/ffmpeg-core.js?url";
+import coreMtWasmURL from "../../node_modules/@ffmpeg/core-mt/dist/esm/ffmpeg-core.wasm?url";
+import coreMtWorkerURL from "../../node_modules/@ffmpeg/core-mt/dist/esm/ffmpeg-core.worker.js?url";
 
 let ffmpeg: FFmpeg | null = null;
 let progressListener: ((event: { progress: number }) => void) | null = null;
+const LOAD_TIMEOUT_MS = 20000;
 
 function canUseMultithreadCore(): boolean {
-  return typeof SharedArrayBuffer !== "undefined" && window.crossOriginIsolated === true;
+  // The current ffmpeg.wasm multi-thread path is not stable in our Vite dev/runtime setup.
+  // Keep export on the single-thread core until we wire a browser-specific worker strategy.
+  return false;
 }
 
 function normalizeError(error: unknown): Error {
@@ -53,20 +55,32 @@ async function getFFmpeg(
   console.log("[Export] Core mode:", useMultithreadCore ? "multi-thread" : "single-thread");
 
   const t0 = performance.now();
-  await ffmpeg.load(
-    useMultithreadCore
-      ? {
-          classWorkerURL,
-          coreURL: coreMtURL,
-          wasmURL: coreMtWasmURL,
-          workerURL: coreMtWorkerURL,
-        }
-      : {
-          classWorkerURL,
-          coreURL,
-          wasmURL: coreWasmURL,
-        },
-  );
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
+
+  try {
+    await ffmpeg.load(
+      useMultithreadCore
+        ? {
+            coreURL: await toBlobURL(coreMtURL, "text/javascript"),
+            wasmURL: await toBlobURL(coreMtWasmURL, "application/wasm"),
+            workerURL: await toBlobURL(coreMtWorkerURL, "text/javascript"),
+          }
+        : {
+            coreURL: await toBlobURL(coreURL, "text/javascript"),
+            wasmURL: await toBlobURL(coreWasmURL, "application/wasm"),
+          },
+      { signal: controller.signal },
+    );
+  } catch (error) {
+    ffmpeg.terminate();
+    ffmpeg = null;
+    progressListener = null;
+    throw normalizeError(error);
+  } finally {
+    window.clearTimeout(timeout);
+  }
+
   console.log(`[Export] FFmpeg.wasm loaded in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 
   return ffmpeg;
