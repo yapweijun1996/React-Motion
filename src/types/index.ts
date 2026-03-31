@@ -10,6 +10,6 @@ export type {
 export type {
   VideoScript,
   VideoScene,
-  VideoSceneType,
+  SceneElement,
   ThemeConfig,
 } from "./video";

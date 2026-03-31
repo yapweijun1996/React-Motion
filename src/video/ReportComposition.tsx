@@ -1,9 +1,8 @@
-import { AbsoluteFill, Sequence } from "remotion";
-import { TitleScene } from "./TitleScene";
-import { ChartScene, type BarItem } from "./ChartScene";
-import { HighlightScene } from "./HighlightScene";
-import { SummaryScene } from "./SummaryScene";
-import type { VideoScript, VideoScene } from "../types";
+import { AbsoluteFill, Sequence, useCurrentFrame, interpolate } from "remotion";
+import { GenericScene } from "./GenericScene";
+import type { VideoScript } from "../types";
+
+const CROSSFADE = 15;
 
 type ReportCompositionProps = {
   script: VideoScript;
@@ -12,63 +11,70 @@ type ReportCompositionProps = {
 export const ReportComposition: React.FC<ReportCompositionProps> = ({
   script,
 }) => {
+  const frame = useCurrentFrame();
+
   return (
     <AbsoluteFill>
-      {script.scenes.map((scene) => (
-        <Sequence
-          key={scene.id}
-          from={scene.startFrame}
-          durationInFrames={scene.durationInFrames}
-        >
-          <SceneRenderer scene={scene} script={script} />
-        </Sequence>
-      ))}
+      {script.scenes.map((scene, i) => {
+        const next = script.scenes[i + 1];
+        const fadeOutStart = next
+          ? next.startFrame - CROSSFADE
+          : scene.startFrame + scene.durationInFrames;
+        const fadeOutEnd = next
+          ? next.startFrame
+          : scene.startFrame + scene.durationInFrames;
+
+        const fadeIn = interpolate(
+          frame,
+          [scene.startFrame, scene.startFrame + CROSSFADE],
+          [0, 1],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+        );
+        // Last scene: no fade out (fadeOutStart === fadeOutEnd), keep opacity 1
+        const fadeOut = fadeOutStart < fadeOutEnd
+          ? interpolate(
+              frame,
+              [fadeOutStart, fadeOutEnd],
+              [1, 0],
+              { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+            )
+          : 1;
+
+        return (
+          <Sequence
+            key={scene.id}
+            from={scene.startFrame}
+            durationInFrames={scene.durationInFrames}
+          >
+            <AbsoluteFill style={{ opacity: Math.min(fadeIn, fadeOut) }}>
+              <GenericScene
+                scene={scene}
+                primaryColor={script.theme?.primaryColor}
+              />
+            </AbsoluteFill>
+          </Sequence>
+        );
+      })}
+
+      {/* Progress bar */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          height: 4,
+          backgroundColor: "rgba(0,0,0,0.1)",
+        }}
+      >
+        <div
+          style={{
+            width: `${(frame / script.durationInFrames) * 100}%`,
+            height: "100%",
+            backgroundColor: script.theme?.primaryColor ?? "#2563eb",
+          }}
+        />
+      </div>
     </AbsoluteFill>
   );
-};
-
-type SceneRendererProps = {
-  scene: VideoScene;
-  script: VideoScript;
-};
-
-const SceneRenderer: React.FC<SceneRendererProps> = ({ scene, script }) => {
-  switch (scene.type) {
-    case "title":
-      return (
-        <TitleScene
-          title={(scene.props.title as string) ?? script.title}
-          subtitle={scene.props.subtitle as string | undefined}
-          primaryColor={script.theme?.primaryColor}
-        />
-      );
-    case "chart":
-      return (
-        <ChartScene
-          title={(scene.props.title as string) ?? ""}
-          bars={(scene.props.bars as BarItem[]) ?? []}
-          primaryColor={script.theme?.primaryColor}
-        />
-      );
-    case "highlight":
-      return (
-        <HighlightScene
-          title={(scene.props.title as string) ?? ""}
-          points={(scene.props.points as string[]) ?? []}
-          icon={scene.props.icon as "trend-up" | "trend-down" | "warning" | "info" | undefined}
-          primaryColor={script.theme?.primaryColor}
-        />
-      );
-    case "summary":
-      return (
-        <SummaryScene
-          title={(scene.props.title as string) ?? "Summary"}
-          points={(scene.props.points as string[]) ?? []}
-          recommendation={scene.props.recommendation as string | undefined}
-          primaryColor={script.theme?.primaryColor}
-        />
-      );
-    default:
-      return null;
-  }
 };

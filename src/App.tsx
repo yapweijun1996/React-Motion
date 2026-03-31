@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
-import { Player } from "@remotion/player";
+import { useState, useCallback, useRef } from "react";
+import { Player, type PlayerRef } from "@remotion/player";
 import { ReportComposition } from "./video/ReportComposition";
 import { generateScript } from "./services/generateScript";
+import { exportToMp4, downloadBlob, type ExportProgress } from "./services/exportVideo";
 import type { MountConfig, VideoScript } from "./types";
 
 type AppProps = {
@@ -13,6 +14,9 @@ export const App: React.FC<AppProps> = ({ config }) => {
   const [script, setScript] = useState<VideoScript | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+
+  const playerRef = useRef<PlayerRef>(null);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
@@ -21,7 +25,6 @@ export const App: React.FC<AppProps> = ({ config }) => {
     setError(null);
 
     try {
-      // Prompt is the primary input; structured data is optional context
       const result = await generateScript(prompt, config.data);
       setScript(result);
     } catch (err) {
@@ -30,6 +33,31 @@ export const App: React.FC<AppProps> = ({ config }) => {
       setLoading(false);
     }
   }, [prompt, config.data]);
+
+  const handleExport = useCallback(async () => {
+    if (!script || !playerRef.current) return;
+
+    setExportProgress({ stage: "recording", percent: 0, message: "Starting..." });
+
+    try {
+      // Seek to start and auto-play so recording captures the video
+      playerRef.current.seekTo(0);
+      playerRef.current.play();
+
+      const durationMs = (script.durationInFrames / script.fps) * 1000;
+
+      const mp4Blob = await exportToMp4(durationMs, setExportProgress);
+
+      playerRef.current.pause();
+
+      const filename = `${script.title.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`;
+      downloadBlob(mp4Blob, filename);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Export failed";
+      setExportProgress({ stage: "error", percent: 0, message: msg });
+      console.error("[Export] Failed:", err);
+    }
+  }, [script]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -41,6 +69,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
     [handleGenerate],
   );
 
+  const isExporting = exportProgress !== null && exportProgress.stage !== "done" && exportProgress.stage !== "error";
+
   return (
     <div style={{ fontFamily: "Arial, sans-serif", maxWidth: 960, margin: "0 auto", padding: 16 }}>
       {/* Prompt input */}
@@ -49,8 +79,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={"Paste your data and describe what video to generate.\nE.g.: 以下是供应商数据：Hin Kang 27155, Adbery 3150, Abbery 280。帮我做汇报视频，重点分析数量差异。"}
-          disabled={loading}
+          placeholder={"Paste your data and describe what video to generate.\nE.g.: 以下是供应商数据：Hin Kang 27155, Adbery 3150, Abbery 280。帮我做汇报视频。"}
+          disabled={loading || isExporting}
           rows={4}
           style={{
             flex: 1,
@@ -63,53 +93,102 @@ export const App: React.FC<AppProps> = ({ config }) => {
             fontFamily: "inherit",
           }}
         />
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !prompt.trim()}
-          style={{
-            padding: "10px 24px",
-            fontSize: 16,
-            fontWeight: 600,
-            color: "#ffffff",
-            backgroundColor: loading ? "#9ca3af" : "#2563eb",
-            border: "none",
-            borderRadius: 8,
-            cursor: loading ? "not-allowed" : "pointer",
-            alignSelf: "flex-end",
-          }}
-        >
-          {loading ? "Generating..." : "Generate"}
-        </button>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, alignSelf: "flex-end" }}>
+          <button
+            onClick={handleGenerate}
+            disabled={loading || !prompt.trim() || isExporting}
+            style={{
+              padding: "10px 24px",
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#ffffff",
+              backgroundColor: loading ? "#9ca3af" : "#2563eb",
+              border: "none",
+              borderRadius: 8,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Generating..." : "Generate"}
+          </button>
+          {script && (
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              style={{
+                padding: "10px 24px",
+                fontSize: 16,
+                fontWeight: 600,
+                color: "#ffffff",
+                backgroundColor: isExporting ? "#9ca3af" : "#059669",
+                border: "none",
+                borderRadius: 8,
+                cursor: isExporting ? "not-allowed" : "pointer",
+              }}
+            >
+              {isExporting ? "Exporting..." : "Export MP4"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Error display */}
       {error && (
+        <div style={{ padding: "10px 14px", marginBottom: 16, backgroundColor: "#fef2f2", color: "#dc2626", borderRadius: 8, fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
+      {/* Export progress */}
+      {exportProgress && exportProgress.stage !== "done" && (
         <div
           style={{
             padding: "10px 14px",
             marginBottom: 16,
-            backgroundColor: "#fef2f2",
-            color: "#dc2626",
+            backgroundColor: exportProgress.stage === "error" ? "#fef2f2" : "#eff6ff",
+            color: exportProgress.stage === "error" ? "#dc2626" : "#1e40af",
             borderRadius: 8,
             fontSize: 14,
           }}
         >
-          {error}
+          {exportProgress.message}
+          {exportProgress.stage !== "error" && (
+            <div
+              style={{
+                marginTop: 6,
+                height: 4,
+                backgroundColor: "#dbeafe",
+                borderRadius: 2,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${exportProgress.percent}%`,
+                  height: "100%",
+                  backgroundColor: "#2563eb",
+                  transition: "width 0.3s",
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
       {/* Video player */}
       {script && (
-        <Player
-          component={ReportComposition}
-          inputProps={{ script }}
-          durationInFrames={script.durationInFrames}
-          fps={script.fps}
-          compositionWidth={script.width}
-          compositionHeight={script.height}
-          style={{ width: "100%" }}
-          controls
-        />
+        <div>
+          <Player
+            ref={playerRef}
+            component={ReportComposition}
+            inputProps={{ script }}
+            durationInFrames={script.durationInFrames}
+            fps={script.fps}
+            compositionWidth={script.width}
+            compositionHeight={script.height}
+            style={{ width: "100%" }}
+            controls
+          />
+        </div>
       )}
 
       {/* Empty state */}

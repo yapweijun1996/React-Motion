@@ -32,7 +32,7 @@ type GeminiResponse = {
 
 export async function callGemini(
   systemPrompt: string,
-  userMessage: string,
+  messages: GeminiMessage[],
 ): Promise<string> {
   const apiKey = getApiKey();
   const model = getModel();
@@ -43,12 +43,7 @@ export async function callGemini(
     system_instruction: {
       parts: [{ text: systemPrompt }],
     },
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: userMessage }],
-      },
-    ],
+    contents: messages,
     generationConfig: {
       temperature: 0.7,
       responseMimeType: "application/json",
@@ -56,7 +51,7 @@ export async function callGemini(
   };
 
   console.log("[Gemini] Model:", model);
-  console.log("[Gemini] Request body:", JSON.stringify(body, null, 2));
+  console.log("[Gemini] Messages:", messages.length, "turns");
 
   const res = await fetch(url, {
     method: "POST",
@@ -71,7 +66,6 @@ export async function callGemini(
   }
 
   const data: GeminiResponse = await res.json();
-  console.log("[Gemini] Full response:", JSON.stringify(data, null, 2));
 
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
@@ -80,5 +74,6 @@ export async function callGemini(
     throw new Error("Gemini returned empty response");
   }
 
+  console.log("[Gemini] Response length:", text.length, "chars");
   return text;
 }

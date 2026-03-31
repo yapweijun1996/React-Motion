@@ -12,21 +12,22 @@ export type VideoScript = {
   theme?: ThemeConfig;
 };
 
-export type VideoSceneType =
-  | "title"
-  | "chart"
-  | "highlight"
-  | "comparison"
-  | "summary"
-  | "transition";
-
+// AI designs each scene from scratch using atomic elements
 export type VideoScene = {
   id: string;
-  type: VideoSceneType;
   startFrame: number;
   durationInFrames: number;
-  props: Record<string, unknown>;
+  bgColor?: string;
+  layout?: "column" | "center" | "row";
+  padding?: string;
+  elements: SceneElement[];
   narration?: string;
+};
+
+// Flat element — type + props at the same level for easy AI generation
+export type SceneElement = {
+  type: "text" | "metric" | "bar-chart" | "list" | "divider" | "callout";
+  [key: string]: unknown;
 };
 
 export type ThemeConfig = {

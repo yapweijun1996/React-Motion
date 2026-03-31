@@ -1,13 +1,6 @@
-import type { VideoScript, VideoScene, VideoSceneType } from "../types";
+import type { VideoScript, VideoScene, SceneElement } from "../types";
 
-const VALID_SCENE_TYPES: VideoSceneType[] = [
-  "title",
-  "chart",
-  "highlight",
-  "comparison",
-  "summary",
-  "transition",
-];
+const VALID_ELEMENT_TYPES = ["text", "metric", "bar-chart", "list", "divider", "callout"];
 
 export function parseVideoScript(raw: string): VideoScript {
   let json: unknown;
@@ -29,16 +22,28 @@ export function parseVideoScript(raw: string): VideoScript {
 
   const scenes: VideoScene[] = (obj.scenes as Record<string, unknown>[]).map(
     (s, i) => {
-      const type = s.type as string;
-      if (!VALID_SCENE_TYPES.includes(type as VideoSceneType)) {
-        throw new Error(`Scene ${i}: invalid type "${type}"`);
+      if (!s.elements || !Array.isArray(s.elements)) {
+        throw new Error(`Scene ${i}: missing 'elements' array`);
       }
+
+      const elements: SceneElement[] = (s.elements as Record<string, unknown>[]).map(
+        (el, j) => {
+          const type = el.type as string;
+          if (!VALID_ELEMENT_TYPES.includes(type)) {
+            throw new Error(`Scene ${i}, element ${j}: invalid type "${type}"`);
+          }
+          return el as SceneElement;
+        },
+      );
+
       return {
         id: (s.id as string) ?? `scene-${i}`,
-        type: type as VideoSceneType,
         startFrame: Number(s.startFrame) || 0,
         durationInFrames: Number(s.durationInFrames) || 150,
-        props: (s.props as Record<string, unknown>) ?? {},
+        bgColor: s.bgColor as string | undefined,
+        layout: s.layout as "column" | "center" | "row" | undefined,
+        padding: s.padding as string | undefined,
+        elements,
         narration: s.narration as string | undefined,
       };
     },
@@ -55,17 +60,10 @@ export function parseVideoScript(raw: string): VideoScript {
     narrative: (obj.narrative as string) ?? "",
     theme: obj.theme
       ? {
-          primaryColor: (obj.theme as Record<string, unknown>)
-            .primaryColor as string,
-          secondaryColor: (obj.theme as Record<string, unknown>)
-            .secondaryColor as string | undefined,
-          fontFamily: (obj.theme as Record<string, unknown>)
-            .fontFamily as string | undefined,
-          style: (obj.theme as Record<string, unknown>).style as
-            | "corporate"
-            | "modern"
-            | "minimal"
-            | undefined,
+          primaryColor: (obj.theme as Record<string, unknown>).primaryColor as string,
+          secondaryColor: (obj.theme as Record<string, unknown>).secondaryColor as string | undefined,
+          fontFamily: (obj.theme as Record<string, unknown>).fontFamily as string | undefined,
+          style: (obj.theme as Record<string, unknown>).style as "corporate" | "modern" | "minimal" | undefined,
         }
       : undefined,
   };
