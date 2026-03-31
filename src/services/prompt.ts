@@ -224,6 +224,14 @@ The canvas is 1920×1080. Elements must fill the space — do NOT cram too many 
 - Prefer more scenes with fewer elements over fewer scenes crammed with elements.
 - Scene backgrounds should alternate light/dark for visual rhythm. Use high-contrast text colors.
 
+## Narration ↔ Visual Sync (CRITICAL)
+
+The audience HEARS narration and SEES elements at the same time. They must tell the same story:
+
+- If narration mentions a number/percentage/trend, show it visually (metric, callout, or chart) in the SAME scene.
+- If a scene has a chart or metric, the narration must reference what it shows.
+- No orphan narration (data mentioned but not shown). No silent visuals (data shown but not narrated).
+
 ## Hard constraints
 
 - Scenes must not overlap: each startFrame = previous startFrame + previous durationInFrames.
@@ -231,7 +239,8 @@ The canvas is 1920×1080. Elements must fill the space — do NOT cram too many 
 - NEVER invent data. Only use numbers from the user's prompt.
 - If data is incomplete, flag gaps using a list element with "warning" icon.
 - Match the language of the user's prompt.
-- Every scene MUST include a "narration" field with 1-3 sentences of natural spoken narration. This text will be converted to audio. Keep it concise (5-15 seconds of speech per scene).`;
+- Every scene MUST include a "narration" field with 1-3 sentences of natural spoken narration. This text will be converted to audio. Keep it concise (5-15 seconds of speech per scene).
+- Narration and visual elements MUST be synchronized (see Narration ↔ Visual Sync above).`;
 
 export function buildAgentSystemPrompt(): string {
   return AGENT_SYSTEM_PROMPT;
