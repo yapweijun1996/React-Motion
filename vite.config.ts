@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   envPrefix: ["VITE_", "DEVELOPMENT_"],
   optimizeDeps: {
-    exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
+    exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util", "@ffmpeg/core", "@ffmpeg/core-mt"],
   },
   server: {
     headers: {

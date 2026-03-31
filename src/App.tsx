@@ -1,13 +1,22 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { ReportComposition } from "./video/ReportComposition";
 import { generateScript } from "./services/generateScript";
-import { type ExportProgress } from "./services/exportVideo";
+import { saveScript, loadScript } from "./services/cache";
+import { exportToMp4, downloadBlob, type ExportProgress } from "./services/exportVideo";
 import type { MountConfig, VideoScript } from "./types";
 
 type AppProps = {
   config: MountConfig;
 };
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(typeof error === "string" ? error : "Unknown error");
+}
 
 export const App: React.FC<AppProps> = ({ config }) => {
   const [prompt, setPrompt] = useState("");
@@ -18,6 +27,17 @@ export const App: React.FC<AppProps> = ({ config }) => {
 
   const playerRef = useRef<PlayerRef>(null);
 
+  // Restore cached script on mount
+  useEffect(() => {
+    loadScript().then((cached) => {
+      if (cached) {
+        setScript(cached.script);
+        setPrompt(cached.prompt);
+        console.log("[App] Restored cached video from IndexedDB");
+      }
+    });
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim()) return;
 
@@ -27,6 +47,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
     try {
       const result = await generateScript(prompt, config.data);
       setScript(result);
+      // Cache to IndexedDB
+      await saveScript(result, prompt);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
@@ -42,9 +64,6 @@ export const App: React.FC<AppProps> = ({ config }) => {
     setExportProgress({ stage: "capturing", percent: 0, message: "Starting..." });
 
     try {
-      // Lazy import to avoid loading FFmpeg.wasm upfront
-      const { exportToMp4, downloadBlob } = await import("./services/exportVideo");
-
       const mp4Blob = await exportToMp4(
         playerRef.current,
         playerContainerRef.current,
@@ -56,9 +75,9 @@ export const App: React.FC<AppProps> = ({ config }) => {
       const filename = `${script.title.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`;
       downloadBlob(mp4Blob, filename);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Export failed";
-      setExportProgress({ stage: "error", percent: 0, message: msg });
-      console.error("[Export] Failed:", err);
+      const error = normalizeError(err);
+      setExportProgress({ stage: "error", percent: 0, message: error.message });
+      console.error("[Export] Failed:", error);
     }
   }, [script]);
 

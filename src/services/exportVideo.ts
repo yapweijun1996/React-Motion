@@ -2,30 +2,71 @@ import { toPng } from "html-to-image";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 import type { PlayerRef } from "@remotion/player";
+import classWorkerURL from "@ffmpeg/ffmpeg/worker?url";
+import coreURL from "@ffmpeg/core?url";
+import coreWasmURL from "@ffmpeg/core/wasm?url";
+import coreMtURL from "@ffmpeg/core-mt?url";
+import coreMtWasmURL from "@ffmpeg/core-mt/wasm?url";
+import coreMtWorkerURL from "@ffmpeg/core-mt/worker?url";
 
 let ffmpeg: FFmpeg | null = null;
+let progressListener: ((event: { progress: number }) => void) | null = null;
+
+function canUseMultithreadCore(): boolean {
+  return typeof SharedArrayBuffer !== "undefined" && window.crossOriginIsolated === true;
+}
+
+function normalizeError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(typeof error === "string" ? error : JSON.stringify(error));
+}
 
 async function getFFmpeg(
   onProgress: (progress: number) => void,
 ): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) {
     console.log("[Export] FFmpeg already loaded, reusing");
-    ffmpeg.on("progress", ({ progress }) => onProgress(progress));
+    if (progressListener) {
+      ffmpeg.off("progress", progressListener);
+    }
+
+    progressListener = ({ progress }) => onProgress(progress);
+    ffmpeg.on("progress", progressListener);
     return ffmpeg;
   }
 
   ffmpeg = new FFmpeg();
-  ffmpeg.on("progress", ({ progress }) => onProgress(progress));
+  progressListener = ({ progress }) => onProgress(progress);
+  ffmpeg.on("progress", progressListener);
   ffmpeg.on("log", ({ message }) => {
     console.log("[FFmpeg]", message);
   });
 
-  console.log("[Export] Loading FFmpeg.wasm (single-thread)...");
+  const useMultithreadCore = canUseMultithreadCore();
+  console.log("[Export] Loading FFmpeg.wasm...");
   console.log("[Export] SharedArrayBuffer available:", typeof SharedArrayBuffer !== "undefined");
+  console.log("[Export] crossOriginIsolated:", window.crossOriginIsolated);
   console.log("[Export] hardwareConcurrency:", navigator.hardwareConcurrency);
+  console.log("[Export] Core mode:", useMultithreadCore ? "multi-thread" : "single-thread");
 
   const t0 = performance.now();
-  await ffmpeg.load();
+  await ffmpeg.load(
+    useMultithreadCore
+      ? {
+          classWorkerURL,
+          coreURL: coreMtURL,
+          wasmURL: coreMtWasmURL,
+          workerURL: coreMtWorkerURL,
+        }
+      : {
+          classWorkerURL,
+          coreURL,
+          wasmURL: coreWasmURL,
+        },
+  );
   console.log(`[Export] FFmpeg.wasm loaded in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
 
   return ffmpeg;
@@ -110,6 +151,7 @@ export async function exportToMp4(
   }
 
   // --- Step 3: Load FFmpeg + write frames ---
+  // Free memory — we no longer need the player
   onProgress({ stage: "writing", percent: 0, message: "Loading FFmpeg..." });
 
   const ff = await getFFmpeg((p) => {
@@ -160,29 +202,36 @@ export async function exportToMp4(
   onProgress({ stage: "encoding", percent: 0, message: "Encoding MP4 (0%)..." });
   const encodeStart = performance.now();
 
-  await ff.exec(ffmpegArgs);
+  const exitCode = await ff.exec(ffmpegArgs);
+  if (exitCode !== 0) {
+    throw new Error(`FFmpeg exited with code ${exitCode}`);
+  }
 
   const encodeDuration = ((performance.now() - encodeStart) / 1000).toFixed(1);
   console.log(`[Export] Encoding completed in ${encodeDuration}s`);
 
-  const data = await ff.readFile("output.mp4");
-  const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/mp4" });
+  try {
+    const data = await ff.readFile("output.mp4");
+    const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/mp4" });
+    const totalDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
 
-  // Cleanup
-  for (let i = 0; i < pngDataUrls.length; i++) {
-    await ff.deleteFile(`frame${String(i).padStart(5, "0")}.png`);
+    console.log("[Export] === DONE ===");
+    console.log(`[Export] MP4 size: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`[Export] Total time: ${totalDuration}s (capture: ${captureDuration}s, write: ${((performance.now() - writeStart) / 1000).toFixed(1)}s, encode: ${encodeDuration}s)`);
+    console.log(`[Export] Frames: ${pngDataUrls.length}, Input PNG: ${(totalBytes / 1024 / 1024).toFixed(1)}MB -> Output MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)}MB`);
+
+    onProgress({ stage: "done", percent: 100, message: "Export complete!" });
+    return mp4Blob;
+  } catch (error) {
+    throw normalizeError(error);
+  } finally {
+    for (let i = 0; i < pngDataUrls.length; i++) {
+      await ff.deleteFile(`frame${String(i).padStart(5, "0")}.png`).catch(() => undefined);
+    }
+
+    await ff.deleteFile("output.mp4").catch(() => undefined);
+    console.groupEnd();
   }
-  await ff.deleteFile("output.mp4");
-
-  const totalDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
-  console.log(`[Export] === DONE ===`);
-  console.log(`[Export] MP4 size: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`);
-  console.log(`[Export] Total time: ${totalDuration}s (capture: ${captureDuration}s, write: ${((performance.now() - writeStart) / 1000).toFixed(1)}s, encode: ${encodeDuration}s)`);
-  console.log(`[Export] Frames: ${pngDataUrls.length}, Input PNG: ${(totalBytes / 1024 / 1024).toFixed(1)}MB → Output MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)}MB`);
-  console.groupEnd();
-
-  onProgress({ stage: "done", percent: 100, message: "Export complete!" });
-  return mp4Blob;
 }
 
 function waitFrame(): Promise<void> {
