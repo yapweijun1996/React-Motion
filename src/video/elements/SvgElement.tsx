@@ -28,7 +28,7 @@ const ALLOWED_TAGS = new Set([
 const DANGEROUS_ATTRS = /^on/i; // onclick, onload, onerror, etc.
 const DANGEROUS_ATTR_VALUES = /javascript:/i;
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const SvgElement: React.FC<Props> = ({ el, index }) => {
   const markup = (el.markup as string) ?? "";

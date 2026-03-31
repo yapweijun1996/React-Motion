@@ -11,7 +11,7 @@ import { getPreset } from "../lottiePresets";
 import type { SceneElement } from "../../types";
 import type { LottieAnimationData } from "@remotion/lottie";
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const LottieElement: React.FC<Props> = ({ el, index }) => {
   const preset = (el.preset as string) ?? "checkmark";

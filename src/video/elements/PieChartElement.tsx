@@ -7,9 +7,9 @@ import type { SceneElement } from "../../types";
 
 type SliceItem = { label: string; value: number; color?: string };
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
-export const PieChartElement: React.FC<Props> = ({ el, index }) => {
+export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const slices = (el.slices as SliceItem[]) ?? [];
@@ -87,12 +87,12 @@ export const PieChartElement: React.FC<Props> = ({ el, index }) => {
                 backgroundColor: color, flexShrink: 0,
               }} />
               <span style={{
-                fontSize: 42, color: "#374151",
+                fontSize: 42, color: dark ? "#e2e8f0" : "#374151",
                 fontWeight: isHl ? 700 : 400,
               }}>
                 {s.label}
                 {showPercentage && (
-                  <span style={{ color: "#9ca3af", marginLeft: 12, fontSize: 36 }}>
+                  <span style={{ color: dark ? "#94a3b8" : "#9ca3af", marginLeft: 12, fontSize: 36 }}>
                     {pct}
                   </span>
                 )}

@@ -32,7 +32,8 @@ React-Motion/
 | File | Purpose |
 |------|---------|
 | `SettingsPanel.tsx` | Modal panel for Gemini API key and model selection. Reads/writes localStorage. |
-| `PromptTemplates.tsx` | Preset prompt templates (business, science, sports, etc.). |
+| `PromptTemplates.tsx` | Template selector UI: category chips, card grid, featured/expand toggle. |
+| `templateData.ts` | 28 preset prompt templates across 7 categories (Business, Professional, Technology, Science, Study, Sports, History). |
 
 ### Services (`src/services/`)
 
@@ -61,6 +62,18 @@ React-Motion/
 |------|---------|
 | `exportVideo.ts` | Frame capture (html-to-image) + FFmpeg.wasm encoding → MP4. |
 | `exportAudio.ts` | Audio muxing: per-scene WAV → adelay → amix → AAC in MP4. |
+| `exportPptx.ts` | PPT export via pptxgenjs: VideoScript → PPTX with native charts + speaker notes. |
+
+**Color & Validation**
+
+| File | Purpose |
+|------|---------|
+| `palette.ts` | chroma-js smart palette: mood keywords, LCH chart colors, contrast-safe text colors. |
+| `validate.ts` | Unified runtime schema: element types, ranges, structural checks. |
+| `errors.ts` | ClassifiedError system: ErrorCode enum, user-friendly messages, logError/logWarn. |
+| `metrics.ts` | IndexedDB event log: generation/export/tts/error tracking with auto-prune. |
+| `elementCatalog.ts` | Element catalog: 15 types with props, tips, and usage guidance for AI. |
+| `chartHelpers.ts` | Shared chart utilities: color palette, value formatting. |
 
 **Other**
 
@@ -68,6 +81,9 @@ React-Motion/
 |------|---------|
 | `settingsStore.ts` | localStorage read/write for API key + model. Falls back to env vars. |
 | `cache.ts` | IndexedDB cache for last generated script + prompt. |
+| `historyStore.ts` | IndexedDB history (50-entry FIFO) with TTS metadata for restore. |
+| `exportStore.ts` | IndexedDB export records (filename, size, date). |
+| `db.ts` | Shared IndexedDB connection manager (v2 schema). |
 
 ### Types (`src/types/`)
 
@@ -90,15 +106,23 @@ React-Motion/
 
 | File | Element Type | Animation |
 |------|-------------|-----------|
-| `TextElement.tsx` | `text` | spring fade, slide-up, zoom |
-| `MetricElement.tsx` | `metric` | spring count-up + slide-in |
-| `BarChartElement.tsx` | `bar-chart` | spring bar fill |
+| `TextElement.tsx` | `text` | spring fade, slide-up, zoom (default 80px) |
+| `MetricElement.tsx` | `metric` | spring count-up + slide-in (160px values) |
+| `BarChartElement.tsx` | `bar-chart` | spring bar fill (42px labels) |
 | `PieChartElement.tsx` | `pie-chart` | D3 arc + spring rotation |
 | `LineChartElement.tsx` | `line-chart` | D3 line + spring draw |
 | `SankeyElement.tsx` | `sankey` | D3 sankey + spring flow |
-| `ListElement.tsx` | `list` | spring stagger entrance |
+| `ListElement.tsx` | `list` | spring stagger entrance (56px items) |
 | `DividerElement.tsx` | `divider` | spring width expansion |
-| `CalloutElement.tsx` | `callout` | spring fade + slide |
+| `CalloutElement.tsx` | `callout` | spring fade + slide (60px content) |
+| `KawaiiElement.tsx` | `kawaii` | react-kawaii SVG mascots + bounce-in |
+| `LottieElement.tsx` | `lottie` | @remotion/lottie animated icons |
+| `IconElement.tsx` | `icon` | lucide-react SVG icons + bounce |
+| `AnnotationElement.tsx` | `annotation` | roughjs hand-drawn + stroke-draw |
+| `SvgElement.tsx` | `svg` | AI-generated inline SVG diagrams |
+| `MapElement.tsx` | `map` | d3-geo world map + country highlight |
+
+All elements accept a `dark` prop from `GenericScene` for text contrast auto-adaptation.
 
 ## Public (`public/`)
 
@@ -125,6 +149,12 @@ React-Motion/
 | `@ffmpeg/ffmpeg` + `@ffmpeg/core` | Browser-side MP4 encoding |
 | `html-to-image` | DOM → PNG frame capture for export |
 | `d3-shape` / `d3-scale` / `d3-sankey` | Chart path calculations (math only) |
+| `chroma-js` | LCH uniform color palette generation |
+| `pptxgenjs` | Browser-side PowerPoint generation |
+| `react-kawaii` | Cute SVG mascot characters |
+| `lottie-web` / `@remotion/lottie` | Lottie animation playback |
+| `lucide-react` | Curated SVG icon library |
+| `roughjs` | Hand-drawn sketch annotations |
 | `vite` | Build tool (IIFE library mode) |
 
 ## Configuration

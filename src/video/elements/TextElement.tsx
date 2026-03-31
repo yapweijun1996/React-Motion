@@ -1,9 +1,9 @@
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
-export const TextElement: React.FC<Props> = ({ el, index }) => {
+export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
   const animation = parseAnimation(el);
 
   const { progress } = useStagger({
@@ -19,7 +19,7 @@ export const TextElement: React.FC<Props> = ({ el, index }) => {
     <div
       style={{
         fontSize: (el.fontSize as number) ?? 80,
-        color: (el.color as string) ?? "#ffffff",
+        color: (el.color as string) ?? (dark ? "#f1f5f9" : "#1e293b"),
         fontWeight: (el.fontWeight as number) ?? 400,
         textAlign: (el.align as "left" | "center" | "right") ?? "left",
         letterSpacing: (el.letterSpacing as number) ?? 0,

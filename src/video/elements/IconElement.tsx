@@ -89,15 +89,15 @@ export const VALID_ICON_NAMES = Object.keys(ICON_REGISTRY);
 
 // --- Component ---
 
-type Props = { el: SceneElement; index: number; primaryColor?: string };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
 
-export const IconElement: React.FC<Props> = ({ el, index, primaryColor }) => {
+export const IconElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
   const name = (el.name as string) ?? "star";
   const Icon = ICON_REGISTRY[name];
   const size = (el.size as number) ?? 64;
   const color = (el.color as string) ?? primaryColor ?? "#2563eb";
   const label = el.label as string | undefined;
-  const labelColor = (el.labelColor as string) ?? "#374151";
+  const labelColor = (el.labelColor as string) ?? (dark ? "#e2e8f0" : "#374151");
   const labelSize = (el.labelSize as number) ?? 20;
   const strokeWidth = (el.strokeWidth as number) ?? 2;
   const animation = parseAnimation(el, "bounce");

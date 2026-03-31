@@ -35,15 +35,15 @@ const CHARACTERS: Record<string, FunctionComponent<KawaiiProps>> = {
   "speech-bubble": SpeechBubble,
 };
 
-type Props = { el: SceneElement; index: number; primaryColor?: string };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
 
-export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor }) => {
+export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
   const character = (el.character as string) ?? "ghost";
   const mood = (el.mood as KawaiiProps["mood"]) ?? "blissful";
   const size = (el.size as number) ?? 180;
   const color = (el.color as string) ?? primaryColor ?? "#FFD882";
   const caption = el.caption as string | undefined;
-  const captionColor = (el.captionColor as string) ?? "#374151";
+  const captionColor = (el.captionColor as string) ?? (dark ? "#e2e8f0" : "#374151");
 
   const { progress, opacity } = useStagger({
     elementIndex: index,

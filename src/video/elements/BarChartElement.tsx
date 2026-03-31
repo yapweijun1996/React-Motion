@@ -5,9 +5,9 @@ import type { SceneElement } from "../../types";
 
 type BarItem = { label: string; value: number; color?: string };
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
-export const BarChartElement: React.FC<Props> = ({ el, index }) => {
+export const BarChartElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const bars = (el.bars as BarItem[]) ?? [];
@@ -30,6 +30,8 @@ export const BarChartElement: React.FC<Props> = ({ el, index }) => {
 
   const barHeight = bars.length <= 4 ? 80 : bars.length <= 6 ? 64 : 52;
   const fontSize = bars.length <= 4 ? 42 : 36;
+  const textCol = dark ? "#e2e8f0" : "#374151";
+  const mutedCol = dark ? "#94a3b8" : "#9ca3af";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
@@ -62,7 +64,7 @@ export const BarChartElement: React.FC<Props> = ({ el, index }) => {
                 textAlign: "right",
                 paddingRight: 12,
                 fontSize,
-                color: "#374151",
+                color: textCol,
                 opacity: labelOpacity,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -90,14 +92,14 @@ export const BarChartElement: React.FC<Props> = ({ el, index }) => {
                 paddingLeft: 8,
                 fontSize,
                 fontWeight: 600,
-                color: isHl ? color : "#374151",
+                color: isHl ? color : textCol,
                 opacity: valueOpacity,
                 flexShrink: 0,
               }}
             >
               {fmtVal}
               {showPct && (
-                <span style={{ fontSize: fontSize - 2, color: "#9ca3af", marginLeft: 3 }}>
+                <span style={{ fontSize: fontSize - 2, color: mutedCol, marginLeft: 3 }}>
                   ({pct})
                 </span>
               )}

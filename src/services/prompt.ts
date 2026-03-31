@@ -118,13 +118,24 @@ The canvas is 1920×1080. Elements must fill the space — do NOT cram too many 
   - **Metric values**: fontSize is controlled internally (160px), just keep value strings concise ("2.5M" not "2,500,000").
 - **Prefer fewer, bigger elements** over many small elements. Each scene should have one clear focal point.
 
+## Narration ↔ Visual Sync (CRITICAL)
+
+The audience HEARS narration and SEES elements at the same time. They must tell the same story:
+
+- **Every data point in narration must be visible**: If narration says "revenue grew 45%", that "45%" must appear in a metric, callout, or chart annotation in the SAME scene.
+- **Every chart/metric must be narrated**: If a scene has a bar-chart, the narration should reference what the chart shows (trend, comparison, key value).
+- **No orphan narration**: Don't narrate data that has no visual element. If you mention a number, show it.
+- **No silent visuals**: Don't show a chart without narrating what it means.
+- **Self-check before produce_script**: For each scene, mentally verify: "Would a viewer who can ONLY hear understand the same story as a viewer who can ONLY see?"
+
 ## Hard Constraints
 
 - Scenes must not overlap: each startFrame = previous startFrame + previous durationInFrames.
 - Canvas: 1920×1080 at 30fps unless user specifies otherwise.
 - NEVER invent data. Only use numbers from the user's prompt.
 - Match the language of the user's prompt (Chinese prompt → Chinese narration).
-- Every scene MUST have a "narration" field.`;
+- Every scene MUST have a "narration" field.
+- Narration and visual elements MUST be synchronized (see Narration ↔ Visual Sync above).`;
 
 /**
  * Legacy system prompt for backward compatibility (evaluate, etc.)

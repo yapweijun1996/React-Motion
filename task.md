@@ -52,7 +52,8 @@
 | RM-60 | Task | UI/UX redesign — CSS class-based layout, header, card-style input, visual hierarchy | Done |
 | RM-61 | Task | Mobile responsive — media queries, touch-friendly buttons (44px), stacked layout | Done |
 | RM-62 | Task | PWA support — manifest.json, service worker (cache-first static, network-first API), iOS meta tags | Done |
-| RM-63 | Task | Prompt templates — 20 presets (business, professional, science, math, space, sports, study, etc.) | Done |
+| RM-63 | Task | Prompt templates — 21 presets (business, professional, science, study, sports, etc.) | Done |
+| RM-104 | Task | History templates — 7 country story templates (SG, MY, US, CN, JP, IN, UK) + refactor templateData.ts | Done |
 | RM-64 | Arch | OODAE Agent Loop — multi-turn agentic pipeline with function calling (max 10 iterations) | Done |
 | RM-65 | Task | Agent tools — analyze_data, draft_storyboard, get_element_catalog, produce_script | Done |
 | RM-66 | Task | Gemini function calling + Google Search grounding support in gemini.ts | Done |

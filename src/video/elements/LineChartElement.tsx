@@ -15,9 +15,9 @@ const MARGIN = { top: 24, right: 36, bottom: 50, left: 70 };
 const INNER_W = CHART_W - MARGIN.left - MARGIN.right;
 const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom;
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
-export const LineChartElement: React.FC<Props> = ({ el, index }) => {
+export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const series = normalizeSeries(el);
@@ -62,7 +62,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index }) => {
             key={tick}
             x1={0} x2={INNER_W}
             y1={yScale(tick)} y2={yScale(tick)}
-            stroke="#e5e7eb" strokeWidth={1}
+            stroke={dark ? "#374151" : "#e5e7eb"} strokeWidth={1}
           />
         ))}
 
@@ -71,7 +71,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index }) => {
             key={`yl-${tick}`}
             x={-10} y={yScale(tick)}
             textAnchor="end" dominantBaseline="middle"
-            fontSize={36} fill="#9ca3af"
+            fontSize={36} fill={dark ? "#cbd5e1" : "#9ca3af"}
           >
             {formatValue(tick)}
           </text>
@@ -83,7 +83,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index }) => {
             x={xScale(label)!}
             y={INNER_H + 30}
             textAnchor="middle"
-            fontSize={36} fill="#9ca3af"
+            fontSize={36} fill={dark ? "#cbd5e1" : "#9ca3af"}
           >
             {label}
           </text>

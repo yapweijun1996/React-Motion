@@ -43,25 +43,30 @@ type VideoScene = {
 3. **TTS extension**: If narration audio is longer than scene duration, scene is extended automatically
 4. **Runtime fields**: `ttsAudioUrl` and `ttsAudioDurationMs` are populated at runtime by `tts.ts`, never persisted to IndexedDB
 
-## Element Contracts (9 types)
+## Element Contracts (15 types)
 
 All elements share the flat structure:
 
 ```typescript
 type SceneElement = {
   type: "text" | "metric" | "bar-chart" | "pie-chart" | "line-chart"
-       | "sankey" | "list" | "divider" | "callout";
+       | "sankey" | "list" | "divider" | "callout" | "kawaii" | "lottie"
+       | "icon" | "annotation" | "svg" | "map";
+  delay?: number;     // Animation delay override
+  stagger?: "tight" | "normal" | "relaxed" | "dramatic";
   [key: string]: unknown;  // Type-specific props
 };
 ```
+
+All elements receive a `dark` prop from `GenericScene` for text contrast auto-adaptation (dark bg → light text, light bg → dark text).
 
 ### text
 
 | Prop | Type | Default | Notes |
 |------|------|---------|-------|
 | content | string | required | Text to display |
-| fontSize | number | 24 | Pixels |
-| color | string | "#ffffff" | Hex |
+| fontSize | number | 80 | Pixels (96-128 for titles, 56-72 for body, min 48) |
+| color | string | auto | Auto-adapts: dark bg → `#f1f5f9`, light bg → `#1e293b` |
 | fontWeight | number | 400 | |
 | align | "left" \| "center" \| "right" | "left" | |
 | animation | "fade" \| "slide-up" \| "zoom" | "fade" | Entry animation |
@@ -126,7 +131,7 @@ Supports two formats: multi-series (array of series) or flat (single data array)
 | items | string[] | required | List items |
 | icon | string | "bullet" | "bullet" \| "check" \| "arrow" \| "star" \| "warning" |
 | color | string | theme primary | Icon color |
-| textColor | string | "#374151" | Text color |
+| textColor | string | auto | Auto-adapts to background |
 
 ### divider
 
@@ -142,7 +147,59 @@ Supports two formats: multi-series (array of series) or flat (single data array)
 | title | string | required | Bold heading |
 | content | string | required | Body text |
 | borderColor | string | theme primary | Left border accent |
-| fontSize | number | 16 | Body font size |
+| fontSize | number | 60 | Body font size |
+
+### kawaii
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| character | string | "ghost" | 16 types: astronaut, cat, planet, browser, mug, etc. |
+| mood | string | "blissful" | happy, excited, shocked, sad, blissful, lovestruck, ko |
+| size | number | 180 | SVG size in pixels |
+| color | string | theme primary | Character color |
+| caption | string | — | Optional caption below character |
+
+### lottie
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| preset | string | "checkmark" | checkmark, arrow-up, arrow-down, pulse, star, thumbs-up |
+| size | number | 120 | Animation size in pixels |
+| loop | boolean | true | Loop animation |
+
+### icon
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| name | string | "star" | 45 icons: trending-up, dollar-sign, graduation-cap, atom, etc. |
+| size | number | 64 | Icon size in pixels |
+| color | string | theme primary | Icon stroke color |
+| label | string | — | Optional label below icon |
+| strokeWidth | number | 2 | Icon stroke width |
+
+### annotation
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| shape | string | "circle" | circle, underline, arrow, box, cross, highlight, bracket |
+| color | string | "#ef4444" | Stroke color |
+| roughness | number | 1.5 | Hand-drawn roughness (0.5-3) |
+| size | number | 120 | Shape size in pixels |
+| label | string | — | Optional label |
+
+### svg
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| markup | string | required | Full SVG string with viewBox. AI-generated. |
+
+### map
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| countries | Array | required | `[{ name, value?, color? }]` — 50+ countries supported |
+| showLabels | boolean | false | Show name+value labels on highlighted countries |
+| baseColor | string | "#e5e7eb" | Default country fill |
 
 ## Theme Contract
 
@@ -159,17 +216,16 @@ Theme colors cascade to elements that don't specify their own color.
 
 ## Prompt Templates
 
-10 preset templates defined in `src/components/PromptTemplates.tsx`:
+28 preset templates defined in `src/components/templateData.ts` (data) and rendered by `src/components/PromptTemplates.tsx` (UI).
 
-| Category | Templates |
-|----------|-----------|
-| Business | Quarterly Report, Sales Ranking, Supplier Analysis |
-| Science | Solar System |
-| Math | Fibonacci Sequence |
-| Geography | World Population |
-| Space | Galaxy Explorer |
-| Technology | AI Industry Growth |
-| Environment | Clean Energy |
-| Sports | Olympics Medals |
+| Category | Count | Templates |
+|----------|-------|-----------|
+| Business | 3 | Quarterly Report, Sales Ranking, Supplier Analysis |
+| Professional | 6 | Board Update, Budget vs Actual, Product Launch, Support KPI, Supply Chain, Hiring Funnel |
+| Technology | 1 | AI Industry Growth |
+| Science | 4 | Clean Energy, Solar System, World Population, Galaxy Explorer |
+| Study | 7 | Fibonacci, Exam Scores, Study Progress, Lab Results, Language Progress, Research Summary |
+| Sports | 1 | Olympics Medals |
+| History | 7 | Singapore Story, Malaysia Story, USA Story, China Story, Japan Story, India Story, UK Story |
 
-Each template includes realistic sample data so users can generate a video immediately.
+Each template includes realistic sample data (milestones, GDP, population, key events) so users can generate a video immediately. The Featured view shows one template per category; users can filter by category chip or expand to see all.

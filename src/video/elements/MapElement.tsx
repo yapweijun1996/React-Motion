@@ -54,7 +54,7 @@ const DEFAULT_COLORS = [
 const MAP_W = 960;
 const MAP_H = 500;
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const MapElement: React.FC<Props> = ({ el, index }) => {
   const countries = (el.countries as CountryData[]) ?? [];
@@ -88,7 +88,7 @@ export const MapElement: React.FC<Props> = ({ el, index }) => {
   }, [countries]);
 
   // Convert TopoJSON → GeoJSON features (memoized)
-  const { features, projection, pathGen } = useMemo(() => {
+  const { features, pathGen } = useMemo(() => {
     const topo = worldData as unknown as Topology<{ countries: GeometryCollection }>;
     const geo = feature(topo, topo.objects.countries);
     const proj = geoNaturalEarth1()

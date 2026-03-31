@@ -9,7 +9,8 @@ VideoScript
   → ReportComposition.tsx
     → TransitionSeries (scene sequencing + transitions)
       → GenericScene (layout + element routing)
-        → 9 element renderers (text, metric, bar-chart, etc.)
+        → 15 element renderers (text, metric, bar-chart, icon, map, etc.)
+        → Dark/light text auto-contrast (isDarkBg detection)
       → <Audio> (TTS narration per scene, blob URL)
     → Progress bar (bottom, theme color)
 ```
@@ -102,3 +103,54 @@ If multi-thread fails, automatically falls back to single-thread.
 - 100 frames (10 seconds at 30fps/3) ≈ 200-500 MB in memory
 - TTS audio: ~48 KB/sec at 24kHz 16-bit mono, negligible
 - All frame files cleaned up from FFmpeg FS after export
+
+---
+
+## PPT Export Pipeline
+
+Alternative export path — generates a PowerPoint file from the same `VideoScript`.
+
+```
+VideoScript
+  → exportPptx.ts (pptxgenjs)
+    → Per scene: addSlide()
+      → bgColor → slide.background
+      → narration → slide.addNotes() (speaker notes)
+      → elements → pptxgenjs API calls:
+          text → addText()
+          metric → addText() (big number + label)
+          bar-chart → addChart(bar) [native, editable in PPT]
+          pie-chart → addChart(pie/doughnut) [native]
+          line-chart → addChart(line) [native]
+          sankey → addTable() (no native sankey in PPT)
+          list → addText() with bullets
+          callout → addShape(roundRect) + addText()
+          divider → addShape(rect)
+          kawaii → caption text only (no SVG equivalent)
+          lottie → skipped (no animation in PPT)
+    → pres.writeFile() → browser download .pptx
+```
+
+### Layout Engine
+
+Elements are positioned using a layout engine that calculates `x/y/w/h` (in inches) based on the scene's `layout` prop:
+- **column**: stack vertically, full width
+- **row**: side by side, equal width
+- **center**: stack vertically, full width (same as column)
+
+### Font Scaling
+
+Video font sizes (96-128px for titles) are scaled by ×0.25 for PPT (→ 24-32pt), which maps correctly to 10" wide slides.
+
+## TTS History Restore
+
+When restoring a video from history, TTS audio is regenerated in the background:
+
+```
+History restore
+  → setScript(script without audio) — video plays immediately (silent)
+  → async: generateSceneTTS(scenes) — using saved narration text
+  → setScript(script with audio) — audio available
+```
+
+User sees the video immediately; narration audio appears after ~3-5 seconds.

@@ -20,7 +20,8 @@ Iteration 1: AI calls analyze_data → computes rankings, percentages
 Iteration 2: AI calls Google Search → finds industry context
 Iteration 3: AI calls draft_storyboard → plans story arc
 Iteration 4: AI calls get_element_catalog → reviews available elements
-Iteration 5: AI calls produce_script → outputs final JSON → DONE
+Iteration 5: AI calls generate_palette → gets cohesive color palette (REQUIRED)
+Iteration 6: AI calls produce_script → outputs final JSON → DONE
 ```
 
 The AI may use fewer or more iterations. It may skip tools or call them multiple times.
@@ -65,9 +66,17 @@ The AI writes a natural-language story outline:
 
 ### `get_element_catalog` (Decide)
 
-Returns the list of 9 available element types with their properties and usage tips.
+Returns the list of 15 available element types with their properties and usage tips.
 
 **When to call**: Before producing the final script, so the AI knows what visual tools it has.
+
+### `generate_palette` (Decide — REQUIRED)
+
+Generates a cohesive color palette from a primary color or mood keyword using chroma-js LCH color space. Returns: primary, secondary, accent, 8 chart colors, background light/dark, text colors with guaranteed contrast.
+
+**Mood keywords**: professional, corporate, warm, cool, bold, calm, elegant, playful, nature, tech, finance, energy.
+
+**When to call**: BEFORE `produce_script`. This is mandatory — the AI must use palette colors for all scene backgrounds, chart colors, and text colors.
 
 ### `produce_script` (Act — Terminal)
 

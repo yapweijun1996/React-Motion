@@ -20,7 +20,7 @@ import {
 } from "./agentTools";
 import { ClassifiedError, logError } from "./errors";
 
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 12;
 
 export type AgentProgress = {
   iteration: number;
@@ -78,10 +78,9 @@ export async function runAgentLoop(
 
     // If no function calls, AI produced only text — shouldn't happen with tools, but handle it
     if (functionCalls.length === 0) {
-      report(i, "text_only", `${textParts.length} text parts`);
-
-      // Try to parse as script JSON (fallback for models that don't use tools)
       const text = textParts.map((p) => p.text).join("");
+      report(i, "text_only", `${textParts.length} text parts`);
+      console.log("[Agent] AI text:", text.slice(0, 300) + (text.length > 300 ? "..." : ""));
       if (text.includes('"scenes"')) {
         try {
           const parsed = JSON.parse(text);
@@ -97,6 +96,12 @@ export async function runAgentLoop(
         parts: [{ text: "Please use the available tools. Call analyze_data or draft_storyboard first, then produce_script when ready." }],
       });
       continue;
+    }
+
+    // Log AI reasoning if it included text alongside tool calls
+    if (textParts.length > 0) {
+      const reasoning = textParts.map((p) => p.text).join("");
+      console.log("[Agent] AI reasoning:", reasoning.slice(0, 300) + (reasoning.length > 300 ? "..." : ""));
     }
 
     // Add model's response (with function calls) to conversation
@@ -123,10 +128,16 @@ export async function runAgentLoop(
       try {
         const toolResult = await executor(args, context);
 
+        // Debug: log tool result summary
+        const resultKeys = Object.keys(toolResult.result);
+        console.log(`[Agent] Tool "${name}" returned: { ${resultKeys.join(", ")} }`);
+
         // Check if this is the terminal tool (produce_script)
         if (name === "produce_script" && toolResult.result.terminal) {
           const scriptJson = toolResult.result.script as Record<string, unknown>;
-          report(i, "produce_script", `Script produced — ${(scriptJson.scenes as unknown[])?.length ?? "?"} scenes`);
+          const sceneCount = (scriptJson.scenes as unknown[])?.length ?? "?";
+          report(i, "produce_script", `Script produced — ${sceneCount} scenes`);
+          console.log("[Agent] Final script:", JSON.stringify(scriptJson).slice(0, 500) + "...");
           return { scriptJson, conversationLog: log, iterations: i };
         }
 

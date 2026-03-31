@@ -62,10 +62,13 @@ End user watches, presents, studies, or shares the generated story/presentation
 - `src/services/tts.ts` — Gemini TTS integration (narration → PCM → WAV per scene).
 - `src/services/exportVideo.ts` — frame-by-frame capture + FFmpeg.wasm encoding (single/multi-thread with auto-fallback).
 - `src/services/exportAudio.ts` — FFmpeg.wasm audio muxing (adelay + amix + AAC).
+- `src/services/exportPptx.ts` — PPT export via pptxgenjs (VideoScript → PPTX with native charts, narration as speaker notes).
 - `src/services/cache.ts` — IndexedDB caching for generated scripts.
+- `src/services/palette.ts` — chroma-js smart color palette generator (LCH uniform, mood keywords, chart colors).
+- `src/services/historyStore.ts` — IndexedDB history (50-entry FIFO) with TTS metadata for restore + regenerate.
 - `src/video/ReportComposition.tsx` — Remotion composition with `@remotion/transitions` (fade/slide/wipe/clock-wipe) + spring timing + progress bar.
-- `src/video/GenericScene.tsx` — elements-based scene renderer.
-- `src/video/elements/*` — 9 atomic element renderers (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout). All use `spring()` physics-based animation. D3 charts use d3-shape/d3-scale/d3-sankey for SVG path calculation.
+- `src/video/GenericScene.tsx` — elements-based scene renderer with dark/light background auto-detection for text contrast.
+- `src/video/elements/*` — 15 atomic element renderers (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, map). All use `spring()` physics-based animation. D3 charts use d3-shape/d3-scale/d3-sankey for SVG path calculation. Font sizes scaled for 1080p readability (titles 96-128px, body 56-72px).
 - `src/types/*` — TypeScript type definitions (MountConfig, BusinessData, VideoScript, VideoScene, SceneElement).
 - `public/ffmpeg-mt/` — FFmpeg.wasm multi-thread UMD core files (served as-is, bypasses Vite ESM transformation).
 
@@ -97,16 +100,16 @@ End user watches, presents, studies, or shares the generated story/presentation
 ### AI pipeline (implemented — OODAE Agent Loop)
 - `src/services/generateScript.ts` → `gemini.ts` → `parseScript.ts` → `evaluate.ts`
 - OODAE loop with function calling (max 10 iterations) + Google Search grounding
-- agent tools: analyze_data, draft_storyboard, get_element_catalog, produce_script
+- agent tools: analyze_data, draft_storyboard, get_element_catalog, generate_palette (mandatory), produce_script
 - retry with error feedback (max 3 attempts)
 
 ### Preview pipeline (implemented)
 - `@remotion/player` consumes `VideoScript` directly
 - preview = export (same composition, same elements)
 
-### Export pipeline (implemented — browser-only)
-- `src/services/exportVideo.ts`: html-to-image frame capture + FFmpeg.wasm encoding
-- `src/services/exportAudio.ts`: TTS audio muxing (adelay + amix + AAC)
+### Export pipeline (implemented — browser-only, dual-format)
+- **MP4**: `src/services/exportVideo.ts` (html-to-image frame capture + FFmpeg.wasm encoding) + `src/services/exportAudio.ts` (TTS audio muxing)
+- **PPTX**: `src/services/exportPptx.ts` (pptxgenjs — native bar/pie/line charts, narration as speaker notes, one slide per scene)
 - multi-thread: `@ffmpeg/core-mt` UMD from `public/ffmpeg-mt/` with runtime detection + auto-fallback
 - `-threads N` (up to 4) when multi-thread, `-threads 1` for single-thread
 
@@ -116,9 +119,11 @@ End user watches, presents, studies, or shares the generated story/presentation
 
 ### Composition layer (implemented — atomic elements)
 - `src/video/ReportComposition.tsx`: `@remotion/transitions` + spring timing + progress bar
-- `src/video/GenericScene.tsx`: elements-based scene renderer
-- 9 atomic elements: text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout
-- D3.js modular (d3-shape/d3-scale/d3-sankey) for SVG math; `spring()` for animation
+- `src/video/GenericScene.tsx`: elements-based scene renderer + dark/light background auto-detection
+- 15 atomic elements: text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, map
+- D3.js modular (d3-shape/d3-scale/d3-sankey/d3-geo) for SVG math; `spring()` for animation
+- Font sizes scaled for 1080p readability (titles 96-128px, body 56-72px, minimum 48px)
+- Text color auto-adapts to scene background (dark bg → light text, light bg → dark text)
 
 ---
 
@@ -324,14 +329,14 @@ Do not introduce architecture meant for post-MVP scale unless it directly suppor
 
 ## Atomic element system
 
-The template-based scene system has been replaced by an atomic element system. AI composes scenes freely using 9 atomic elements — no fixed templates.
+The template-based scene system has been replaced by an atomic element system. AI composes scenes freely using 15 atomic elements — no fixed templates.
 
 ### Element renderers (`src/video/elements/`)
 
-| Element | D3 | Description |
-|---------|-----|------------|
+| Element | D3/Lib | Description |
+|---------|--------|------------|
 | `text` | — | Rich text with fade/slide-up/zoom spring animation |
-| `metric` | — | Big KPI numbers with count-up spring animation |
+| `metric` | — | Big KPI numbers (160px) with count-up spring animation |
 | `bar-chart` | — | Horizontal bar chart with spring-driven bar growth |
 | `pie-chart` | d3-shape | SVG pie/donut chart with spring arc expansion |
 | `line-chart` | d3-shape, d3-scale | SVG line chart with stroke-dashoffset draw animation |
@@ -339,6 +344,20 @@ The template-based scene system has been replaced by an atomic element system. A
 | `list` | — | Bullet/icon list with spring slide-in |
 | `divider` | — | Animated line with spring width growth |
 | `callout` | — | Highlighted box with spring slide-up |
+| `kawaii` | react-kawaii | Cute SVG mascot characters (16 types, 7 moods) |
+| `lottie` | @remotion/lottie | Animated icons (6 presets: checkmark, arrows, pulse, star, thumbs-up) |
+| `icon` | lucide-react | 45 curated SVG icons across 6 categories with bounce animation |
+| `annotation` | roughjs | Hand-drawn sketch annotations (7 shapes) with stroke-draw animation |
+| `svg` | — | AI-generated inline SVG diagrams (flowcharts, org charts, mind maps) |
+| `map` | d3-geo | World map with country highlighting (50+ countries supported) |
+
+### Text contrast auto-detection
+
+`GenericScene.tsx` computes background luminance and passes a `dark` prop to all elements. Elements automatically switch between light text (`#e2e8f0`) and dark text (`#374151`) based on scene background color.
+
+### Mandatory color palette
+
+AI must call `generate_palette` tool before producing the script. The palette provides: 8 chart colors (LCH uniform), background light/dark pair, text colors with guaranteed contrast, accent color. Do NOT allow AI to pick random hex colors.
 
 ### Adding a new element
 

@@ -17,6 +17,19 @@ import { MapElement } from "./elements/MapElement";
 import { NoiseBackground } from "./NoiseBackground";
 import type { VideoScene, SceneElement } from "../types";
 
+/** Detect if a hex color is dark (luminance < 0.4). */
+function isDarkBg(hex: string | undefined): boolean {
+  if (!hex) return false;
+  const c = hex.replace("#", "");
+  if (c.length < 6) return false;
+  const r = parseInt(c.slice(0, 2), 16) / 255;
+  const g = parseInt(c.slice(2, 4), 16) / 255;
+  const b = parseInt(c.slice(4, 6), 16) / 255;
+  // Relative luminance (sRGB)
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum < 0.4;
+}
+
 type GenericSceneProps = {
   scene: VideoScene;
   primaryColor?: string;
@@ -27,6 +40,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
   primaryColor,
 }) => {
   const layout = scene.layout ?? "column";
+  const dark = isDarkBg(scene.bgColor);
 
   const flexProps: React.CSSProperties =
     layout === "center"
@@ -52,6 +66,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
           el={el}
           index={i}
           primaryColor={primaryColor}
+          dark={dark}
         />
       ))}
     </AbsoluteFill>
@@ -62,6 +77,7 @@ type ElementRendererProps = {
   el: SceneElement;
   index: number;
   primaryColor?: string;
+  dark?: boolean;
 };
 
 const CHART_TYPES = new Set(["bar-chart", "pie-chart", "line-chart", "sankey", "svg", "map"]);
@@ -80,35 +96,36 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
   el,
   index,
   primaryColor,
+  dark,
 }) => {
   const inner = (() => {
     switch (el.type) {
       case "text":
-        return <TextElement el={el} index={index} />;
+        return <TextElement el={el} index={index} dark={dark} />;
       case "metric":
-        return <MetricElement el={el} index={index} primaryColor={primaryColor} />;
+        return <MetricElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "bar-chart":
-        return <BarChartElement el={el} index={index} />;
+        return <BarChartElement el={el} index={index} dark={dark} />;
       case "pie-chart":
-        return <PieChartElement el={el} index={index} />;
+        return <PieChartElement el={el} index={index} dark={dark} />;
       case "line-chart":
-        return <LineChartElement el={el} index={index} />;
+        return <LineChartElement el={el} index={index} dark={dark} />;
       case "sankey":
-        return <SankeyElement el={el} index={index} />;
+        return <SankeyElement el={el} index={index} dark={dark} />;
       case "list":
-        return <ListElement el={el} index={index} primaryColor={primaryColor} />;
+        return <ListElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "divider":
         return <DividerElement el={el} index={index} primaryColor={primaryColor} />;
       case "callout":
-        return <CalloutElement el={el} index={index} primaryColor={primaryColor} />;
+        return <CalloutElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "kawaii":
-        return <KawaiiElement el={el} index={index} primaryColor={primaryColor} />;
+        return <KawaiiElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "lottie":
         return <LottieElement el={el} index={index} />;
       case "icon":
-        return <IconElement el={el} index={index} primaryColor={primaryColor} />;
+        return <IconElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "annotation":
-        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} />;
+        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "svg":
         return <SvgElement el={el} index={index} />;
       case "map":

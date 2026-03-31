@@ -17,6 +17,11 @@ Your job: verify the script is correct and effective.
 2. DATA COMPLETENESS: If the user's prompt contains data that the script ignores, flag it.
 3. SCENE INTEGRITY: Scenes must not overlap (startFrame math must be correct).
 4. VISUAL VARIETY: Are scenes visually distinct? Or do they all look the same?
+5. NARRATION-VISUAL SYNC: For each scene, check that narration and elements tell the same story:
+   - If narration mentions a number/percentage/trend, it MUST appear in a visual element (metric, chart, callout) in that scene.
+   - If a scene has a chart or metric, the narration MUST reference what it shows.
+   - Fix orphan narration by adding the missing visual element (metric or callout).
+   - Fix silent visuals by adding the data point to narration.
 
 ## Output JSON
 

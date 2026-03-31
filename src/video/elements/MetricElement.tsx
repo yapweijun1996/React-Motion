@@ -9,9 +9,9 @@ type MetricItem = {
   color?: string;
 };
 
-type Props = { el: SceneElement; index: number; primaryColor?: string };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
 
-export const MetricElement: React.FC<Props> = ({ el, index, primaryColor }) => {
+export const MetricElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const items = (el.items as MetricItem[]) ?? [];
@@ -79,11 +79,11 @@ export const MetricElement: React.FC<Props> = ({ el, index, primaryColor }) => {
               {formatted}
               {suffix && <span style={{ fontSize: 72, marginLeft: 8 }}>{suffix}</span>}
             </div>
-            <div style={{ fontSize: 56, color: "#94a3b8", marginTop: 16, fontWeight: 500 }}>
+            <div style={{ fontSize: 56, color: dark ? "#cbd5e1" : "#64748b", marginTop: 16, fontWeight: 500 }}>
               {item.label}
             </div>
             {item.subtext && (
-              <div style={{ fontSize: 42, color: "#64748b", marginTop: 8 }}>
+              <div style={{ fontSize: 42, color: dark ? "#94a3b8" : "#64748b", marginTop: 8 }}>
                 {item.subtext}
               </div>
             )}

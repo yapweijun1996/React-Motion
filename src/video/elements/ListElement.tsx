@@ -9,13 +9,13 @@ const ICON_MAP: Record<string, string> = {
   warning: "\u26a0",
 };
 
-type Props = { el: SceneElement; index: number; primaryColor?: string };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
 
-export const ListElement: React.FC<Props> = ({ el, index, primaryColor }) => {
+export const ListElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
   const items = (el.items as string[]) ?? [];
   const icon = ICON_MAP[(el.icon as string) ?? "bullet"] ?? "\u25cf";
   const color = (el.color as string) ?? primaryColor ?? "#2563eb";
-  const textColor = (el.textColor as string) ?? "#1f2937";
+  const textColor = (el.textColor as string) ?? (dark ? "#e2e8f0" : "#1f2937");
   const stagger = parseStagger(el);
   // List defaults to slide-left if no animation specified (natural for staggered items)
   const animation = (el.animation as string) ? parseAnimation(el) : "slide-left";

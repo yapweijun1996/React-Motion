@@ -1,9 +1,9 @@
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 
-type Props = { el: SceneElement; index: number; primaryColor?: string };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
 
-export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor }) => {
+export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
   const borderColor = (el.borderColor as string) ?? primaryColor ?? "#2563eb";
   const animation = parseAnimation(el);
 
@@ -32,7 +32,7 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor }) => 
         <div
           style={{
             fontSize: 44,
-            color: "#6b7280",
+            color: dark ? "#cbd5e1" : "#6b7280",
             marginBottom: 12,
             fontWeight: 600,
             textTransform: "uppercase",

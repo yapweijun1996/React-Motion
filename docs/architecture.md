@@ -22,13 +22,19 @@ React-Motion is an AI-powered data-to-video report generator. Users paste busine
 │  Gemini 2.5 Flash TTS per scene narration   │
 │  Scene timing adjusted to match audio       │
 ├─────────────────────────────────────────────┤
-│  Remotion Render (video/)                   │
-│  GenericScene + 9 atomic elements           │
-│  TransitionSeries + spring() animations     │
+│  Color Palette (palette.ts)                 │
+│  chroma-js LCH uniform palette generation   │
+│  Mandatory before produce_script            │
 ├─────────────────────────────────────────────┤
-│  Export (exportVideo.ts)                    │
-│  html-to-image frame capture + FFmpeg.wasm  │
-│  Audio mux: adelay + amix + AAC             │
+│  Remotion Render (video/)                   │
+│  GenericScene + 15 atomic elements          │
+│  TransitionSeries + spring() animations     │
+│  Dark/light text auto-contrast detection    │
+│  Font sizes scaled for 1080p readability    │
+├─────────────────────────────────────────────┤
+│  Export — Dual Format                       │
+│  MP4: html-to-image + FFmpeg.wasm + audio   │
+│  PPTX: pptxgenjs (native charts + notes)   │
 └─────────────────────────────────────────────┘
 ```
 
@@ -43,6 +49,7 @@ User prompt + optional BusinessData
     ├─ Google Search   → industry context
     ├─ draft_storyboard → story arc plan
     ├─ get_element_catalog → available elements
+    ├─ generate_palette → cohesive color palette (REQUIRED)
     └─ produce_script  → VideoScript JSON (terminates loop)
         │
         ▼
@@ -57,7 +64,8 @@ User prompt + optional BusinessData
   Remotion Player (browser preview)
         │
         ▼
-  Export: html-to-image → FFmpeg.wasm → MP4 + AAC audio
+  Export MP4: html-to-image → FFmpeg.wasm → MP4 + AAC audio
+  Export PPT: pptxgenjs → PPTX (native charts, narration as speaker notes)
 ```
 
 ## Key Contracts
@@ -80,12 +88,12 @@ type VideoScript = {
 };
 ```
 
-### Scene Elements (9 atomic types)
+### Scene Elements (15 atomic types)
 
 | Element | Purpose |
 |---------|---------|
 | `text` | Text block with fade/slide-up/zoom animation |
-| `metric` | Big KPI numbers with count-up animation |
+| `metric` | Big KPI numbers (160px) with count-up animation |
 | `bar-chart` | Horizontal bar chart with progressive fill |
 | `pie-chart` | Pie/donut chart (D3.js) |
 | `line-chart` | Line chart for trends (D3.js) |
@@ -93,6 +101,16 @@ type VideoScript = {
 | `list` | Bullet/check/arrow/star/warning list |
 | `divider` | Visual separator |
 | `callout` | Bordered highlight box |
+| `kawaii` | Cute SVG mascot characters (react-kawaii) |
+| `lottie` | Animated icons (@remotion/lottie) |
+| `icon` | 45 curated SVG icons (lucide-react) |
+| `annotation` | Hand-drawn sketch marks (roughjs) |
+| `svg` | AI-generated inline SVG diagrams |
+| `map` | World map with country highlighting (d3-geo) |
+
+### Text Contrast
+
+`GenericScene.tsx` auto-detects dark/light backgrounds and passes `dark` prop to all elements. Text colors adapt automatically for readability.
 
 ## Deployment Model
 

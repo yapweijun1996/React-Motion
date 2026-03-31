@@ -13,9 +13,9 @@ const CHART_H = 500;
 const NODE_W = 22;
 const NODE_PAD = 20;
 
-type Props = { el: SceneElement; index: number };
+type Props = { el: SceneElement; index: number; dark?: boolean };
 
-export const SankeyElement: React.FC<Props> = ({ el, index }) => {
+export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const inputNodes = (el.nodes as NodeInput[]) ?? [];
@@ -103,7 +103,7 @@ export const SankeyElement: React.FC<Props> = ({ el, index }) => {
               textAnchor={x0 < CHART_W / 2 ? "start" : "end"}
               dominantBaseline="middle"
               fontSize={38}
-              fill="#374151"
+              fill={dark ? "#e2e8f0" : "#374151"}
               fontWeight={500}
             >
               {node.name}
