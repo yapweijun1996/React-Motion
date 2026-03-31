@@ -39,7 +39,7 @@ export function loadSettings(): AppSettings {
         import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
         import.meta.env.VITE_GEMINI_MODEL ||
         "gemini-2.0-flash",
-      ttsConcurrency: stored.ttsConcurrency ?? 2,
+      ttsConcurrency: stored.ttsConcurrency ?? 1,
     };
 
     const result = validateSettings(merged);
@@ -112,7 +112,7 @@ function getDefaults(): AppSettings {
       import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
       import.meta.env.VITE_GEMINI_MODEL ||
       "gemini-2.0-flash",
-    ttsConcurrency: 2,
+    ttsConcurrency: 1,
   };
 }
 

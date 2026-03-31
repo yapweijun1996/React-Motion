@@ -17,8 +17,9 @@ export type TTSProgress = {
 
 // --- Public API ---
 
-/** Delay before retrying a 429'd request */
-const RETRY_DELAY_MS = 1500;
+/** Base delay before retrying a rate-limited request (exponential backoff) */
+const RETRY_BASE_MS = 2000;
+const MAX_RETRIES = 3;
 
 /**
  * Generate TTS audio for all scenes that have narration text.
@@ -111,22 +112,33 @@ async function runPool<T>(
 const RETRYABLE_CODES = ["429", "500", "502", "503"];
 
 /**
- * Call Gemini TTS with single retry on transient errors (429/500/502/503).
+ * Call Gemini TTS with exponential backoff retry on transient errors (429/500/502/503).
+ * Up to MAX_RETRIES attempts with increasing delay: 2s, 4s, 8s.
  */
 async function callGeminiTTSWithRetry(
   text: string,
 ): Promise<{ pcmBase64: string; mimeType: string }> {
-  try {
-    return await callGeminiTTS(text);
-  } catch (err) {
-    if (err instanceof Error && RETRYABLE_CODES.some((c) => err.message.includes(c))) {
-      const code = RETRYABLE_CODES.find((c) => err.message.includes(c)) ?? "?";
-      console.log(`[TTS] Transient error (${code}), retrying in ${RETRY_DELAY_MS}ms...`);
-      await sleep(RETRY_DELAY_MS);
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
       return await callGeminiTTS(text);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      const isRetryable = RETRYABLE_CODES.some((c) => lastError!.message.includes(c));
+      if (!isRetryable || attempt >= MAX_RETRIES) {
+        throw lastError;
+      }
+
+      const code = RETRYABLE_CODES.find((c) => lastError!.message.includes(c)) ?? "?";
+      const delayMs = RETRY_BASE_MS * Math.pow(2, attempt); // 2s, 4s, 8s
+      console.log(`[TTS] Transient error (${code}), retry ${attempt + 1}/${MAX_RETRIES} in ${delayMs}ms...`);
+      await sleep(delayMs);
     }
-    throw err;
   }
+
+  throw lastError ?? new Error("TTS retry exhausted");
 }
 
 function sleep(ms: number): Promise<void> {
