@@ -12,8 +12,8 @@ You have atomic elements to compose scenes. There are no fixed templates. You de
   "id": "string",
   "title": "string",
   "fps": 30,
-  "width": 1280,
-  "height": 720,
+  "width": 1920,
+  "height": 1080,
   "durationInFrames": number (30fps),
   "narrative": "string",
   "theme": { "primaryColor": "hex", "secondaryColor": "hex", "style": "corporate" | "modern" | "minimal" },
@@ -46,6 +46,7 @@ You have atomic elements to compose scenes. There are no fixed templates. You de
 ## Hard constraints
 
 - Scenes must not overlap: each startFrame = previous startFrame + previous durationInFrames.
+- Use a 16:9 canvas at 1920x1080 unless the user explicitly asks for a different format.
 - NEVER invent data. Only use numbers from the user's prompt.
 - If data is incomplete, flag gaps using a list element with "warning" icon.
 - Match the language of the user's prompt.`;

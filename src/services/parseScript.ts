@@ -1,6 +1,8 @@
 import type { VideoScript, VideoScene, SceneElement } from "../types";
 
 const VALID_ELEMENT_TYPES = ["text", "metric", "bar-chart", "list", "divider", "callout"];
+const MIN_VIDEO_WIDTH = 1920;
+const MIN_VIDEO_HEIGHT = 1080;
 
 export function parseVideoScript(raw: string): VideoScript {
   let json: unknown;
@@ -53,8 +55,8 @@ export function parseVideoScript(raw: string): VideoScript {
     id: (obj.id as string) ?? "ai-script",
     title: obj.title as string,
     fps: Number(obj.fps) || 30,
-    width: Number(obj.width) || 1280,
-    height: Number(obj.height) || 720,
+    width: Math.max(Number(obj.width) || MIN_VIDEO_WIDTH, MIN_VIDEO_WIDTH),
+    height: Math.max(Number(obj.height) || MIN_VIDEO_HEIGHT, MIN_VIDEO_HEIGHT),
     durationInFrames: Number(obj.durationInFrames) || 300,
     scenes,
     narrative: (obj.narrative as string) ?? "",

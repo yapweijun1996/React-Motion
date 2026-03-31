@@ -94,25 +94,16 @@ export type ExportProgress = {
 
 export async function exportToMp4(
   playerRef: PlayerRef,
-  playerContainer: HTMLElement,
+  captureTarget: HTMLElement,
+  width: number,
+  height: number,
   totalFrames: number,
   fps: number,
   onProgress: (p: ExportProgress) => void,
 ): Promise<Blob> {
-  const width = 1280;
-  const height = 720;
-
   console.group("[Export] exportToMp4");
   console.log("[Export] Config:", { totalFrames, fps, width, height });
   console.log("[Export] Browser:", navigator.userAgent);
-
-  // --- Step 1: Find capture target ---
-  const compositionEl = playerContainer.querySelector(
-    ".__remotion-player > div:first-child > .__remotion-player"
-  ) as HTMLElement | null;
-
-  const captureTarget = compositionEl ?? playerContainer;
-  console.log("[Export] Capture target:", compositionEl ? "composition only (no controls)" : "FULL PLAYER (controls included!)");
   console.log("[Export] Capture target size:", captureTarget.offsetWidth, "x", captureTarget.offsetHeight);
 
   // --- Step 2: Capture frames ---

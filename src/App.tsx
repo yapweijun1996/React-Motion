@@ -64,9 +64,14 @@ export const App: React.FC<AppProps> = ({ config }) => {
     setExportProgress({ stage: "capturing", percent: 0, message: "Starting..." });
 
     try {
+      await waitForPaint();
+      await waitForPaint();
+
       const mp4Blob = await exportToMp4(
         playerRef.current,
         playerContainerRef.current,
+        script.width,
+        script.height,
         script.durationInFrames,
         script.fps,
         setExportProgress,
@@ -208,7 +213,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
             compositionWidth={script.width}
             compositionHeight={script.height}
             style={{ width: "100%" }}
-            controls
+            controls={!isExporting}
           />
         </div>
       )}
@@ -234,3 +239,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
     </div>
   );
 };
+
+function waitForPaint(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
