@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { Player, type PlayerRef } from "@remotion/player";
 import { ReportComposition } from "./video/ReportComposition";
 import { generateScript } from "./services/generateScript";
-import { exportToMp4, downloadBlob, type ExportProgress } from "./services/exportVideo";
+import { type ExportProgress } from "./services/exportVideo";
 import type { MountConfig, VideoScript } from "./types";
 
 type AppProps = {
@@ -34,21 +34,24 @@ export const App: React.FC<AppProps> = ({ config }) => {
     }
   }, [prompt, config.data]);
 
-  const handleExport = useCallback(async () => {
-    if (!script || !playerRef.current) return;
+  const playerContainerRef = useRef<HTMLDivElement>(null);
 
-    setExportProgress({ stage: "recording", percent: 0, message: "Starting..." });
+  const handleExport = useCallback(async () => {
+    if (!script || !playerRef.current || !playerContainerRef.current) return;
+
+    setExportProgress({ stage: "capturing", percent: 0, message: "Starting..." });
 
     try {
-      // Seek to start and auto-play so recording captures the video
-      playerRef.current.seekTo(0);
-      playerRef.current.play();
+      // Lazy import to avoid loading FFmpeg.wasm upfront
+      const { exportToMp4, downloadBlob } = await import("./services/exportVideo");
 
-      const durationMs = (script.durationInFrames / script.fps) * 1000;
-
-      const mp4Blob = await exportToMp4(durationMs, setExportProgress);
-
-      playerRef.current.pause();
+      const mp4Blob = await exportToMp4(
+        playerRef.current,
+        playerContainerRef.current,
+        script.durationInFrames,
+        script.fps,
+        setExportProgress,
+      );
 
       const filename = `${script.title.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`;
       downloadBlob(mp4Blob, filename);
@@ -176,7 +179,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
 
       {/* Video player */}
       {script && (
-        <div>
+        <div ref={playerContainerRef}>
           <Player
             ref={playerRef}
             component={ReportComposition}

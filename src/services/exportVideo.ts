@@ -1,197 +1,192 @@
+import { toPng } from "html-to-image";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
+import type { PlayerRef } from "@remotion/player";
 
 let ffmpeg: FFmpeg | null = null;
 
-async function getFFmpeg(): Promise<FFmpeg> {
-  if (ffmpeg && ffmpeg.loaded) return ffmpeg;
+async function getFFmpeg(
+  onProgress: (progress: number) => void,
+): Promise<FFmpeg> {
+  if (ffmpeg && ffmpeg.loaded) {
+    console.log("[Export] FFmpeg already loaded, reusing");
+    ffmpeg.on("progress", ({ progress }) => onProgress(progress));
+    return ffmpeg;
+  }
 
-  console.log("[Export] Loading FFmpeg.wasm...");
   ffmpeg = new FFmpeg();
-
-  ffmpeg.on("progress", ({ progress }) => {
-    console.log(`[Export] FFmpeg progress: ${(progress * 100).toFixed(0)}%`);
+  ffmpeg.on("progress", ({ progress }) => onProgress(progress));
+  ffmpeg.on("log", ({ message }) => {
+    console.log("[FFmpeg]", message);
   });
 
+  console.log("[Export] Loading FFmpeg.wasm (single-thread)...");
+  console.log("[Export] SharedArrayBuffer available:", typeof SharedArrayBuffer !== "undefined");
+  console.log("[Export] hardwareConcurrency:", navigator.hardwareConcurrency);
+
+  const t0 = performance.now();
   await ffmpeg.load();
-  console.log("[Export] FFmpeg.wasm loaded");
+  console.log(`[Export] FFmpeg.wasm loaded in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+
   return ffmpeg;
 }
 
 export type ExportProgress = {
-  stage: "recording" | "converting" | "done" | "error";
+  stage: "capturing" | "writing" | "encoding" | "done" | "error";
   percent: number;
   message: string;
 };
 
 export async function exportToMp4(
-  durationMs: number,
+  playerRef: PlayerRef,
+  playerContainer: HTMLElement,
+  totalFrames: number,
+  fps: number,
   onProgress: (p: ExportProgress) => void,
 ): Promise<Blob> {
-  // --- Step 1: Capture screen via getDisplayMedia ---
-  onProgress({ stage: "recording", percent: 0, message: "Please allow screen recording..." });
+  const width = 1280;
+  const height = 720;
 
-  let displayStream: MediaStream;
-  try {
-    displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        // @ts-expect-error — preferCurrentTab is a Chrome hint
-        preferCurrentTab: true,
-        frameRate: 30,
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-      audio: false,
+  console.group("[Export] exportToMp4");
+  console.log("[Export] Config:", { totalFrames, fps, width, height });
+  console.log("[Export] Browser:", navigator.userAgent);
+
+  // --- Step 1: Find capture target ---
+  const compositionEl = playerContainer.querySelector(
+    ".__remotion-player > div:first-child > .__remotion-player"
+  ) as HTMLElement | null;
+
+  const captureTarget = compositionEl ?? playerContainer;
+  console.log("[Export] Capture target:", compositionEl ? "composition only (no controls)" : "FULL PLAYER (controls included!)");
+  console.log("[Export] Capture target size:", captureTarget.offsetWidth, "x", captureTarget.offsetHeight);
+
+  // --- Step 2: Capture frames ---
+  onProgress({ stage: "capturing", percent: 0, message: "Capturing frames..." });
+  playerRef.pause();
+
+  const frameStep = 3;
+  const framesToCapture = Math.ceil(totalFrames / frameStep);
+  const pngDataUrls: string[] = [];
+
+  console.log("[Export] Frame plan:", { frameStep, framesToCapture, totalFrames });
+  const captureStart = performance.now();
+
+  for (let i = 0; i < totalFrames; i += frameStep) {
+    playerRef.seekTo(i);
+    await waitFrame();
+    await waitFrame();
+
+    try {
+      const dataUrl = await toPng(captureTarget, {
+        width,
+        height,
+        canvasWidth: width,
+        canvasHeight: height,
+        skipFonts: true,
+      });
+
+      pngDataUrls.push(dataUrl);
+    } catch (err) {
+      console.error(`[Export] Frame ${i} capture failed:`, err);
+      // Skip failed frame, continue
+      continue;
+    }
+
+    const pct = Math.round((pngDataUrls.length / framesToCapture) * 100);
+    onProgress({
+      stage: "capturing",
+      percent: pct,
+      message: `Capturing frame ${pngDataUrls.length} / ${framesToCapture}`,
     });
-  } catch {
-    throw new Error("Screen recording permission denied");
   }
 
-  console.log("[Export] Display stream tracks:", displayStream.getTracks().map((t) => `${t.kind}:${t.readyState}`));
+  const captureDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
+  const avgFrameTime = ((performance.now() - captureStart) / pngDataUrls.length).toFixed(0);
+  console.log(`[Export] Captured ${pngDataUrls.length} frames in ${captureDuration}s (avg ${avgFrameTime}ms/frame)`);
 
-  // --- Step 2: Route through Canvas (sample project pattern) ---
-  onProgress({ stage: "recording", percent: 1, message: "Recording video..." });
-
-  const canvas = document.createElement("canvas");
-  canvas.width = 1280;
-  canvas.height = 720;
-  const ctx = canvas.getContext("2d")!;
-
-  const videoEl = document.createElement("video");
-  videoEl.srcObject = displayStream;
-  videoEl.muted = true;
-  await videoEl.play();
-
-  // Draw display stream to canvas via requestAnimationFrame
-  let drawing = true;
-  function drawFrame() {
-    if (!drawing) return;
-    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-    requestAnimationFrame(drawFrame);
+  if (pngDataUrls.length === 0) {
+    console.groupEnd();
+    throw new Error("No frames captured — html-to-image failed for all frames");
   }
-  drawFrame();
 
-  // Capture canvas stream
-  const canvasStream = canvas.captureStream(30);
-  console.log("[Export] Canvas stream ready, tracks:", canvasStream.getTracks().length);
+  // --- Step 3: Load FFmpeg + write frames ---
+  onProgress({ stage: "writing", percent: 0, message: "Loading FFmpeg..." });
 
-  // --- Step 3: Record canvas stream with MediaRecorder ---
-  const webmBlob = await recordStream(canvasStream, durationMs, (pct) => {
-    onProgress({ stage: "recording", percent: pct, message: `Recording... ${pct}%` });
+  const ff = await getFFmpeg((p) => {
+    const pct = Math.round(p * 100);
+    onProgress({
+      stage: "encoding",
+      percent: pct,
+      message: `Encoding MP4 (${pct}%)...`,
+    });
   });
 
-  // Cleanup recording
-  drawing = false;
-  displayStream.getTracks().forEach((t) => t.stop());
-  videoEl.srcObject = null;
+  const writeStart = performance.now();
+  let totalBytes = 0;
 
-  console.log("[Export] WebM recorded:", (webmBlob.size / 1024 / 1024).toFixed(2), "MB");
+  for (let i = 0; i < pngDataUrls.length; i++) {
+    const pngData = await fetchFile(pngDataUrls[i]);
+    totalBytes += pngData.byteLength;
+    await ff.writeFile(`frame${String(i).padStart(5, "0")}.png`, pngData);
 
-  // --- Step 4: Convert WebM to MP4 ---
-  onProgress({ stage: "converting", percent: 0, message: "Loading FFmpeg..." });
+    const pct = Math.round(((i + 1) / pngDataUrls.length) * 100);
+    onProgress({
+      stage: "writing",
+      percent: pct,
+      message: `Preparing frame ${i + 1} / ${pngDataUrls.length}`,
+    });
+  }
 
-  const ff = await getFFmpeg();
+  console.log(`[Export] Wrote ${pngDataUrls.length} frames (${(totalBytes / 1024 / 1024).toFixed(1)}MB) in ${((performance.now() - writeStart) / 1000).toFixed(1)}s`);
 
-  onProgress({ stage: "converting", percent: 20, message: "Converting to MP4..." });
-
-  await ff.writeFile("input.webm", await fetchFile(webmBlob));
-
-  await ff.exec([
-    "-i", "input.webm",
+  // --- Step 4: Encode MP4 ---
+  const inputFps = Math.max(Math.round(fps / frameStep), 5);
+  const ffmpegArgs = [
+    "-framerate", String(inputFps),
+    "-i", "frame%05d.png",
     "-c:v", "libx264",
-    "-preset", "fast",
-    "-crf", "23",
-    "-movflags", "+faststart",
+    "-preset", "ultrafast",
+    "-crf", "28",
     "-pix_fmt", "yuv420p",
+    "-movflags", "+faststart",
+    "-tune", "stillimage",
+    "-r", String(fps),
     "output.mp4",
-  ]);
+  ];
 
-  onProgress({ stage: "converting", percent: 90, message: "Finalizing..." });
+  console.log("[Export] FFmpeg args:", ffmpegArgs.join(" "));
+  console.log("[Export] Input fps:", inputFps, "→ Output fps:", fps);
+
+  onProgress({ stage: "encoding", percent: 0, message: "Encoding MP4 (0%)..." });
+  const encodeStart = performance.now();
+
+  await ff.exec(ffmpegArgs);
+
+  const encodeDuration = ((performance.now() - encodeStart) / 1000).toFixed(1);
+  console.log(`[Export] Encoding completed in ${encodeDuration}s`);
 
   const data = await ff.readFile("output.mp4");
   const mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/mp4" });
 
-  await ff.deleteFile("input.webm");
+  // Cleanup
+  for (let i = 0; i < pngDataUrls.length; i++) {
+    await ff.deleteFile(`frame${String(i).padStart(5, "0")}.png`);
+  }
   await ff.deleteFile("output.mp4");
 
-  console.log("[Export] MP4 ready:", (mp4Blob.size / 1024 / 1024).toFixed(2), "MB");
-  onProgress({ stage: "done", percent: 100, message: "Export complete!" });
+  const totalDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
+  console.log(`[Export] === DONE ===`);
+  console.log(`[Export] MP4 size: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`);
+  console.log(`[Export] Total time: ${totalDuration}s (capture: ${captureDuration}s, write: ${((performance.now() - writeStart) / 1000).toFixed(1)}s, encode: ${encodeDuration}s)`);
+  console.log(`[Export] Frames: ${pngDataUrls.length}, Input PNG: ${(totalBytes / 1024 / 1024).toFixed(1)}MB → Output MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)}MB`);
+  console.groupEnd();
 
+  onProgress({ stage: "done", percent: 100, message: "Export complete!" });
   return mp4Blob;
 }
 
-function recordStream(
-  stream: MediaStream,
-  durationMs: number,
-  onProgress: (pct: number) => void,
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const chunks: Blob[] = [];
-
-    const mimeType = getSupportedMimeType();
-    console.log("[Export] MediaRecorder mimeType:", mimeType);
-
-    let recorder: MediaRecorder;
-    try {
-      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
-    } catch {
-      console.warn("[Export] Fallback to default MediaRecorder");
-      recorder = new MediaRecorder(stream);
-    }
-
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-
-    recorder.onstop = () => {
-      console.log("[Export] Recording stopped, chunks:", chunks.length);
-      resolve(new Blob(chunks, { type: recorder.mimeType || "video/webm" }));
-    };
-
-    recorder.onerror = (event) => {
-      console.error("[Export] MediaRecorder error:", event);
-      reject(new Error("MediaRecorder error"));
-    };
-
-    // Handle user stopping screen share
-    stream.getVideoTracks()[0]?.addEventListener("ended", () => {
-      console.log("[Export] Stream ended by user");
-      if (recorder.state === "recording") {
-        recorder.requestData(); // flush remaining data
-        recorder.stop();
-      }
-    });
-
-    const startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const pct = Math.min(Math.round((elapsed / durationMs) * 100), 99);
-      onProgress(pct);
-    }, 500);
-
-    recorder.start(1000);
-    console.log("[Export] Recording started for", durationMs, "ms");
-
-    setTimeout(() => {
-      clearInterval(interval);
-      if (recorder.state === "recording") {
-        recorder.requestData(); // flush before stop — prevents data loss
-        recorder.stop();
-      }
-    }, durationMs + 1000);
-  });
-}
-
-function getSupportedMimeType(): string {
-  const types = [
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm",
-  ];
-  for (const type of types) {
-    if (MediaRecorder.isTypeSupported(type)) return type;
-  }
-  return "";
+function waitFrame(): Promise<void> {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

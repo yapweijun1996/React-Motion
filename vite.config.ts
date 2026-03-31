@@ -5,6 +5,15 @@ import { resolve } from "path";
 export default defineConfig({
   plugins: [react()],
   envPrefix: ["VITE_", "DEVELOPMENT_"],
+  optimizeDeps: {
+    exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util"],
+  },
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+  },
   build: {
     lib: {
       entry: resolve(__dirname, "src/index.tsx"),
