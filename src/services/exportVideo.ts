@@ -28,18 +28,18 @@ export async function exportToMp4(
   durationMs: number,
   onProgress: (p: ExportProgress) => void,
 ): Promise<Blob> {
-  // --- Step 1: Capture current tab via getDisplayMedia ---
+  // --- Step 1: Capture screen via getDisplayMedia ---
   onProgress({ stage: "recording", percent: 0, message: "Please allow screen recording..." });
 
-  let stream: MediaStream;
+  let displayStream: MediaStream;
   try {
-    stream = await navigator.mediaDevices.getDisplayMedia({
+    displayStream = await navigator.mediaDevices.getDisplayMedia({
       video: {
         // @ts-expect-error — preferCurrentTab is a Chrome hint
         preferCurrentTab: true,
         frameRate: 30,
-        width: 1280,
-        height: 720,
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       },
       audio: false,
     });
@@ -47,19 +47,47 @@ export async function exportToMp4(
     throw new Error("Screen recording permission denied");
   }
 
+  console.log("[Export] Display stream tracks:", displayStream.getTracks().map((t) => `${t.kind}:${t.readyState}`));
+
+  // --- Step 2: Route through Canvas (sample project pattern) ---
   onProgress({ stage: "recording", percent: 1, message: "Recording video..." });
 
-  // --- Step 2: Record as WebM ---
-  const webmBlob = await recordStream(stream, durationMs, (pct) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d")!;
+
+  const videoEl = document.createElement("video");
+  videoEl.srcObject = displayStream;
+  videoEl.muted = true;
+  await videoEl.play();
+
+  // Draw display stream to canvas via requestAnimationFrame
+  let drawing = true;
+  function drawFrame() {
+    if (!drawing) return;
+    ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+    requestAnimationFrame(drawFrame);
+  }
+  drawFrame();
+
+  // Capture canvas stream
+  const canvasStream = canvas.captureStream(30);
+  console.log("[Export] Canvas stream ready, tracks:", canvasStream.getTracks().length);
+
+  // --- Step 3: Record canvas stream with MediaRecorder ---
+  const webmBlob = await recordStream(canvasStream, durationMs, (pct) => {
     onProgress({ stage: "recording", percent: pct, message: `Recording... ${pct}%` });
   });
 
-  // Stop all tracks
-  stream.getTracks().forEach((t) => t.stop());
+  // Cleanup recording
+  drawing = false;
+  displayStream.getTracks().forEach((t) => t.stop());
+  videoEl.srcObject = null;
 
   console.log("[Export] WebM recorded:", (webmBlob.size / 1024 / 1024).toFixed(2), "MB");
 
-  // --- Step 3: Convert WebM to MP4 ---
+  // --- Step 4: Convert WebM to MP4 ---
   onProgress({ stage: "converting", percent: 0, message: "Loading FFmpeg..." });
 
   const ff = await getFFmpeg();
@@ -99,22 +127,40 @@ function recordStream(
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const chunks: Blob[] = [];
-    const mimeType = getSupportedMimeType();
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: 5_000_000,
-    });
+    const mimeType = getSupportedMimeType();
+    console.log("[Export] MediaRecorder mimeType:", mimeType);
+
+    let recorder: MediaRecorder;
+    try {
+      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    } catch {
+      console.warn("[Export] Fallback to default MediaRecorder");
+      recorder = new MediaRecorder(stream);
+    }
 
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunks.push(e.data);
     };
 
     recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: mimeType }));
+      console.log("[Export] Recording stopped, chunks:", chunks.length);
+      resolve(new Blob(chunks, { type: recorder.mimeType || "video/webm" }));
     };
 
-    recorder.onerror = () => reject(new Error("MediaRecorder error"));
+    recorder.onerror = (event) => {
+      console.error("[Export] MediaRecorder error:", event);
+      reject(new Error("MediaRecorder error"));
+    };
+
+    // Handle user stopping screen share
+    stream.getVideoTracks()[0]?.addEventListener("ended", () => {
+      console.log("[Export] Stream ended by user");
+      if (recorder.state === "recording") {
+        recorder.requestData(); // flush remaining data
+        recorder.stop();
+      }
+    });
 
     const startTime = Date.now();
     const interval = setInterval(() => {
@@ -123,14 +169,16 @@ function recordStream(
       onProgress(pct);
     }, 500);
 
-    recorder.start(100);
+    recorder.start(1000);
+    console.log("[Export] Recording started for", durationMs, "ms");
 
     setTimeout(() => {
       clearInterval(interval);
       if (recorder.state === "recording") {
+        recorder.requestData(); // flush before stop — prevents data loss
         recorder.stop();
       }
-    }, durationMs + 500);
+    }, durationMs + 1000);
   });
 }
 
@@ -143,7 +191,7 @@ function getSupportedMimeType(): string {
   for (const type of types) {
     if (MediaRecorder.isTypeSupported(type)) return type;
   }
-  return "video/webm";
+  return "";
 }
 
 export function downloadBlob(blob: Blob, filename: string) {
