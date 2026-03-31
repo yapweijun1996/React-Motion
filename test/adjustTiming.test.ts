@@ -29,15 +29,15 @@ function makeScript(scenes: Partial<VideoScene>[]): VideoScript {
 }
 
 describe("adjustSceneTimings", () => {
-  it("does not change scenes without audio", () => {
+  it("does not change scenes without audio (above minimum)", () => {
     const script = makeScript([
-      { durationInFrames: 100 },
+      { durationInFrames: 200 },
       { durationInFrames: 200 },
     ]);
     const adjusted = adjustSceneTimings(script);
-    expect(adjusted.scenes[0].durationInFrames).toBe(100);
+    expect(adjusted.scenes[0].durationInFrames).toBe(200);
     expect(adjusted.scenes[1].durationInFrames).toBe(200);
-    expect(adjusted.durationInFrames).toBe(300);
+    expect(adjusted.durationInFrames).toBe(400);
   });
 
   it("extends scene when audio is longer than original duration", () => {
@@ -56,24 +56,24 @@ describe("adjustSceneTimings", () => {
     expect(adjusted.scenes[0].durationInFrames).toBe(300);
   });
 
-  it("enforces minimum scene frames (90)", () => {
+  it("enforces minimum scene frames (150)", () => {
     const script = makeScript([
-      { durationInFrames: 30, ttsAudioDurationMs: 500 }, // 0.5s = 15 frames + 15 = 30, but min is 90
+      { durationInFrames: 30, ttsAudioDurationMs: 500 }, // 0.5s = 15 frames + 15 = 30, but min is 150
     ]);
     const adjusted = adjustSceneTimings(script);
-    expect(adjusted.scenes[0].durationInFrames).toBe(90);
+    expect(adjusted.scenes[0].durationInFrames).toBe(150);
   });
 
   it("recalculates startFrames sequentially", () => {
     const script = makeScript([
-      { durationInFrames: 100 },
-      { durationInFrames: 100, ttsAudioDurationMs: 5000 }, // extends to 165
-      { durationInFrames: 100 },
+      { durationInFrames: 200 },
+      { durationInFrames: 200, ttsAudioDurationMs: 7000 }, // 7s = 210 + 15 = 225
+      { durationInFrames: 200 },
     ]);
     const adjusted = adjustSceneTimings(script);
     expect(adjusted.scenes[0].startFrame).toBe(0);
-    expect(adjusted.scenes[1].startFrame).toBe(100);
-    expect(adjusted.scenes[2].startFrame).toBe(265); // 100 + 165
+    expect(adjusted.scenes[1].startFrame).toBe(200);
+    expect(adjusted.scenes[2].startFrame).toBe(425); // 200 + 225
   });
 
   it("updates total durationInFrames", () => {
@@ -119,25 +119,25 @@ describe("adjustSceneTimings", () => {
   it("applies CJK multiplier to Japanese text", () => {
     const script = makeScript([
       {
-        durationInFrames: 100,
-        ttsAudioDurationMs: 2000,
+        durationInFrames: 200,
+        ttsAudioDurationMs: 4000,
         narration: "これはテストです",
-      }, // 2s = 60 + 15 = 75 → ×1.5 = 113
+      }, // 4s = 120 + 15 = 135 → ×1.5 = 203
     ]);
     const adjusted = adjustSceneTimings(script);
-    expect(adjusted.scenes[0].durationInFrames).toBe(113);
+    expect(adjusted.scenes[0].durationInFrames).toBe(203);
   });
 
   it("applies CJK multiplier to Korean text", () => {
     const script = makeScript([
       {
-        durationInFrames: 100,
-        ttsAudioDurationMs: 2000,
+        durationInFrames: 200,
+        ttsAudioDurationMs: 4000,
         narration: "한국어 테스트",
-      }, // 75 → ×1.5 = 113
+      }, // 4s = 120 + 15 = 135 → ×1.5 = 203
     ]);
     const adjusted = adjustSceneTimings(script);
-    expect(adjusted.scenes[0].durationInFrames).toBe(113);
+    expect(adjusted.scenes[0].durationInFrames).toBe(203);
   });
 
   it("does not apply CJK multiplier when narration is missing", () => {
@@ -157,12 +157,12 @@ describe("adjustSceneTimings", () => {
     expect(adjusted.scenes[0].durationInFrames).toBe(150);
   });
 
-  it("does not extend non-CJK scene without TTS audio", () => {
+  it("does not extend non-CJK scene without TTS audio (above minimum)", () => {
     const script = makeScript([
-      { durationInFrames: 100, narration: "English scene without audio" },
+      { durationInFrames: 200, narration: "English scene without audio" },
     ]);
     const adjusted = adjustSceneTimings(script);
-    expect(adjusted.scenes[0].durationInFrames).toBe(100);
+    expect(adjusted.scenes[0].durationInFrames).toBe(200);
   });
 });
 

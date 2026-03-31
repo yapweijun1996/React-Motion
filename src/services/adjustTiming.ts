@@ -1,7 +1,7 @@
 import type { VideoScript } from "../types";
 
 const AUDIO_BUFFER_FRAMES = 15; // 0.5s padding after narration ends
-const MIN_SCENE_FRAMES = 90;    // 3s minimum per scene
+const MIN_SCENE_FRAMES = 150;   // 5s minimum per scene — gives audience time to absorb
 const CJK_DURATION_MULTIPLIER = 1.5; // CJK text needs longer read time
 
 // CJK Unicode ranges: CJK Unified Ideographs, Hiragana, Katakana, Hangul Syllables

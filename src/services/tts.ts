@@ -107,8 +107,11 @@ async function runPool<T>(
   await Promise.all(workers);
 }
 
+/** Status codes worth retrying (transient errors) */
+const RETRYABLE_CODES = ["429", "500", "502", "503"];
+
 /**
- * Call Gemini TTS with single retry on 429 (rate limit).
+ * Call Gemini TTS with single retry on transient errors (429/500/502/503).
  */
 async function callGeminiTTSWithRetry(
   text: string,
@@ -116,8 +119,9 @@ async function callGeminiTTSWithRetry(
   try {
     return await callGeminiTTS(text);
   } catch (err) {
-    if (err instanceof Error && err.message.includes("429")) {
-      console.log(`[TTS] Rate limited, retrying in ${RETRY_DELAY_MS}ms...`);
+    if (err instanceof Error && RETRYABLE_CODES.some((c) => err.message.includes(c))) {
+      const code = RETRYABLE_CODES.find((c) => err.message.includes(c)) ?? "?";
+      console.log(`[TTS] Transient error (${code}), retrying in ${RETRY_DELAY_MS}ms...`);
       await sleep(RETRY_DELAY_MS);
       return await callGeminiTTS(text);
     }

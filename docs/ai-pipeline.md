@@ -8,7 +8,7 @@ The AI pipeline uses the OODAE pattern (Observe → Orient → Decide → Act �
 
 ### Stage 1: Agent Loop (`agentLoop.ts`)
 
-The agent loop runs up to **10 iterations**. Each iteration:
+The agent loop runs up to **12 iterations**. Each iteration:
 
 1. Send conversation + tool definitions to Gemini
 2. Gemini returns text, function calls, or both
@@ -33,6 +33,7 @@ A separate Gemini call reviews the generated script for:
 - Data completeness (no ignored data)
 - Scene integrity (startFrame math)
 - Visual variety
+- **Narration↔Visual sync** — every data point in narration must appear in a visual element (metric, chart, callout) in the same scene, and every chart/metric must be referenced in narration
 
 If issues are found, the evaluator returns a corrected VideoScript.
 
@@ -82,16 +83,49 @@ Generates a cohesive color palette from a primary color or mood keyword using ch
 
 The AI outputs the complete VideoScript JSON. This **terminates the agent loop**.
 
+## Creative Direction Framework
+
+The agent system prompt (`prompt.ts`) embeds a structured creative framework that guides AI output quality:
+
+### Duarte Sparkline Narrative Arc
+Every video follows a 7-beat story structure:
+1. **Hook** — surprising number or dramatic visual (scale-rotate/rubber-band animation)
+2. **Context** — establish background (relaxed stagger)
+3. **Tension** — present the conflict/interesting data
+4. **Evidence** — charts, metrics, comparisons (1 insight per scene + "So What?")
+5. **Climax** — most important finding (clock-wipe + dramatic stagger)
+6. **Resolution** — takeaway or recommendation
+7. **Close** — one memorable statement
+
+### "So What?" Rule
+Every chart/metric must INTERPRET data, not just display it. Narration explains significance, not raw numbers.
+
+### Pacing & Visual Variety
+- Scene durations vary by role (hook=3s, data=6-8s, climax=7-9s)
+- Breathing scenes inserted every 2-3 data-heavy scenes
+- Mandatory diversity: 4+ element types, alternating layouts, alternating dark/light backgrounds
+- No same transition 3× in a row
+
+### Narration ↔ Visual Sync
+- Every data point in narration must be visible in the same scene's elements
+- Every chart/metric must be referenced in narration
+- Evaluator enforces this as check #5
+
+### Emotional Engagement
+- Kawaii characters (1-2 per video) as emotional anchors
+- Annotation elements for hand-drawn emphasis
+- Icon elements alongside metrics for visual richness
+
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `services/agentLoop.ts` | OODAE loop engine (max 10 iterations) |
+| `services/agentLoop.ts` | OODAE loop engine (max 12 iterations) |
 | `services/agentTools.ts` | Tool registry: declarations + executors |
 | `services/gemini.ts` | Gemini API client with function calling support |
-| `services/prompt.ts` | Agent system prompt (OODAE-aware, creative direction) |
+| `services/prompt.ts` | Agent system prompt (OODAE-aware, Duarte arc, "So What?" rule, narration↔visual sync) |
 | `services/generateScript.ts` | Orchestrator: agent loop → evaluate → TTS |
-| `services/evaluate.ts` | 1+1 AI self-check |
+| `services/evaluate.ts` | 1+1 AI self-check (data accuracy + narration↔visual sync) |
 | `services/parseScript.ts` | VideoScript JSON validation |
 
 ## Gemini API Integration
@@ -136,11 +170,11 @@ If the agent loop fails at any point, `generateScript.ts` catches the error and 
 The agent reports progress at each iteration:
 
 ```
-[1/10] Thinking...
-[2/10] Analyzing data...
-[3/10] Writing storyboard...
-[4/10] Reviewing elements...
-[5/10] Producing video script...
+[1/12] Thinking...
+[2/12] Analyzing data...
+[3/12] Writing storyboard...
+[4/12] Reviewing elements...
+[5/12] Producing video script...
 ```
 
 This is displayed in the UI via the `onProgress` callback.

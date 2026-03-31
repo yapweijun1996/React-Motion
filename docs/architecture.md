@@ -14,13 +14,17 @@ React-Motion is an AI-powered data-to-video report generator. Users paste busine
 │  Tools: analyze_data, draft_storyboard,     │
 │         get_element_catalog, produce_script  │
 │  + Google Search grounding                  │
+│  Creative: Duarte arc, "So What?" rule,     │
+│  narration↔visual sync, pacing/variety      │
 ├─────────────────────────────────────────────┤
 │  Evaluate (evaluate.ts)                     │
-│  1+1 AI self-check for data accuracy        │
+│  1+1 AI self-check: data accuracy +         │
+│  narration↔visual sync                      │
 ├─────────────────────────────────────────────┤
 │  TTS (tts.ts)                               │
 │  Gemini 2.5 Flash TTS per scene narration   │
 │  Scene timing adjusted to match audio       │
+│  Auto-retry on transient errors (429/5xx)   │
 ├─────────────────────────────────────────────┤
 │  Color Palette (palette.ts)                 │
 │  chroma-js LCH uniform palette generation   │
@@ -44,7 +48,7 @@ React-Motion is an AI-powered data-to-video report generator. Users paste busine
 User prompt + optional BusinessData
         │
         ▼
-  OODAE Agent Loop (max 10 iterations)
+  OODAE Agent Loop (max 12 iterations)
     ├─ analyze_data    → data insights
     ├─ Google Search   → industry context
     ├─ draft_storyboard → story arc plan
@@ -53,7 +57,7 @@ User prompt + optional BusinessData
     └─ produce_script  → VideoScript JSON (terminates loop)
         │
         ▼
-  Evaluate (1+1 self-check)
+  Evaluate (1+1 self-check: data accuracy + narration↔visual sync)
     └─ Corrected VideoScript if issues found
         │
         ▼
@@ -142,7 +146,7 @@ All transitions use spring timing (damping=200, 20 frames).
 
 ## Prompt Templates
 
-10 preset templates in `PromptTemplates.tsx` cover: Business (3), Science, Math, Geography, Space, Technology, Environment, Sports. Each includes realistic sample data for one-click generation.
+28 preset templates in `templateData.ts` cover: Business (3), Professional (6), Technology (1), Science (4), Study (7), Sports (1), History (7). Each includes realistic sample data for one-click generation.
 
 ## PWA Support
 

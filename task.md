@@ -54,10 +54,10 @@
 | RM-62 | Task | PWA support — manifest.json, service worker (cache-first static, network-first API), iOS meta tags | Done |
 | RM-63 | Task | Prompt templates — 21 presets (business, professional, science, study, sports, etc.) | Done |
 | RM-104 | Task | History templates — 7 country story templates (SG, MY, US, CN, JP, IN, UK) + refactor templateData.ts | Done |
-| RM-64 | Arch | OODAE Agent Loop — multi-turn agentic pipeline with function calling (max 10 iterations) | Done |
+| RM-64 | Arch | OODAE Agent Loop — multi-turn agentic pipeline with function calling (max 12 iterations) | Done |
 | RM-65 | Task | Agent tools — analyze_data, draft_storyboard, get_element_catalog, produce_script | Done |
 | RM-66 | Task | Gemini function calling + Google Search grounding support in gemini.ts | Done |
-| RM-67 | Task | Agent system prompt — OODAE-aware, creative direction, story arc guidance | Done |
+| RM-67 | Task | Agent system prompt — OODAE-aware, creative direction, Duarte Sparkline arc, "So What?" rule, pacing/variety/emotional engagement | Done |
 
 | RM-37 | Bug | MP4 export speed — `-preset ultrafast`, `-crf 28`, `-tune stillimage`, frameStep=3 | Done |
 | RM-39 | Task | FFmpeg `-threads` auto-detect — `Math.min(hardwareConcurrency, 4)` | Done |
@@ -74,7 +74,7 @@
 | RM-87 | Task | Observability — metrics.ts IndexedDB event log with 4 埋点 (generation/export/tts/error), getStats() aggregation, exportEventsAsJSON(), auto-prune | Done |
 | RM-48 | Task | CJK language-aware scene duration — hasCJK() + ×1.5 multiplier for CJK narration (with and without TTS audio) | Done |
 | RM-93 | Task | Chart container-level entrance animation — all 4 chart elements (bar/pie/line/sankey) support animation prop, default zoom. Prompt + elementCatalog updated. | Done |
-| RM-92 | Task | TTS parallel generation — concurrency=3 pool + single 429 retry. ~10-16s → ~3-5s for typical 5-8 scene videos. Zero new dependencies. | Done |
+| RM-92 | Task | TTS parallel generation — concurrency pool + single retry on transient errors (429/500/502/503). Zero new dependencies. | Done |
 | RM-54 | Task | Prompt history + export records — IndexedDB v2: historyStore (50-entry FIFO) + exportStore + HistoryPanel UI + TTS metadata | Done |
 | RM-94 | Bug | HistoryPanel missing all CSS — 16 classes undefined. Add panel/tabs/history-list/btn-sm/btn-danger styles. Fix History icon (H→↻). Remove backdrop-filter (GPU). | Done |
 | RM-95 | Task | CSS architecture split — styles.css (862 lines) → 9 domain files under src/styles/. Import hub entry point. All files under 180 lines. | Done |
@@ -83,6 +83,9 @@
 | RM-100a | Task | `lucide` icon layer — 45 curated icons (6 categories), IconElement with bounce animation, tree-shaken imports | Done |
 | RM-100b | Task | `roughjs` annotation renderer — 7 hand-drawn shapes (circle, underline, arrow, box, cross, highlight, bracket), stroke-draw animation | Done |
 | RM-100c | Task | D3 helper layer — `d3-format` SI prefix formatting + `d3-scale-chromatic` Tableau10 palette. Eliminated 4×DEFAULT_COLORS + 2×formatVal duplication. | Done |
+| RM-105 | Bug | Narration↔Visual sync — TTS mentions data not shown in visual elements. Added sync rules to agent prompt + legacy prompt, evaluator check #5 (NARRATION-VISUAL SYNC), MAX_ITERATIONS 10→12. | Done |
+| RM-106 | Task | Creative direction overhaul — Duarte Sparkline narrative arc (7-beat story structure), "So What?" rule for chart narration, pacing/rhythm guidelines (variable scene duration, breathing scenes), visual variety mandates (element/layout/bg/animation diversity), emotional engagement (kawaii, annotation, icon usage). | Done |
+| RM-107 | Bug | TTS retry transient errors — expanded retry from 429-only to 429/500/502/503 (all transient server errors). Single retry + 1.5s delay unchanged. | Done |
 
 ### In Progress / Testing
 
@@ -275,7 +278,7 @@
 | RM-old-39 | Task | WebCodecs GPU encoder (Chrome only) | Rejected — user wants single encoder path for all browsers |
 | RM-old-dual | Arch | Dual-track export (WebCodecs + FFmpeg) | Rejected — unnecessary complexity, FFmpeg.wasm-mt sufficient |
 | RM-50 | Task | Element self-description schema | Superseded — agent tool `get_element_catalog` replaces this (RM-65) |
-| RM-51 | Task | Multi-stage OODAE agent loop (5 turns) | Superseded — OODAE Agent Loop implemented as RM-64 (max 10 iterations) |
+| RM-51 | Task | Multi-stage OODAE agent loop (5 turns) | Superseded — OODAE Agent Loop implemented as RM-64 (max 12 iterations) |
 | RM-45 | Task | CFML integration test — embed widget in sample .cfm page | Removed — CFML host integration no longer required |
 | RM-79 | Task | Adopt Zod runtime schemas | Superseded by RM-90 — self-contained validate.ts achieves same goal without Zod dependency |
 | RM-81 | Task | Playwright browser smoke tests | Removed — user does not want Playwright |

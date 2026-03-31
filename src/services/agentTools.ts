@@ -92,20 +92,24 @@ register(
   {
     name: "draft_storyboard",
     description:
-      "Write a director's storyboard for the video BEFORE generating the final script. " +
-      "Include: opening hook, data highlights to emphasize, story arc (intro → analysis → insight → conclusion), " +
-      "suggested scene count, color mood, and pacing notes. " +
-      "This is your creative planning step — take time to think about what makes a compelling presentation.",
+      "Write a director's storyboard BEFORE generating the final script. " +
+      "You MUST plan a narrative arc: Hook → Context → Tension → Evidence → Climax → Resolution → Close. " +
+      "For EACH planned scene, specify: (1) its ROLE in the arc, (2) the ONE key insight, (3) the 'So What?' interpretation, (4) which element types to use. " +
+      "Also plan breathing scenes (1 per 2-3 data scenes) and pacing variation.",
     parameters: {
       type: "object",
       properties: {
         storyboard: {
           type: "string",
-          description: "The full storyboard / director's notes in natural language.",
+          description:
+            "The full storyboard with narrative arc. For each scene include: " +
+            "[Scene N] Role: hook/context/tension/evidence/climax/resolution/breathing/close | " +
+            "Insight: the one key point | So What: interpretation for the audience | " +
+            "Elements: planned element types | Duration: short/medium/long",
         },
         scene_count: {
           type: "number",
-          description: "Planned number of scenes.",
+          description: "Planned number of scenes (7-12 recommended for a good narrative arc).",
         },
         color_mood: {
           type: "string",
@@ -113,21 +117,33 @@ register(
         },
         pacing: {
           type: "string",
-          description: "Pacing style: 'steady', 'build-up', 'fast-opening-slow-close'.",
+          description: "Pacing variation plan, e.g. 'short hook → medium context → long evidence → dramatic climax → short close'.",
+        },
+        climax_scene: {
+          type: "number",
+          description: "Which scene number is the climax (most important finding). This scene gets clock-wipe transition and dramatic stagger.",
         },
       },
       required: ["storyboard", "scene_count"],
     },
   },
   async (args) => {
-    console.log("[Tool:draft_storyboard] Scenes:", args.scene_count, "| Mood:", args.color_mood);
+    console.log("[Tool:draft_storyboard] Scenes:", args.scene_count, "| Mood:", args.color_mood, "| Climax:", args.climax_scene);
     return {
       result: {
         storyboard: args.storyboard,
         scene_count: args.scene_count,
         color_mood: args.color_mood ?? "professional",
         pacing: args.pacing ?? "steady",
-        status: "Storyboard saved. Next steps: (1) call get_element_catalog, (2) call generate_palette with your color_mood to get a cohesive palette — this is REQUIRED, (3) then produce_script using the palette colors.",
+        climax_scene: args.climax_scene,
+        reminders: {
+          narrative_arc: "Ensure your storyboard follows: Hook → Context → Tension → Evidence → Climax → Resolution → Close",
+          so_what: "Every chart/metric scene MUST include a 'So What?' interpretation in narration — don't just read data, EXPLAIN what it means",
+          breathing: "Insert 1 breathing scene (single metric, kawaii, or callout) after every 2-3 data-heavy scenes",
+          variety: "Use at least 4 different element types. Never use the same element type 3 scenes in a row",
+          pacing: "Vary scene durations: hook=150f, context=180f, data=210f, climax=270f, close=150f",
+        },
+        status: "Storyboard saved. Next steps: (1) call get_element_catalog, (2) call generate_palette with your color_mood — REQUIRED, (3) produce_script using palette colors and narrative arc.",
       },
     };
   },
