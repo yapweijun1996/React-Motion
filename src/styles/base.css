@@ -1,0 +1,149 @@
+/* ============================================
+   Base — app shell, buttons, alerts, progress,
+   spinner, player, empty state
+   ============================================ */
+
+/* App shell */
+.rm-app {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 16px;
+  color: var(--rm-gray-800);
+}
+
+/* Buttons */
+.rm-btn {
+  padding: 10px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--rm-radius);
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.rm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rm-btn-primary {
+  background: var(--rm-primary);
+  color: white;
+}
+.rm-btn-primary:hover:not(:disabled) {
+  background: var(--rm-primary-hover);
+}
+
+.rm-btn-success {
+  background: var(--rm-success);
+  color: white;
+}
+.rm-btn-success:hover:not(:disabled) {
+  background: var(--rm-success-hover);
+}
+
+.rm-btn-outline {
+  background: transparent;
+  color: var(--rm-success);
+  border: 1.5px solid var(--rm-success);
+}
+.rm-btn-outline:hover:not(:disabled) {
+  background: var(--rm-success);
+  color: white;
+}
+
+.rm-btn-secondary {
+  background: var(--rm-gray-100);
+  color: var(--rm-gray-700);
+}
+.rm-btn-secondary:hover:not(:disabled) {
+  background: var(--rm-gray-200);
+}
+
+.rm-btn-sm {
+  padding: 5px 12px;
+  font-size: 13px;
+  min-height: 32px;
+}
+
+.rm-btn-danger {
+  background: #fef2f2;
+  color: var(--rm-danger);
+}
+.rm-btn-danger:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+/* Alert / Error */
+.rm-alert {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: var(--rm-radius);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.rm-alert-error {
+  background: #fef2f2;
+  color: var(--rm-danger);
+  border: 1px solid #fecaca;
+}
+.rm-alert-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+/* Progress bar */
+.rm-progress-track {
+  margin-top: 6px;
+  height: 4px;
+  background: #dbeafe;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rm-progress-fill {
+  height: 100%;
+  background: var(--rm-primary);
+  transition: width 0.3s;
+}
+
+/* Player area */
+.rm-player-wrap {
+  border-radius: var(--rm-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--rm-shadow);
+  background: #000;
+  margin-bottom: 16px;
+}
+
+/* Empty state */
+.rm-empty {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--rm-gray-400);
+  font-size: 15px;
+  border: 2px dashed var(--rm-gray-200);
+  border-radius: var(--rm-radius-lg);
+  line-height: 1.6;
+}
+
+/* Loading spinner */
+.rm-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: rm-spin 0.6s linear infinite;
+}
+
+@keyframes rm-spin {
+  to { transform: rotate(360deg); }
+}

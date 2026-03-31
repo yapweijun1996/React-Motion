@@ -1,57 +1,119 @@
+import { loadSettings } from "./settingsStore";
+import { ClassifiedError, classifyHttpStatus, logError } from "./errors";
+
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 function getApiKey(): string {
-  const key =
-    import.meta.env.DEVELOPMENT_GEMINI_API_KEY ||
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    "";
-  if (!key) throw new Error("Gemini API key not configured");
-  return key;
+  const { geminiApiKey } = loadSettings();
+  if (!geminiApiKey) throw new ClassifiedError("API_KEY_MISSING", "Gemini API key not configured");
+  return geminiApiKey;
 }
 
 function getModel(): string {
-  return (
-    import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
-    import.meta.env.VITE_GEMINI_MODEL ||
-    "gemini-2.0-flash"
-  );
+  return loadSettings().geminiModel;
 }
+
+// --- Message types ---
+
+export type TextPart = { text: string };
+export type FunctionCallPart = { functionCall: { name: string; args: Record<string, unknown> } };
+export type FunctionResponsePart = { functionResponse: { name: string; response: Record<string, unknown> } };
+export type GeminiPart = TextPart | FunctionCallPart | FunctionResponsePart;
 
 export type GeminiMessage = {
   role: "user" | "model";
-  parts: { text: string }[];
+  parts: GeminiPart[];
+};
+
+// --- Tool / Function declaration types ---
+
+export type FunctionDeclaration = {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
+export type GeminiTool = {
+  function_declarations?: FunctionDeclaration[];
+  google_search?: Record<string, never>;
+};
+
+// --- Response types ---
+
+type GeminiResponsePart = {
+  text?: string;
+  functionCall?: { name: string; args: Record<string, unknown> };
 };
 
 type GeminiResponse = {
   candidates?: {
     content?: {
-      parts?: { text?: string }[];
+      parts?: GeminiResponsePart[];
     };
+    finishReason?: string;
   }[];
 };
+
+export type GeminiCallResult = {
+  parts: GeminiResponsePart[];
+  finishReason: string;
+};
+
+// --- Options ---
+
+export type CallGeminiOptions = {
+  tools?: GeminiTool[];
+  temperature?: number;
+  jsonOutput?: boolean;
+};
+
+// --- Original simple call (backward compatible) ---
 
 export async function callGemini(
   systemPrompt: string,
   messages: GeminiMessage[],
 ): Promise<string> {
+  const result = await callGeminiRaw(systemPrompt, messages, {
+    jsonOutput: true,
+    temperature: 0.7,
+  });
+  const text = result.parts.find((p) => p.text)?.text;
+  if (!text) throw new ClassifiedError("API_EMPTY_RESPONSE", "Gemini returned no text in response");
+  return text;
+}
+
+// --- Enhanced call with function calling support ---
+
+export async function callGeminiRaw(
+  systemPrompt: string,
+  messages: GeminiMessage[],
+  options: CallGeminiOptions = {},
+): Promise<GeminiCallResult> {
   const apiKey = getApiKey();
   const model = getModel();
-
   const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
-  const body = {
-    system_instruction: {
-      parts: [{ text: systemPrompt }],
-    },
+  const body: Record<string, unknown> = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
     contents: messages,
     generationConfig: {
-      temperature: 0.7,
-      responseMimeType: "application/json",
+      temperature: options.temperature ?? 0.7,
+      ...(options.jsonOutput ? { responseMimeType: "application/json" } : {}),
     },
   };
 
-  console.log("[Gemini] Model:", model);
-  console.log("[Gemini] Messages:", messages.length, "turns");
+  if (options.tools && options.tools.length > 0) {
+    body.tools = options.tools;
+
+    // Gemini 3 requires this flag when mixing function calling with built-in tools (Google Search)
+    const hasBuiltInTool = options.tools.some((t) => t.google_search);
+    const hasFunctionDecl = options.tools.some((t) => t.function_declarations);
+    if (hasBuiltInTool && hasFunctionDecl) {
+      body.tool_config = { include_server_side_tool_invocations: true };
+    }
+  }
+
+  console.log("[Gemini] Model:", model, "| Tools:", options.tools?.length ?? 0);
 
   const res = await fetch(url, {
     method: "POST",
@@ -60,20 +122,34 @@ export async function callGemini(
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    console.error("[Gemini] API error:", res.status, err);
-    throw new Error(`Gemini API error (${res.status}): ${err}`);
+    const errBody = await res.text();
+    const code = classifyHttpStatus(res.status);
+    logError("Gemini", code, errBody, { status: res.status, model });
+    throw new ClassifiedError(code, `Gemini API error (${res.status}): ${errBody}`);
   }
 
   const data: GeminiResponse = await res.json();
+  const candidate = data.candidates?.[0];
+  const parts = candidate?.content?.parts ?? [];
+  const finishReason = candidate?.finishReason ?? "UNKNOWN";
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    console.error("[Gemini] Empty response, full data:", data);
-    throw new Error("Gemini returned empty response");
+  if (parts.length === 0) {
+    logError("Gemini", "API_EMPTY_RESPONSE", "Empty parts array", { finishReason, candidateCount: data.candidates?.length });
+    throw new ClassifiedError("API_EMPTY_RESPONSE", "Gemini returned empty response");
   }
 
-  console.log("[Gemini] Response length:", text.length, "chars");
-  return text;
+  const textLen = parts.filter((p) => p.text).reduce((n, p) => n + (p.text?.length ?? 0), 0);
+  const fnCalls = parts.filter((p) => p.functionCall).map((p) => p.functionCall!.name);
+
+  console.log(
+    `[Gemini] Response: ${textLen} chars text, ${fnCalls.length} tool calls${fnCalls.length ? ` [${fnCalls.join(", ")}]` : ""}, finish: ${finishReason}`,
+  );
+
+  if (finishReason === "MAX_TOKENS") {
+    console.warn("[Gemini] Response was truncated (MAX_TOKENS) — output may be incomplete");
+  } else if (finishReason === "SAFETY") {
+    console.warn("[Gemini] Response was blocked by safety filters");
+  }
+
+  return { parts, finishReason };
 }

@@ -1,0 +1,85 @@
+/* ============================================
+   Header — logo, status badge, gear buttons
+   ============================================ */
+
+.rm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rm-gray-200);
+}
+
+.rm-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rm-logo-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--rm-primary), #7c3aed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.rm-logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--rm-gray-900);
+}
+
+.rm-logo-sub {
+  font-size: 12px;
+  color: var(--rm-gray-400);
+  font-weight: 400;
+}
+
+.rm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Gear / icon button in header */
+.rm-btn-gear {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--rm-radius);
+  border: 1px solid var(--rm-gray-200);
+  background: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--rm-gray-600);
+  transition: background 0.15s, border-color 0.15s;
+}
+.rm-btn-gear:hover {
+  background: var(--rm-gray-50);
+  border-color: var(--rm-gray-300);
+}
+
+/* Status badge */
+.rm-status {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.rm-status-ok {
+  background: #ecfdf5;
+  color: #065f46;
+}
+.rm-status-warn {
+  background: #fef3c7;
+  color: #92400e;
+}

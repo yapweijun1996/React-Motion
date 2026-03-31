@@ -1,74 +1,121 @@
+/**
+ * Quick-restore cache — saves/loads the LAST generated script.
+ *
+ * This is the fast-path for page reload: restore the most recent script
+ * instantly without browsing history. Separate from historyStore which
+ * manages the full list.
+ *
+ * Uses the shared DB from db.ts (v2 schema).
+ */
+
+import { openDB, STORE_SCRIPTS } from "./db";
+import { logWarn } from "./errors";
 import type { VideoScript } from "../types";
 
-const DB_NAME = "react-motion";
-const DB_VERSION = 1;
-const STORE_NAME = "scripts";
 const LAST_SCRIPT_KEY = "last-script";
+const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+// --- Types ---
 
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function saveScript(script: VideoScript, prompt: string): Promise<void> {
-  try {
-    const db = await openDB();
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-
-    store.put({ script, prompt, savedAt: Date.now() }, LAST_SCRIPT_KEY);
-
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
-
-    console.log("[Cache] Script saved to IndexedDB");
-    db.close();
-  } catch (err) {
-    console.warn("[Cache] Failed to save:", err);
-  }
-}
-
-type CachedEntry = {
+export type CachedEntry = {
   script: VideoScript;
   prompt: string;
   savedAt: number;
 };
 
+// --- Public API ---
+
+/** Save the latest script for quick restore on page reload. */
+export async function saveScript(script: VideoScript, prompt: string): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_SCRIPTS, "readwrite");
+    const store = tx.objectStore(STORE_SCRIPTS);
+
+    const cleanScript = stripRuntime(script);
+    store.put({ script: cleanScript, prompt, savedAt: Date.now() }, LAST_SCRIPT_KEY);
+
+    await idbTx(tx);
+    db.close();
+    console.log("[Cache] Saved last script");
+  } catch (err) {
+    logWarn("Cache", "CACHE_SAVE_FAILED", "Save failed", { error: err });
+  }
+}
+
+/** Load the last saved script (quick restore). Returns null if expired or missing. */
 export async function loadScript(): Promise<CachedEntry | null> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(STORE_SCRIPTS, "readonly");
+    const store = tx.objectStore(STORE_SCRIPTS);
 
-    const result = await new Promise<CachedEntry | null>((resolve, reject) => {
-      const req = store.get(LAST_SCRIPT_KEY);
-      req.onsuccess = () => resolve(req.result ?? null);
-      req.onerror = () => reject(req.error);
-    });
-
+    const result = await idbRequest<CachedEntry | undefined>(store.get(LAST_SCRIPT_KEY));
     db.close();
 
-    if (result) {
-      const age = ((Date.now() - result.savedAt) / 1000 / 60).toFixed(0);
-      console.log(`[Cache] Loaded script from IndexedDB (${age} min ago)`);
+    if (!result) return null;
+
+    // TTL check
+    const age = Date.now() - result.savedAt;
+    if (age > DEFAULT_TTL_MS) {
+      console.log("[Cache] Expired — clearing");
+      await clearCache();
+      return null;
     }
 
-    return result;
+    // Deep clone + strip stale blob URLs
+    const script: VideoScript = JSON.parse(JSON.stringify(result.script));
+    script.scenes = script.scenes.map((s) => ({
+      ...s,
+      ttsAudioUrl: undefined,
+      ttsAudioDurationMs: undefined,
+    }));
+
+    const ageMin = (age / 60000).toFixed(0);
+    console.log(`[Cache] Loaded last script (${ageMin} min old)`);
+    return { script, prompt: result.prompt, savedAt: result.savedAt };
   } catch (err) {
-    console.warn("[Cache] Failed to load:", err);
+    logWarn("Cache", "CACHE_LOAD_FAILED", "Load failed", { error: err });
     return null;
   }
+}
+
+/** Clear the quick-restore cache. */
+export async function clearCache(): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE_SCRIPTS, "readwrite");
+    tx.objectStore(STORE_SCRIPTS).clear();
+    await idbTx(tx);
+    db.close();
+  } catch (err) {
+    logWarn("Cache", "UNKNOWN", "Clear failed", { error: err });
+  }
+}
+
+// --- Helpers ---
+
+function stripRuntime(script: VideoScript): VideoScript {
+  return {
+    ...script,
+    scenes: script.scenes.map((s) => ({
+      ...s,
+      ttsAudioUrl: undefined,
+      ttsAudioDurationMs: undefined,
+    })),
+  };
+}
+
+function idbRequest<T>(req: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbTx(tx: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }

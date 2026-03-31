@@ -21,12 +21,17 @@ export type VideoScene = {
   layout?: "column" | "center" | "row";
   padding?: string;
   elements: SceneElement[];
+  transition?: "fade" | "slide" | "wipe" | "clock-wipe";
   narration?: string;
+  ttsAudioUrl?: string;        // blob: URL to WAV (runtime only, not persisted)
+  ttsAudioDurationMs?: number; // audio duration in ms (used for timing adjustment)
 };
 
 // Flat element — type + props at the same level for easy AI generation
 export type SceneElement = {
-  type: "text" | "metric" | "bar-chart" | "list" | "divider" | "callout";
+  type: "text" | "metric" | "bar-chart" | "pie-chart" | "line-chart" | "sankey" | "list" | "divider" | "callout" | "kawaii" | "lottie" | "icon" | "annotation" | "svg" | "map";
+  delay?: number;
+  stagger?: "tight" | "normal" | "relaxed" | "dramatic";
   [key: string]: unknown;
 };
 

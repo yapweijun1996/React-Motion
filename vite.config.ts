@@ -5,6 +5,11 @@ import { resolve } from "path";
 export default defineConfig({
   plugins: [react()],
   envPrefix: ["VITE_", "DEVELOPMENT_"],
+  test: {
+    globals: true,
+    environment: "node",
+    include: ["test/**/*.test.ts"],
+  },
   optimizeDeps: {
     exclude: ["@ffmpeg/ffmpeg", "@ffmpeg/util", "@ffmpeg/core", "@ffmpeg/core-mt"],
   },

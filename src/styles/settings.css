@@ -1,0 +1,63 @@
+/* ============================================
+   Settings — overlay + panel
+   ============================================ */
+
+.rm-settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 60px 16px 16px;
+}
+
+.rm-settings-panel {
+  width: min(480px, 100%);
+  background: white;
+  border-radius: var(--rm-radius-lg);
+  box-shadow: var(--rm-shadow-lg);
+  overflow: hidden;
+}
+
+.rm-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rm-gray-200);
+}
+
+.rm-settings-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--rm-gray-900);
+}
+
+.rm-settings-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--rm-gray-400);
+  border-radius: var(--rm-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rm-settings-close:hover {
+  background: var(--rm-gray-100);
+  color: var(--rm-gray-600);
+}
+
+.rm-settings-footer {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--rm-gray-200);
+  justify-content: flex-end;
+}

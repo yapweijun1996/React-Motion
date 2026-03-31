@@ -1,0 +1,45 @@
+/* ============================================
+   Export — overlay + modal
+   ============================================ */
+
+.rm-export-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.58);
+  padding: 24px;
+}
+
+.rm-export-modal {
+  width: min(520px, 100%);
+  padding: 24px;
+  border-radius: 16px;
+  background: white;
+  box-shadow: var(--rm-shadow-lg);
+}
+
+.rm-export-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--rm-gray-900);
+  margin: 0 0 10px;
+}
+
+.rm-export-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--rm-gray-600);
+  margin-bottom: 16px;
+}
+
+.rm-export-status {
+  padding: 12px 14px;
+  border-radius: var(--rm-radius);
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14px;
+  font-weight: 600;
+}

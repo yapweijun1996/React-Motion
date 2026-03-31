@@ -1,8 +1,24 @@
-import { AbsoluteFill, Sequence, useCurrentFrame, interpolate } from "remotion";
+import { AbsoluteFill, Audio, useCurrentFrame } from "remotion";
+import { TransitionSeries, springTiming } from "@remotion/transitions";
+import { fade } from "@remotion/transitions/fade";
+import { slide } from "@remotion/transitions/slide";
+import { wipe } from "@remotion/transitions/wipe";
+import { clockWipe } from "@remotion/transitions/clock-wipe";
 import { GenericScene } from "./GenericScene";
-import type { VideoScript } from "../types";
+import type { VideoScript, VideoScene } from "../types";
 
-const CROSSFADE = 15;
+const TRANSITION_FRAMES = 20;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getPresentation(scene: VideoScene): any {
+  const type = scene.transition;
+  switch (type) {
+    case "slide": return slide();
+    case "wipe": return wipe();
+    case "clock-wipe": return clockWipe({ width: 1920, height: 1080 });
+    default: return fade();
+  }
+}
 
 type ReportCompositionProps = {
   script: VideoScript;
@@ -15,46 +31,38 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
 
   return (
     <AbsoluteFill>
-      {script.scenes.map((scene, i) => {
-        const next = script.scenes[i + 1];
-        const fadeOutStart = next
-          ? next.startFrame - CROSSFADE
-          : scene.startFrame + scene.durationInFrames;
-        const fadeOutEnd = next
-          ? next.startFrame
-          : scene.startFrame + scene.durationInFrames;
+      <TransitionSeries>
+        {script.scenes.map((scene, i) => {
+          const isLast = i === script.scenes.length - 1;
 
-        const fadeIn = interpolate(
-          frame,
-          [scene.startFrame, scene.startFrame + CROSSFADE],
-          [0, 1],
-          { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-        );
-        // Last scene: no fade out (fadeOutStart === fadeOutEnd), keep opacity 1
-        const fadeOut = fadeOutStart < fadeOutEnd
-          ? interpolate(
-              frame,
-              [fadeOutStart, fadeOutEnd],
-              [1, 0],
-              { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
-            )
-          : 1;
-
-        return (
-          <Sequence
-            key={scene.id}
-            from={scene.startFrame}
-            durationInFrames={scene.durationInFrames}
-          >
-            <AbsoluteFill style={{ opacity: Math.min(fadeIn, fadeOut) }}>
+          return [
+            <TransitionSeries.Sequence
+              key={`scene-${scene.id}`}
+              durationInFrames={scene.durationInFrames}
+            >
               <GenericScene
                 scene={scene}
                 primaryColor={script.theme?.primaryColor}
               />
-            </AbsoluteFill>
-          </Sequence>
-        );
-      })}
+              {scene.ttsAudioUrl && (
+                <Audio src={scene.ttsAudioUrl} volume={1} />
+              )}
+            </TransitionSeries.Sequence>,
+
+            !isLast && (
+              <TransitionSeries.Transition
+                key={`trans-${scene.id}`}
+                presentation={getPresentation(script.scenes[i + 1])}
+                timing={springTiming({
+                  config: { damping: 120 },
+                  durationInFrames: TRANSITION_FRAMES,
+                  durationRestThreshold: 0.001,
+                })}
+              />
+            ),
+          ];
+        })}
+      </TransitionSeries>
 
       {/* Progress bar */}
       <div
@@ -65,6 +73,7 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
           width: "100%",
           height: 4,
           backgroundColor: "rgba(0,0,0,0.1)",
+          zIndex: 10,
         }}
       >
         <div

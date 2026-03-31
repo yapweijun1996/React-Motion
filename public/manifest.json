@@ -1,0 +1,19 @@
+{
+  "name": "React-Motion — AI Video Generator",
+  "short_name": "React-Motion",
+  "description": "AI-powered data-to-video report generator. Paste data, describe your video, and let AI create professional presentations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"]
+}

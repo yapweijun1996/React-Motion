@@ -1,44 +1,42 @@
-import { useCurrentFrame, interpolate } from "remotion";
+import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 
 type Props = { el: SceneElement; index: number; primaryColor?: string };
 
 export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor }) => {
-  const frame = useCurrentFrame();
-  const delay = (el.delay as number) ?? index * 8 + 10;
   const borderColor = (el.borderColor as string) ?? primaryColor ?? "#2563eb";
+  const animation = parseAnimation(el);
 
-  const opacity = interpolate(frame, [delay, delay + 18], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
+  const { progress } = useStagger({
+    elementIndex: index,
+    stagger: parseStagger(el),
+    delayOverride: el.delay,
+    elementType: "callout",
   });
 
-  const translateY = interpolate(frame, [delay, delay + 18], [14, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const entrance = computeEntranceStyle(progress, animation);
 
   return (
     <div
       style={{
-        padding: "18px 22px",
+        padding: "36px 40px",
         backgroundColor: (el.bgColor as string) ?? `${borderColor}10`,
-        borderLeft: `4px solid ${borderColor}`,
+        borderLeft: `5px solid ${borderColor}`,
         borderRadius: 8,
-        opacity,
-        transform: `translateY(${translateY}px)`,
+        opacity: entrance.opacity,
+        transform: entrance.transform,
         width: "100%",
       }}
     >
       {typeof el.title === "string" && (
         <div
           style={{
-            fontSize: 14,
+            fontSize: 44,
             color: "#6b7280",
-            marginBottom: 6,
+            marginBottom: 12,
             fontWeight: 600,
             textTransform: "uppercase",
-            letterSpacing: 1,
+            letterSpacing: 2,
           }}
         >
           {el.title as string}
@@ -46,7 +44,7 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor }) => 
       )}
       <div
         style={{
-          fontSize: (el.fontSize as number) ?? 20,
+          fontSize: (el.fontSize as number) ?? 60,
           color: (el.color as string) ?? borderColor,
           fontWeight: 600,
           lineHeight: 1.4,

@@ -1,4 +1,4 @@
-import { useCurrentFrame, interpolate } from "remotion";
+import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 
 const ICON_MAP: Record<string, string> = {
@@ -12,43 +12,42 @@ const ICON_MAP: Record<string, string> = {
 type Props = { el: SceneElement; index: number; primaryColor?: string };
 
 export const ListElement: React.FC<Props> = ({ el, index, primaryColor }) => {
-  const frame = useCurrentFrame();
   const items = (el.items as string[]) ?? [];
   const icon = ICON_MAP[(el.icon as string) ?? "bullet"] ?? "\u25cf";
   const color = (el.color as string) ?? primaryColor ?? "#2563eb";
   const textColor = (el.textColor as string) ?? "#1f2937";
-  const baseDelay = (el.delay as number) ?? index * 8 + 5;
+  const stagger = parseStagger(el);
+  // List defaults to slide-left if no animation specified (natural for staggered items)
+  const animation = (el.animation as string) ? parseAnimation(el) : "slide-left";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 28, width: "100%" }}>
       {items.map((item, i) => {
-        const delay = baseDelay + i * 10;
-
-        const opacity = interpolate(frame, [delay, delay + 14], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
+        const { progress } = useStagger({
+          elementIndex: index,
+          itemIndex: i,
+          stagger,
+          delayOverride: el.delay,
+          elementType: "list",
         });
 
-        const translateX = interpolate(frame, [delay, delay + 14], [-20, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        });
+        const entrance = computeEntranceStyle(progress, animation);
 
         return (
           <div
             key={i}
             style={{
-              fontSize: (el.fontSize as number) ?? 24,
+              fontSize: (el.fontSize as number) ?? 56,
               color: textColor,
-              opacity,
-              transform: `translateX(${translateX}px)`,
+              opacity: entrance.opacity,
+              transform: entrance.transform,
               display: "flex",
               alignItems: "flex-start",
-              gap: 12,
+              gap: 20,
               lineHeight: 1.4,
             }}
           >
-            <span style={{ color, fontWeight: 700, fontSize: 18, marginTop: 3, flexShrink: 0 }}>
+            <span style={{ color, fontWeight: 700, fontSize: 50, marginTop: 4, flexShrink: 0 }}>
               {icon}
             </span>
             <span>{item}</span>

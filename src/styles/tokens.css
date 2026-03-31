@@ -1,0 +1,24 @@
+/* ============================================
+   Design tokens — CSS custom properties
+   ============================================ */
+
+:root {
+  --rm-primary: #2563eb;
+  --rm-primary-hover: #1d4ed8;
+  --rm-success: #059669;
+  --rm-success-hover: #047857;
+  --rm-danger: #dc2626;
+  --rm-gray-50: #f9fafb;
+  --rm-gray-100: #f3f4f6;
+  --rm-gray-200: #e5e7eb;
+  --rm-gray-300: #d1d5db;
+  --rm-gray-400: #9ca3af;
+  --rm-gray-600: #4b5563;
+  --rm-gray-700: #374151;
+  --rm-gray-800: #1f2937;
+  --rm-gray-900: #111827;
+  --rm-radius: 10px;
+  --rm-radius-lg: 14px;
+  --rm-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --rm-shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+}

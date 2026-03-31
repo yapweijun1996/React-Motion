@@ -1,104 +1,163 @@
 import type { BusinessData, VideoScript } from "../types";
-import { callGemini, type GeminiMessage } from "./gemini";
-import { buildSystemPrompt, buildUserMessage } from "./prompt";
+import { buildAgentSystemPrompt, buildUserMessage, buildSystemPrompt } from "./prompt";
 import { parseVideoScript } from "./parseScript";
 import { evaluateScript } from "./evaluate";
+import { runAgentLoop, type AgentProgress } from "./agentLoop";
+import { callGemini, type GeminiMessage } from "./gemini";
+import { generateSceneTTS } from "./tts";
+import { adjustSceneTimings } from "./adjustTiming";
+import { trackEvent } from "./metrics";
 
-const MAX_RETRIES = 2;
+export type GenerationProgress = {
+  stage: "agent" | "evaluate" | "tts" | "done";
+  message: string;
+  agentDetail?: AgentProgress;
+};
+
+const MAX_PARSE_RETRIES = 2;
 
 export async function generateScript(
   userPrompt: string,
   data?: BusinessData,
+  onProgress?: (p: GenerationProgress) => void,
 ): Promise<VideoScript> {
-  console.group("[ReactMotion] generateScript");
+  console.group("[ReactMotion] generateScript (OODAE Agent)");
+  const t0 = performance.now();
 
-  console.log("[1] User prompt:", userPrompt);
-  console.log("[1] Structured data:", data ? "provided" : "(none)");
+  // --- Phase 1: Agent Loop (Observe → Orient → Decide → Act) ---
+  onProgress?.({ stage: "agent", message: "Agent starting..." });
 
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildAgentSystemPrompt();
   const userMessage = buildUserMessage(userPrompt, data);
 
+  let scriptJson: Record<string, unknown>;
+  let iterations: number;
+
+  try {
+    const result = await runAgentLoop(
+      systemPrompt,
+      userMessage,
+      { userPrompt, data },
+      (agentProgress) => {
+        onProgress?.({
+          stage: "agent",
+          message: formatAgentMessage(agentProgress),
+          agentDetail: agentProgress,
+        });
+      },
+    );
+    scriptJson = result.scriptJson;
+    iterations = result.iterations;
+    console.log(`[Agent] Completed in ${iterations} iterations`);
+  } catch (err) {
+    // Fallback: if agent loop fails, try legacy single-shot
+    console.warn("[Agent] Loop failed, falling back to legacy single-shot:", err);
+    onProgress?.({ stage: "agent", message: "Falling back to direct generation..." });
+    scriptJson = await legacyGenerate(userPrompt, data);
+    iterations = 0;
+  }
+
+  // --- Parse the script JSON ---
+  let script: VideoScript;
+  try {
+    script = parseVideoScript(JSON.stringify(scriptJson));
+    console.log("[Parse] OK. Scenes:", script.scenes.length);
+  } catch (parseErr) {
+    // If parse fails, try one retry with legacy approach
+    console.warn("[Parse] Agent output failed validation:", parseErr);
+    onProgress?.({ stage: "agent", message: "Fixing script format..." });
+    scriptJson = await legacyGenerate(userPrompt, data);
+    script = parseVideoScript(JSON.stringify(scriptJson));
+  }
+
+  // --- Phase 2: Evaluate ---
+  onProgress?.({ stage: "evaluate", message: "Evaluating quality..." });
+  console.log("[Evaluate] Starting...");
+
+  try {
+    const evalResult = await evaluateScript(userPrompt, script);
+    if (!evalResult.pass && evalResult.fixes) {
+      script = parseVideoScript(JSON.stringify(evalResult.fixes));
+      console.log("[Evaluate] Applied corrections");
+    } else if (evalResult.pass) {
+      console.log("[Evaluate] Passed");
+    }
+  } catch (err) {
+    console.warn("[Evaluate] Failed (non-fatal):", err);
+  }
+
+  // --- Phase 3: TTS ---
+  onProgress?.({ stage: "tts", message: "Generating narration audio..." });
+  console.log("[TTS] Generating...");
+
+  try {
+    const scenesWithTTS = await generateSceneTTS(script.scenes, (p) => {
+      onProgress?.({
+        stage: "tts",
+        message: `Generating narration (${p.scenesProcessed + 1}/${p.totalScenes})...`,
+      });
+    });
+    script = adjustSceneTimings({ ...script, scenes: scenesWithTTS });
+    console.log("[TTS] Done. Adjusted duration:", script.durationInFrames, "frames");
+  } catch (err) {
+    console.warn("[TTS] Failed (non-fatal):", err);
+  }
+
+  onProgress?.({ stage: "done", message: "Done" });
+  const durationMs = Math.round(performance.now() - t0);
+  trackEvent("generation", true, durationMs, {
+    scenes: script.scenes.length,
+    iterations,
+    durationFrames: script.durationInFrames,
+  });
+  console.groupEnd();
+  return script;
+}
+
+// --- Legacy single-shot fallback ---
+
+async function legacyGenerate(
+  userPrompt: string,
+  data?: BusinessData,
+): Promise<Record<string, unknown>> {
+  const systemPrompt = buildSystemPrompt();
+  const userMessage = buildUserMessage(userPrompt, data);
   const messages: GeminiMessage[] = [
     { role: "user", parts: [{ text: userMessage }] },
   ];
 
-  let lastError: Error | null = null;
-
-  // --- Turn 1: Generate ---
-  let script: VideoScript | null = null;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    console.log(`[2] Generate attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
-
+  for (let attempt = 0; attempt <= MAX_PARSE_RETRIES; attempt++) {
     const raw = await callGemini(systemPrompt, messages);
-    console.log("[3] Gemini raw response:", raw);
-
     try {
-      script = parseVideoScript(raw);
-
-      console.log("[4] Parsed OK. Scenes:", script.scenes.length);
-      script.scenes.forEach((s, i) => {
-        const elTypes = s.elements.map((e) => e.type).join(", ");
-        console.log(
-          `  Scene ${i}: start=${s.startFrame}, dur=${s.durationInFrames}, bg=${s.bgColor}, elements=[${elTypes}]`,
-        );
-      });
-
-      break;
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      console.warn(`[4] Parse failed (attempt ${attempt + 1}):`, lastError.message);
-
-      if (attempt < MAX_RETRIES) {
+      return JSON.parse(raw);
+    } catch {
+      if (attempt < MAX_PARSE_RETRIES) {
         messages.push(
           { role: "model", parts: [{ text: raw }] },
-          {
-            role: "user",
-            parts: [
-              {
-                text: `Your JSON output failed validation:\n\n${lastError.message}\n\nPlease fix the JSON and try again. Return ONLY the corrected JSON.`,
-              },
-            ],
-          },
+          { role: "user", parts: [{ text: "Invalid JSON. Fix it and return ONLY the corrected JSON." }] },
         );
       }
     }
   }
 
-  if (!script) {
-    console.groupEnd();
-    throw new Error(
-      `Generation failed after ${MAX_RETRIES + 1} attempts. Last error: ${lastError?.message}`,
-    );
-  }
+  throw new Error("Legacy generation failed after retries");
+}
 
-  // --- Turn 2: Evaluate ---
-  console.log("[5] Starting Evaluate...");
+// --- Progress message formatting ---
 
-  try {
-    const evalResult = await evaluateScript(userPrompt, script);
+function formatAgentMessage(p: AgentProgress): string {
+  const LABELS: Record<string, string> = {
+    thinking: "Thinking...",
+    "tool:analyze_data": "Analyzing data...",
+    "tool:draft_storyboard": "Writing storyboard...",
+    "tool:get_element_catalog": "Reviewing elements...",
+    "tool:produce_script": "Producing video script...",
+    text_only: "Processing...",
+    fallback_json: "Parsing output...",
+    max_reached: "Finalizing...",
+    force_output: "Generating final script...",
+  };
 
-    if (!evalResult.pass) {
-      console.warn("[5] Evaluate found issues:", evalResult.issues);
-
-      if (evalResult.fixes) {
-        // Use the corrected script from Evaluate
-        const fixed = parseVideoScript(JSON.stringify(evalResult.fixes));
-        console.log("[5] Applied corrected script from Evaluate");
-        console.groupEnd();
-        return fixed;
-      }
-
-      // No fixes provided — log issues but use original script
-      console.warn("[5] No corrected script provided, using original");
-    } else {
-      console.log("[5] Evaluate passed");
-    }
-  } catch (err) {
-    // Evaluate failure is non-fatal — use original script
-    console.warn("[5] Evaluate failed, using original script:", err);
-  }
-
-  console.groupEnd();
-  return script;
+  const label = LABELS[p.action] ?? `Agent: ${p.action}`;
+  return `[${p.iteration}/${p.maxIterations}] ${label}`;
 }

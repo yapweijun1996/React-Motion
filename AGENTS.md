@@ -2,131 +2,123 @@
 
 ## Project
 
-This repository builds **React-Motion**, an AI-powered data-to-video report generator designed to embed into existing business systems.
+This repository builds **React-Motion**, an AI-powered story and presentation maker designed to turn user intent, data, and context into polished end-user presentations and videos.
 
 The product goal:
 
-- end users provide business data + a natural language prompt
-- AI analyzes the data and generates a video script (narrative, highlights, structure)
-- Remotion renders the script into a professional presentation video (animated charts, text overlays, transitions)
-- end users preview in-browser and export MP4 for management presentations
-- the entire tool is packaged as a JS bundle and embedded in a CFML/Lucee host application via `<script>` tag
+- end users provide data, context, or topic material plus a natural language prompt
+- an AI agent uses OODAE loop thinking to analyze the input, decide the narrative, and structure the presentation
+- the runtime harness converts that narrative into a deterministic `VideoScript` contract
+- Remotion renders the script into a polished story, presentation, or explainer video with animated visuals, transitions, and narration
+- end users preview in-browser and export the result as a presentation-grade MP4
+- the entire tool is packaged as a JS bundle and can run as an embedded runtime inside host applications
 
 This is **not** a general-purpose video editor or NLE.
-It is a **prompt-driven data presentation video generator** — the AI decides the story, Remotion renders it.
+It is an **AI runtime harness for story and presentation generation** — the agent decides the narrative, the system renders it.
 
 ---
 
 ## Current phase
 
-**Phase 0 — Greenfield.**
+**Phase 2 — Feature-complete MVP with TTS + multi-thread export.**
 
-No source code exists yet. The repository contains only planning documents (`CLAUDE.md`, `AGENTS.md`), environment config (`.env.local`), and reference material (`sample-project/`).
+Core pipeline is fully implemented: prompt → AI agent (OODAE loop with function calling) → `VideoScript` → Remotion render → TTS audio → FFmpeg.wasm MP4 export. UI includes settings panel, prompt templates, mobile responsive layout, and PWA support.
 
-All sections below describe the **target architecture** — the structure to build toward, not existing code.
+Active work: FFmpeg.wasm multi-thread encoding for faster exports, visual enhancement layers.
 
 ---
 
 ## Core product flow
 
 ```
-CFML/Lucee host app
-  ↓ passes business data (JSON) + user prompt
-React-Motion widget (JS bundle embedded via <script>)
-  ↓ sends data + prompt to AI
-Gemini API
-  ↓ returns video script (scenes, narrative, chart configs, highlights)
-Remotion composition
-  ↓ renders animated charts, text, transitions per script
-Browser preview (Remotion Player)
+Host app or standalone runtime
+  ↓ passes data, context, topic material, and user intent
+React-Motion widget/runtime harness
+  ↓ OODAE Agent Loop (function calling, max 10 iterations)
+Gemini API (with Google Search grounding)
+  ↓ returns VideoScript JSON (story structure + scenes + atomic elements + narration text)
+Remotion composition (GenericScene + atomic element renderers)
+  ↓ renders presentation visuals, animated charts, text, transitions, and story beats
+Gemini TTS API (narration text → PCM audio per scene)
+  ↓ syncs audio with scene timing (TTS-first duration)
+Browser preview (Remotion Player with <Audio>)
   ↓ user approves
-Export MP4 (Node.js render service or Remotion Lambda)
+Export MP4 (html-to-image frame capture + FFmpeg.wasm encoding + audio mux)
   ↓
-End user presents to boss / management
+End user watches, presents, studies, or shares the generated story/presentation
 ```
 
 ---
 
-## Runtime stack (planned)
+## Runtime stack (implemented)
 
-- `index.tsx` — widget bootstrap, exposes `window.ReactMotion.mount(el, config)`.
-- `App.tsx` — main shell: prompt input, preview surface, export controls.
-- `store/*` — global state: project data, AI generation state, render state.
-- `features/prompt/*` — prompt input UI and prompt processing logic.
-- `features/ai/*` — Gemini API integration: data analysis, script generation, narrative generation.
-- `features/player/*` — Remotion Player preview surface.
-- `features/export/*` — export/render job flow and progress UI.
-- `video/*` — Remotion compositions, scene components, chart animations, text overlays.
-- `templates/*` — reusable video report templates (chart report, summary report, comparison report, etc.).
-- `services/*` — API clients, data normalization, validation, render orchestration.
-- `types/*` — TypeScript type definitions for all data contracts.
-- `utils/*`, `config/*`, `hooks/*` — supporting layers.
-
-> None of these paths exist yet. Create them incrementally as implementation begins.
+- `src/index.tsx` — widget bootstrap, exposes `window.ReactMotion.mount(el, config)`.
+- `src/App.tsx` — main shell: prompt input, settings, preview surface, export controls.
+- `src/services/gemini.ts` — Gemini API client with function calling and Google Search grounding.
+- `src/services/generateScript.ts` — OODAE agent loop: prompt → Gemini → parse → evaluate → VideoScript.
+- `src/services/prompt.ts` — system prompt and user message builder.
+- `src/services/parseScript.ts` — VideoScript JSON parser with type validation.
+- `src/services/evaluate.ts` — 1+1 synchronous AI self-check after generation.
+- `src/services/tts.ts` — Gemini TTS integration (narration → PCM → WAV per scene).
+- `src/services/exportVideo.ts` — frame-by-frame capture + FFmpeg.wasm encoding (single/multi-thread with auto-fallback).
+- `src/services/exportAudio.ts` — FFmpeg.wasm audio muxing (adelay + amix + AAC).
+- `src/services/cache.ts` — IndexedDB caching for generated scripts.
+- `src/video/ReportComposition.tsx` — Remotion composition with `@remotion/transitions` (fade/slide/wipe/clock-wipe) + spring timing + progress bar.
+- `src/video/GenericScene.tsx` — elements-based scene renderer.
+- `src/video/elements/*` — 9 atomic element renderers (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout). All use `spring()` physics-based animation. D3 charts use d3-shape/d3-scale/d3-sankey for SVG path calculation.
+- `src/types/*` — TypeScript type definitions (MountConfig, BusinessData, VideoScript, VideoScene, SceneElement).
+- `public/ffmpeg-mt/` — FFmpeg.wasm multi-thread UMD core files (served as-is, bypasses Vite ESM transformation).
 
 ---
 
 ## Canonical paths to treat as source of truth
 
-Once implementation begins, these are the authoritative source paths:
-
-- `features/`, `video/`, `templates/`, `store/`, `services/`, `types/`, `utils/`, `hooks/`, `config/`, `tests/`, `docs/`
-- Root-level files (`App.tsx`, `index.tsx`, `package.json`, `vite.config.ts`)
-- `src/` duplicate or partial files should not be changed by default unless the active import path requires it
+- `src/` — all source code lives here
+- `src/services/` — AI pipeline, export, TTS, caching
+- `src/video/` — Remotion compositions and element renderers
+- `src/types/` — TypeScript type definitions
+- `public/` — static assets served as-is (FFmpeg.wasm multi-thread core files)
+- Root-level files (`package.json`, `vite.config.ts`, `index.html`, `task.md`, `AGENTS.md`)
 - `sample-project/` is reference-only and must never become a live implementation dependency
 
 ---
 
 ## Product boundary model
 
-### Widget shell (to build)
-- `index.tsx`: widget bootstrap, mounts into a host-provided DOM element
-- `App.tsx`: main shell with prompt input, preview, and export controls
-- must work as an embedded widget inside a CFML/Lucee HTML page
-- host app provides data via mount config; widget does not fetch data on its own
+### Widget shell (implemented)
+- `src/index.tsx`: exposes `window.ReactMotion.mount(el, config)`
+- `src/App.tsx`: prompt input, settings panel, prompt templates, preview, export controls
+- IIFE bundle for CFML/Lucee embed; mobile responsive with PWA support
 
-### State (to build)
-- `store/*`: central state management
-- state should be divided by responsibility:
-  - prompt state (user input, prompt history)
-  - project state (video script, scene data)
-  - AI generation state (loading, results, errors)
-  - preview state (playback position, player status)
-  - export/render state (progress, success, failure)
-- state edits should go through store actions/slices, not ad-hoc mutable globals
+### State (implemented — React hooks, no external store)
+- co-located in `App.tsx` via `useState`/`useCallback`/`useRef`
+- IndexedDB caching via `services/cache.ts` for persistence
 
-### Prompt pipeline (to build)
-- user enters a natural language prompt describing what they want to present
-- prompt is combined with the business data context
-- sent to Gemini API for analysis and script generation
-- prompt pipeline lives under `features/prompt/*` and `features/ai/*`
+### AI pipeline (implemented — OODAE Agent Loop)
+- `src/services/generateScript.ts` → `gemini.ts` → `parseScript.ts` → `evaluate.ts`
+- OODAE loop with function calling (max 10 iterations) + Google Search grounding
+- agent tools: analyze_data, draft_storyboard, get_element_catalog, produce_script
+- retry with error feedback (max 3 attempts)
 
-### AI pipeline (to build)
-- `features/ai/*`: Gemini API integration
-- receives: business data (JSON) + user prompt
-- returns: structured video script (scenes, narrative text, chart configs, highlights, recommendations)
-- AI output must conform to a typed `VideoScript` contract
-- AI decides story structure, emphasis, and insight ordering
-- deterministic executor validates AI output before passing to Remotion
+### Preview pipeline (implemented)
+- `@remotion/player` consumes `VideoScript` directly
+- preview = export (same composition, same elements)
 
-### Preview pipeline (to build)
-- browser preview uses Remotion Player
-- preview components consume the structured `VideoScript`
-- preview should reflect the generated script exactly as export would render it
+### Export pipeline (implemented — browser-only)
+- `src/services/exportVideo.ts`: html-to-image frame capture + FFmpeg.wasm encoding
+- `src/services/exportAudio.ts`: TTS audio muxing (adelay + amix + AAC)
+- multi-thread: `@ffmpeg/core-mt` UMD from `public/ffmpeg-mt/` with runtime detection + auto-fallback
+- `-threads N` (up to 4) when multi-thread, `-threads 1` for single-thread
 
-### Render pipeline (to build)
-- export logic lives under `features/export/*` and/or `services/render*`
-- render inputs must be derived from the canonical `VideoScript`
-- MP4 export requires Node.js (Remotion render) — served by a separate Node.js microservice or Remotion Lambda
-- render execution should never depend on transient UI-only state
-- every export path must surface progress, success, and failure to the user
+### TTS pipeline (implemented)
+- `src/services/tts.ts`: Gemini TTS → PCM → WAV per scene
+- TTS-first timing: audio duration drives scene durationInFrames
 
-### Template/composition layer (to build)
-- Remotion compositions and scene components live under `video/*`
-- reusable report templates live under `templates/*`
-- templates are scene-type driven: chart animation, text overlay, title card, comparison view, summary card, etc.
-- each template is a React component with explicit typed props
-- AI script references template types; Remotion resolves and renders them
+### Composition layer (implemented — atomic elements)
+- `src/video/ReportComposition.tsx`: `@remotion/transitions` + spring timing + progress bar
+- `src/video/GenericScene.tsx`: elements-based scene renderer
+- 9 atomic elements: text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout
+- D3.js modular (d3-shape/d3-scale/d3-sankey) for SVG math; `spring()` for animation
 
 ---
 
@@ -134,7 +126,7 @@ Once implementation begins, these are the authoritative source paths:
 
 The video script is the source of truth between AI and Remotion.
 
-At minimum, the app should converge around a structure like:
+The implemented data contracts (see `src/types/` for authoritative definitions):
 
 ```ts
 // Input from CFML host app
@@ -187,11 +179,22 @@ type VideoScript = {
 
 type VideoScene = {
   id: string;
-  type: "title" | "chart" | "highlight" | "comparison" | "summary" | "transition";
   startFrame: number;
   durationInFrames: number;
-  props: Record<string, unknown>;
+  bgColor?: string;
+  layout?: "column" | "center" | "row";
+  padding?: string;
+  elements: SceneElement[];
+  transition?: "fade" | "slide" | "wipe" | "clock-wipe";
   narration?: string;
+  ttsAudioUrl?: string;
+  ttsAudioDurationMs?: number;
+};
+
+// Flat element — type + props at same level for easy AI generation
+type SceneElement = {
+  type: "text" | "metric" | "bar-chart" | "pie-chart" | "line-chart" | "sankey" | "list" | "divider" | "callout";
+  [key: string]: unknown;
 };
 
 type ThemeConfig = {
@@ -206,22 +209,23 @@ Rules:
 
 1. The `VideoScript` generated by AI is the canonical source of truth for rendering.
 2. Preview and export must consume the same `VideoScript`.
-3. All scene props must be explicitly typed per scene type.
+3. `SceneElement` uses flat structure (type + props at same level) for easy AI generation.
 4. Do not create separate incompatible data models for preview and export.
-5. Temporary UI state is allowed, but it must not affect the rendered video.
-6. `BusinessData` from the host app is read-only — never mutated by the widget.
+5. `BusinessData` from the host app is read-only — never mutated by the widget.
+6. TTS audio URLs and durations are attached to scenes after TTS generation.
 
 ---
 
 ## AI integration rules
 
-Use Gemini API for data analysis and script generation.
+Gemini API for data analysis, script generation, and TTS narration.
 
 ### What AI does
-- analyzes business data to find patterns, outliers, rankings, trends
-- interprets the user's prompt to determine presentation focus and tone
-- generates a structured `VideoScript` with scenes, narrative, and chart configs
-- suggests highlights and insights the user may not have noticed
+- OODAE Agent Loop: analyzes data → drafts storyboard → queries element catalog → produces script
+- function calling tools: `analyze_data`, `draft_storyboard`, `get_element_catalog`, `produce_script`
+- Google Search grounding for real-time data context
+- generates narration text per scene (consumed by Gemini TTS)
+- 1+1 Evaluate: synchronous self-check after generation (data accuracy, scene integrity, visual variety)
 
 ### What AI does NOT do
 - AI does not render video — Remotion does
@@ -229,9 +233,9 @@ Use Gemini API for data analysis and script generation.
 - AI does not control the UI — it outputs a data contract that the UI consumes
 
 ### AI output validation
-- AI output must parse into a valid `VideoScript` type
-- if AI output is malformed, surface the error to the user — do not silently degrade
-- retry with adjusted context is allowed; silent fallback to hardcoded content is not
+- AI output must parse into a valid `VideoScript` via `parseScript.ts`
+- malformed output → error sent back to AI → retry (max 3 attempts with conversation history)
+- silent fallback to hardcoded content is never allowed (anti-hardcode rule)
 
 ---
 
@@ -291,13 +295,18 @@ React-Motion is embedded as a widget in a CFML/Lucee host application.
 
 ## MVP scope rules
 
-Current MVP includes only:
+Current MVP includes:
 
-* prompt input → AI generates video script from business data
-* one or two report templates (bar chart report, summary report)
+* prompt input → OODAE AI agent generates video script from business data
+* 9 atomic elements (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout)
+* D3.js SVG chart rendering (d3-shape, d3-scale, d3-sankey)
+* spring() physics-based animation on all elements
+* @remotion/transitions scene transitions (fade/slide/wipe/clock-wipe)
 * browser preview via Remotion Player
-* export MP4 (via Node.js render service)
-* embed as JS bundle in CFML page
+* TTS narration via Gemini TTS API
+* export MP4 (html-to-image + FFmpeg.wasm in-browser)
+* embed as IIFE JS bundle in CFML page
+* settings panel, mobile responsive, PWA support
 
 Current MVP does **not** require:
 
@@ -313,26 +322,47 @@ Do not introduce architecture meant for post-MVP scale unless it directly suppor
 
 ---
 
-## Template contract rules
+## Atomic element system
 
-Templates are video scene primitives rendered by Remotion.
+The template-based scene system has been replaced by an atomic element system. AI composes scenes freely using 9 atomic elements — no fixed templates.
 
-Rules:
+### Element renderers (`src/video/elements/`)
 
-1. Templates must be reusable React components with explicit typed props.
-2. Templates must not read from stores — they receive all data via props.
-3. Scene timing is controlled by the `VideoScript`, not hardcoded in templates.
-4. Each template type corresponds to a `VideoScene.type` value.
-5. New templates should follow existing template folder and typing conventions.
+| Element | D3 | Description |
+|---------|-----|------------|
+| `text` | — | Rich text with fade/slide-up/zoom spring animation |
+| `metric` | — | Big KPI numbers with count-up spring animation |
+| `bar-chart` | — | Horizontal bar chart with spring-driven bar growth |
+| `pie-chart` | d3-shape | SVG pie/donut chart with spring arc expansion |
+| `line-chart` | d3-shape, d3-scale | SVG line chart with stroke-dashoffset draw animation |
+| `sankey` | d3-sankey | SVG sankey flow diagram with staggered link animation |
+| `list` | — | Bullet/icon list with spring slide-in |
+| `divider` | — | Animated line with spring width growth |
+| `callout` | — | Highlighted box with spring slide-up |
 
-Planned template types for MVP:
+### Adding a new element
 
-- `title` — opening/closing title card with text animation
-- `chart` — animated bar/line/pie chart with data labels
-- `highlight` — callout for key insights or anomalies
-- `comparison` — side-by-side or before/after view
-- `summary` — closing summary with bullet points
-- `transition` — scene transition effects
+1. Create `src/video/elements/NewElement.tsx` — props: `{ el: SceneElement; index: number }`
+2. Add type string to `VALID_ELEMENT_TYPES` in `src/services/parseScript.ts`
+3. Add case in `ElementRenderer` switch in `src/video/GenericScene.tsx`
+4. Add JSON schema to system prompt in `src/services/prompt.ts`
+5. Add type to `SceneElement.type` union in `src/types/video.ts`
+
+### Animation system
+
+All elements use Remotion's `spring()` for physics-based animation (not `interpolate()` linear). Spring config varies per element type for natural feel:
+- Light elements (list items): `{ damping: 13, mass: 0.5 }` — snappy
+- Medium elements (text, callout): `{ damping: 14, mass: 0.6 }` — balanced
+- Heavy elements (charts): `{ damping: 15-18, mass: 0.8 }` — weighty
+
+### Scene transitions (`@remotion/transitions`)
+
+Scenes transition using `TransitionSeries` with spring timing:
+- `fade` — crossfade (default)
+- `slide` — push in/out
+- `wipe` — slide over
+- `clock-wipe` — circular reveal
+AI selects transition type per scene via `scene.transition` field.
 
 ---
 
@@ -422,12 +452,13 @@ If a sample pattern is proposed, capture all three mapping points before impleme
 
 * Browser runtime is the primary widget target
 * the widget runs inside a CFML/Lucee-served HTML page
-* Node.js is required for MP4 export (Remotion render service) — this is a separate deployment concern
+* MP4 export runs entirely in-browser via FFmpeg.wasm (no Node.js required)
+* FFmpeg.wasm multi-thread requires COOP/COEP headers (Vite dev server has them; CFML host must also set them)
+* `public/ffmpeg-mt/` contains UMD builds of `@ffmpeg/core-mt` — served as static files to bypass Vite ESM transformation
 * preview must work fully in-browser via Remotion Player
-* Gemini API calls go from browser (or proxied through CFML/Node) — decide auth strategy in implementation
-* local persistence is not needed for MVP (CFML host manages data)
+* Gemini API key configured via settings panel (localStorage) or `.env.local`
+* IndexedDB used for script caching; PWA service worker for offline asset caching
 * workers are allowed where they reduce UI blocking
-* do not assume a complex backend beyond the Remotion render service
 
 ---
 
@@ -489,14 +520,8 @@ A change is aligned when it:
 
 ---
 
-## Useful docs (to create as implementation progresses)
+## Key documentation
 
-* `docs/architecture.md`
-* `docs/project-structure.md`
-* `docs/ai-pipeline.md`
-* `docs/render-flow.md`
-* `docs/template-contracts.md`
-* `docs/cfml-integration.md`
-* `task.md`
-
-> None of these files exist yet. Create each doc when the corresponding feature area is implemented.
+* `task.md` — task board with full history, architecture decisions, and roadmap
+* `AGENTS.md` — this file: architecture guide and development rules
+* `CLAUDE.md` — project-level instructions for Claude Code

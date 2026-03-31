@@ -1,0 +1,88 @@
+/* ============================================
+   Mobile responsive — all @media queries
+   ============================================ */
+
+@media (max-width: 640px) {
+  .rm-app {
+    padding: 12px;
+  }
+
+  .rm-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .rm-logo-text {
+    font-size: 17px;
+  }
+
+  .rm-input-area {
+    padding: 12px;
+  }
+
+  .rm-textarea {
+    font-size: 16px; /* prevent iOS zoom */
+    min-height: 100px;
+  }
+
+  .rm-actions {
+    flex-direction: column;
+  }
+
+  .rm-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .rm-empty {
+    padding: 40px 16px;
+    font-size: 14px;
+  }
+
+  .rm-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .rm-chips::-webkit-scrollbar { display: none; }
+
+  .rm-templates-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .rm-template-card {
+    padding: 12px 14px;
+  }
+
+  .rm-settings-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .rm-settings-panel {
+    border-radius: var(--rm-radius-lg) var(--rm-radius-lg) 0 0;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  .rm-panel-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .rm-panel {
+    border-radius: var(--rm-radius-lg) var(--rm-radius-lg) 0 0;
+    max-height: 85vh;
+  }
+}
+
+@media (max-width: 380px) {
+  .rm-logo-sub {
+    display: none;
+  }
+}

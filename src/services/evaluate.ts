@@ -1,4 +1,6 @@
 import { callGemini, type GeminiMessage } from "./gemini";
+import { parseVideoScript } from "./parseScript";
+import { logWarn } from "./errors";
 import type { VideoScript } from "../types";
 
 const EVALUATE_SYSTEM = `You are a quality checker for AI-generated video scripts.
@@ -53,7 +55,7 @@ export async function evaluateScript(
   console.log("[Eval] Sending script for review...");
 
   const raw = await callGemini(EVALUATE_SYSTEM, messages);
-  console.log("[Eval] Raw response:", raw);
+  console.log("[Eval] Response length:", raw.length, "chars");
 
   try {
     const result = JSON.parse(raw) as Record<string, unknown>;
@@ -69,21 +71,23 @@ export async function evaluateScript(
       console.log("[Eval] Passed — no issues");
     }
 
-    // If fixes contains a full corrected script, parse it
+    // If fixes contains a full corrected script, validate it properly
     let fixes: VideoScript | null = null;
     if (!pass && result.fixes && typeof result.fixes === "object") {
-      const fixObj = result.fixes as Record<string, unknown>;
-      if (fixObj.scenes && Array.isArray(fixObj.scenes)) {
-        fixes = result.fixes as unknown as VideoScript;
-        console.log("[Eval] Corrected script provided");
+      try {
+        fixes = parseVideoScript(JSON.stringify(result.fixes));
+        console.log("[Eval] Corrected script validated OK");
+      } catch (fixErr) {
+        console.warn("[Eval] Corrected script failed validation, ignoring:", fixErr);
+        fixes = null;
       }
     }
 
     console.groupEnd();
     return { pass, issues, fixes };
-  } catch {
-    console.warn("[Eval] Failed to parse eval response, treating as pass");
+  } catch (parseErr) {
+    logWarn("Eval", "EVAL_PARSE_FAILED", "Eval response was not valid JSON — skipping evaluation (non-fatal)", { error: parseErr });
     console.groupEnd();
-    return { pass: true, issues: [], fixes: null };
+    return { pass: false, issues: ["Evaluation skipped: AI returned invalid JSON"], fixes: null };
   }
 }

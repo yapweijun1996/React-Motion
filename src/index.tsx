@@ -5,11 +5,7 @@ import type { MountConfig } from "./types";
 function mount(el: HTMLElement, config?: MountConfig) {
   const safeConfig = config ?? {};
 
-  console.group("[ReactMotion] mount");
-  console.log("Element:", el);
-  console.log("Config:", JSON.stringify(safeConfig, null, 2));
-  console.log("Has structured data:", !!safeConfig.data);
-  console.groupEnd();
+  console.log("[ReactMotion] mount — data:", !!safeConfig.data, "| options:", !!safeConfig.options);
 
   const root = createRoot(el);
   root.render(<App config={safeConfig} />);
