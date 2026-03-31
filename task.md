@@ -104,11 +104,49 @@
 | RM-83 | Task | Migrate IndexedDB cache layer to `idb` promise wrapper | Low | 当前 db.ts 手写 IDB 正常工作。简化语法但不解决实际问题。 |
 | RM-84 | Task | Evaluate `vite-plugin-pwa` to replace hand-managed manifest/service worker wiring | Low | 当前 SW 正常运行，迁移风险 > 收益。 |
 
+### To Do — Priority 2 (Remove Remotion Dependency)
+
+**Epic: RM-EPIC-04 — Remove Remotion, Build Custom Video Engine (Zero License Cost)**
+
+Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero license risk, smaller bundle.
+
+| Key | Type | Summary | Priority | Status | Notes |
+|-----|------|---------|----------|--------|-------|
+| RM-110 | Task | `animation.ts` — custom `spring()`, `interpolate()`, `noise2D/3D` | High | ✅ Done | Drop-in API replacement. 18 tests pass. ~230 lines. |
+| RM-111 | Task | `VideoContext.tsx` — custom `useCurrentFrame`, `useVideoConfig` via React Context + rAF | High | To Do | Core frame engine. Provides fps/width/height/currentFrame to all children. |
+| RM-112 | Task | `SceneRenderer.tsx` — custom scene sequencer + CSS transitions | High | To Do | Replaces `TransitionSeries` + `fade/slide/wipe/clockWipe`. Scene dispatch by startFrame. |
+| RM-113 | Task | `VideoPlayer.tsx` — custom player with play/pause/seek/progress bar | High | To Do | Replaces `@remotion/player`. Controls + frame loop + audio sync. |
+| RM-114 | Task | `AbsoluteFill.tsx` — trivial div wrapper | Low | To Do | `position:absolute; inset:0` div. ~5 lines. |
+| RM-115 | Task | `AudioTrack.tsx` — HTML5 Audio API synced to frame engine | Medium | To Do | Replaces Remotion `<Audio>`. Sync play/pause/seek with frame. |
+| RM-116 | Task | Batch update all element imports — switch from `remotion` to custom modules | Medium | To Do | ~15 element files + useStagger.ts + ReportComposition.tsx + GenericScene.tsx. |
+| RM-117 | Task | Replace `@remotion/lottie` — use `lottie-web` directly | Low | To Do | Already have lottie-web dependency. Just need frame-sync wrapper. |
+| RM-118 | Task | Remove all `remotion` and `@remotion/*` from package.json | Medium | To Do | Final cleanup. Verify build + tests pass. Bundle size reduction. |
+| RM-119 | Task | Update ExportStage.tsx — use custom player for frame capture | Medium | To Do | Currently uses Remotion PlayerRef. Switch to custom player ref. |
+| RM-120 | Task | Update AGENTS.md + docs — reflect custom engine architecture | Low | To Do | Remove all Remotion references from docs. |
+
+**Execution order:** RM-110 → RM-111 → RM-114 → RM-112 → RM-115 → RM-113 → RM-116 → RM-117 → RM-119 → RM-118 → RM-120
+
+**Remotion replacement map:**
+
+| Remotion Feature | Replacement | Difficulty |
+|-----------------|-------------|------------|
+| `spring()` | `animation.ts` spring() | ✅ Done (RM-110) |
+| `interpolate()` | `animation.ts` interpolate() | ✅ Done (RM-110) |
+| `noise2D/3D` | `animation.ts` noise2D/3D() | ✅ Done (RM-110) |
+| `useCurrentFrame` | `VideoContext.tsx` | To Do (RM-111) |
+| `useVideoConfig` | `VideoContext.tsx` | To Do (RM-111) |
+| `AbsoluteFill` | `AbsoluteFill.tsx` | To Do (RM-114) |
+| `TransitionSeries` + effects | `SceneRenderer.tsx` | To Do (RM-112) |
+| `<Audio>` | `AudioTrack.tsx` | To Do (RM-115) |
+| `@remotion/player` | `VideoPlayer.tsx` | To Do (RM-113) |
+| `@remotion/noise` | `animation.ts` noise2D/3D | ✅ Done (RM-110) |
+| `@remotion/lottie` | `lottie-web` direct | To Do (RM-117) |
+
 ### To Do — Priority 3 (Post-MVP)
 
 | Key | Type | Summary | Priority | Notes |
 |-----|------|---------|----------|-------|
-| RM-56 | Task | Reduce bundle size — analyze and tree-shake Remotion deps | Low | Current: ~44MB IIFE (Remotion+React+D3). Consider lazy-load or code-split. |
+| RM-56 | Task | ~~Reduce bundle size — analyze and tree-shake Remotion deps~~ | ~~Low~~ | Superseded by RM-EPIC-04 (remove Remotion entirely) |
 | RM-57 | Task | Multi-provider AI support — Claude, GPT as alternatives to Gemini | Low | Provider abstraction layer |
 | RM-58 | Task | Multi-speaker TTS — different voices for different scenes | Low | Gemini TTS supports 2 speakers |
 | RM-85 | Task | Evaluate MediaBunny/WebCodecs-era browser media pipeline for future export simplification | Low | Research-only. Do not introduce a second live export path during MVP. |
@@ -324,6 +362,7 @@
 | 2026-03-31 | TTS parallel generation (RM-92) | Serial for-loop replaced with runPool() concurrency=3 pool. 3 workers pull from shared index — at most 3 API calls in flight. 429 retry: single attempt after 1.5s delay. Progress callback fires per-completion (atomic counter). Zero new deps (~25 lines). Estimated 3-5x speedup (10-16s → 3-5s for 5-8 scenes). |
 | 2026-03-31 | Fully frontend — no Node.js server (RM-53 removed) | User requires 100% browser-side architecture. No server-side rendering (Remotion renderMedia), no API proxy, no backend processing. All export via FFmpeg.wasm in-browser. |
 | 2026-03-31 | Comlink rejected (RM-82 removed) | Deep analysis: FFmpeg.wasm already uses Emscripten pthreads internally. Zero raw postMessage in codebase. Frame capture blocked by DOM/html-to-image (not movable to Worker). OffscreenCanvas not applicable (requires Canvas API, not DOM/SVG). Comlink adds abstraction layer with no concrete benefit. |
+| 2026-03-31 | Remove Remotion — build custom video engine (RM-EPIC-04) | Remotion dual-license requires paid Company License for 4+ person teams. Project only uses ~10% of Remotion (spring, interpolate, Player, TransitionSeries, Audio, noise). Export pipeline already self-built (html-to-image + FFmpeg.wasm). Building custom replacements: ~450 lines new code, eliminates ~44MB bundle weight from Remotion packages, zero license risk, full control over animation/rendering. Execution: animation.ts (done) → VideoContext → AbsoluteFill → SceneRenderer → AudioTrack → VideoPlayer → batch import update → remove packages. |
 | 2026-03-31 | CSS domain split (RM-95) | Single 862-line styles.css split into 9 domain files under src/styles/ (tokens, base, header, forms, settings, export, templates, panel, responsive). styles.css becomes @import hub (14 lines). Vite resolves @import natively. Each file < 180 lines, single responsibility. No runtime cost — CSS is bundled at build time. |
 | 2026-03-31 | HistoryPanel CSS + layout fixes (RM-94, RM-96) | HistoryPanel had 16 undefined CSS classes (panel overlay, tabs, history list, btn-sm, btn-danger). backdrop-filter removed (GPU pressure). PromptTemplates moved above Player. History button H→↻. Mobile bottom-sheet for both Settings and History panels. |
 | 2026-03-31 | PPT export — dual-format output from single VideoScript (RM-103) | pptxgenjs (~795KB) generates .pptx entirely in-browser. Same VideoScript drives both MP4 (Remotion+FFmpeg) and PPTX (pptxgenjs). Element mapping: text→addText, metric→multi addText, bar/pie/line→native addChart (editable in PowerPoint!), sankey→addTable (no native support), list→addText with bullets, callout→addShape+addText, divider→addShape(rect). kawaii→caption text only, lottie→skipped. Narration→slide speaker notes. Layout engine calculates x/y/w/h from scene.layout (column/row/center). Font sizes scaled ×0.6 (video 1080p→PPT 10"). Zero AI pipeline changes. |

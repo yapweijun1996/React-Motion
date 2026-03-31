@@ -23,7 +23,7 @@ const MAX_RETRIES = 3;
 
 /**
  * Generate TTS audio for all scenes that have narration text.
- * Uses controlled parallelism (concurrency from settings, default 2) with single 429 retry.
+ * Uses controlled parallelism (concurrency from settings, default 2) with exponential backoff retry.
  * Returns new scene array with ttsAudioUrl + ttsAudioDurationMs populated.
  */
 export async function generateSceneTTS(
