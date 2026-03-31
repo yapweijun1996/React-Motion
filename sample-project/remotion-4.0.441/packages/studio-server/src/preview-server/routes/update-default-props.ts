@@ -1,0 +1,96 @@
+import {readFileSync} from 'node:fs';
+import path from 'node:path';
+import {RenderInternals} from '@remotion/renderer';
+import type {
+	UpdateDefaultPropsRequest,
+	UpdateDefaultPropsResponse,
+} from '@remotion/studio-shared';
+import {updateDefaultProps} from '../../codemods/update-default-props';
+import {writeFileAndNotifyFileWatchers} from '../../file-watcher';
+import {makeHyperlink} from '../../hyperlinks/make-link';
+import type {ApiHandler} from '../api-types';
+import {getProjectInfo} from '../project-info';
+import {
+	printUndoHint,
+	pushToUndoStack,
+	suppressUndoStackInvalidation,
+} from '../undo-stack';
+import {suppressBundlerUpdateForFile} from '../watch-ignore-next-change';
+import {checkIfTypeScriptFile} from './can-update-default-props';
+import {warnAboutPrettierOnce} from './log-update';
+
+export const updateDefaultPropsHandler: ApiHandler<
+	UpdateDefaultPropsRequest,
+	UpdateDefaultPropsResponse
+> = async ({
+	input: {compositionId, defaultProps, enumPaths},
+	remotionRoot,
+	entryPoint,
+	logLevel,
+}) => {
+	try {
+		RenderInternals.Log.trace(
+			{indent: false, logLevel},
+			`[update-default-props] Received request for compositionId="${compositionId}"`,
+		);
+		const projectInfo = await getProjectInfo(remotionRoot, entryPoint);
+		if (!projectInfo.rootFile) {
+			throw new Error('Cannot find root file in project');
+		}
+
+		checkIfTypeScriptFile(projectInfo.rootFile);
+
+		const fileContents = readFileSync(projectInfo.rootFile, 'utf-8');
+		const {output, formatted} = await updateDefaultProps({
+			compositionId,
+			input: fileContents,
+			newDefaultProps: JSON.parse(defaultProps),
+			enumPaths,
+		});
+
+		pushToUndoStack({
+			filePath: projectInfo.rootFile,
+			oldContents: fileContents,
+			logLevel,
+			remotionRoot,
+			description: {
+				undoMessage: `Undid default props update for "${compositionId}"`,
+				redoMessage: `Redid default props update for "${compositionId}"`,
+			},
+			entryType: 'default-props',
+		});
+		suppressUndoStackInvalidation(projectInfo.rootFile);
+		suppressBundlerUpdateForFile(projectInfo.rootFile);
+		writeFileAndNotifyFileWatchers(projectInfo.rootFile, output);
+
+		const fileRelativeToRoot = path.relative(
+			remotionRoot,
+			projectInfo.rootFile,
+		);
+		const locationLabel = `${fileRelativeToRoot}`;
+		const fileLink = makeHyperlink({
+			url: `file://${projectInfo.rootFile}`,
+			text: locationLabel,
+			fallback: locationLabel,
+		});
+		RenderInternals.Log.info(
+			{indent: false, logLevel},
+			`${RenderInternals.chalk.blueBright(`${fileLink}:`)} Updated default props for "${compositionId}"`,
+		);
+		if (!formatted) {
+			warnAboutPrettierOnce(logLevel);
+		}
+
+		printUndoHint(logLevel);
+
+		return {
+			success: true,
+		};
+	} catch (err) {
+		return {
+			success: false,
+			reason: (err as Error).message,
+			stack: (err as Error).stack as string,
+		};
+	}
+};
