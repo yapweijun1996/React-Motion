@@ -24,8 +24,10 @@ export const App: React.FC<AppProps> = ({ config }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [showExportStage, setShowExportStage] = useState(false);
 
   const playerRef = useRef<PlayerRef>(null);
+  const exportPlayerRef = useRef<PlayerRef>(null);
 
   // Restore cached script on mount
   useEffect(() => {
@@ -56,20 +58,26 @@ export const App: React.FC<AppProps> = ({ config }) => {
     }
   }, [prompt, config.data]);
 
-  const playerContainerRef = useRef<HTMLDivElement>(null);
+  const exportSurfaceRef = useRef<HTMLDivElement>(null);
 
   const handleExport = useCallback(async () => {
-    if (!script || !playerRef.current || !playerContainerRef.current) return;
+    if (!script) return;
 
     setExportProgress({ stage: "capturing", percent: 0, message: "Starting..." });
 
     try {
+      setShowExportStage(true);
+      await waitForPaint();
       await waitForPaint();
       await waitForPaint();
 
+      if (!exportPlayerRef.current || !exportSurfaceRef.current) {
+        throw new Error("Export surface is not ready");
+      }
+
       const mp4Blob = await exportToMp4(
-        playerRef.current,
-        playerContainerRef.current,
+        exportPlayerRef.current,
+        exportSurfaceRef.current,
         script.width,
         script.height,
         script.durationInFrames,
@@ -83,6 +91,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
       const error = normalizeError(err);
       setExportProgress({ stage: "error", percent: 0, message: error.message });
       console.error("[Export] Failed:", error);
+    } finally {
+      setShowExportStage(false);
     }
   }, [script]);
 
@@ -201,9 +211,71 @@ export const App: React.FC<AppProps> = ({ config }) => {
         </div>
       )}
 
+      {isExporting && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="export-modal-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15, 23, 42, 0.58)",
+            padding: 24,
+          }}
+        >
+          <div
+            style={{
+              width: "min(520px, 100%)",
+              padding: "24px 24px 20px",
+              borderRadius: 16,
+              backgroundColor: "#ffffff",
+              boxShadow: "0 30px 80px rgba(15, 23, 42, 0.28)",
+            }}
+          >
+            <div
+              id="export-modal-title"
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#0f172a",
+                marginBottom: 10,
+              }}
+            >
+              Export in progress
+            </div>
+            <div
+              style={{
+                fontSize: 15,
+                lineHeight: 1.6,
+                color: "#334155",
+                marginBottom: 16,
+              }}
+            >
+              Keep this tab open and active until the MP4 export finishes. Switching tabs, minimizing the browser, or closing this page may interrupt capture or slow it down.
+            </div>
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: 12,
+                backgroundColor: "#eff6ff",
+                color: "#1d4ed8",
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              {exportProgress?.message ?? "Preparing export..."}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Video player */}
       {script && (
-        <div ref={playerContainerRef}>
+        <>
           <Player
             ref={playerRef}
             component={ReportComposition}
@@ -213,9 +285,16 @@ export const App: React.FC<AppProps> = ({ config }) => {
             compositionWidth={script.width}
             compositionHeight={script.height}
             style={{ width: "100%" }}
-            controls={!isExporting}
+            controls
           />
-        </div>
+          {showExportStage && (
+            <ExportStage
+              script={script}
+              playerRef={exportPlayerRef}
+              surfaceRef={exportSurfaceRef}
+            />
+          )}
+        </>
       )}
 
       {/* Empty state */}
@@ -242,4 +321,53 @@ export const App: React.FC<AppProps> = ({ config }) => {
 
 function waitForPaint(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+type ExportStageProps = {
+  script: VideoScript;
+  playerRef: React.RefObject<PlayerRef>;
+  surfaceRef: React.RefObject<HTMLDivElement>;
+};
+
+function ExportStage({ script, playerRef, surfaceRef }: ExportStageProps) {
+  const scale = Math.min(window.innerWidth / script.width, window.innerHeight / script.height, 1);
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#000000",
+        zIndex: 9999,
+      }}
+    >
+      <div style={{ transform: `scale(${scale})`, transformOrigin: "center center" }}>
+        <div
+          ref={surfaceRef}
+          style={{
+            width: script.width,
+            height: script.height,
+            overflow: "hidden",
+            backgroundColor: "#000000",
+          }}
+        >
+          <Player
+            ref={playerRef}
+            component={ReportComposition}
+            inputProps={{ script }}
+            durationInFrames={script.durationInFrames}
+            fps={script.fps}
+            compositionWidth={script.width}
+            compositionHeight={script.height}
+            style={{ width: script.width, height: script.height }}
+            controls={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
