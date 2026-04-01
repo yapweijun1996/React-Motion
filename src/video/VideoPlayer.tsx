@@ -20,6 +20,7 @@ import {
 } from "react";
 import { VideoProvider } from "./VideoContext";
 import type { PlayerHandle } from "./PlayerHandle";
+import { PlayerControls } from "./PlayerControls";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,17 +42,6 @@ type VideoPlayerProps = {
   /** Container style override */
   style?: React.CSSProperties;
 };
-
-// ---------------------------------------------------------------------------
-// Time formatting
-// ---------------------------------------------------------------------------
-
-function formatTime(frame: number, fps: number): string {
-  const totalSec = Math.floor(frame / fps);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return `${min}:${String(sec).padStart(2, "0")}`;
-}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -206,15 +196,6 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
       }
     }, [startPlayback, stopPlayback]);
 
-    const handleProgressClick = useCallback(
-      (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        seekTo(Math.round(ratio * (durationInFrames - 1)));
-      },
-      [seekTo, durationInFrames],
-    );
-
     // Keyboard: space/k = play/pause, arrows = seek, f = fullscreen
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
@@ -290,101 +271,18 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
 
         {/* Controls bar */}
         {controls && (
-          <div style={controlsBarStyle}>
-            {/* Play / Pause */}
-            <button
-              onClick={handlePlayPause}
-              style={btnStyle}
-              aria-label={playing ? "Pause" : "Play"}
-            >
-              {playing ? "⏸" : "▶"}
-            </button>
-
-            {/* Progress bar */}
-            <div
-              onClick={handleProgressClick}
-              style={progressTrackStyle}
-              role="slider"
-              aria-valuemin={0}
-              aria-valuemax={durationInFrames}
-              aria-valuenow={frame}
-            >
-              <div
-                style={{
-                  ...progressFillStyle,
-                  width: `${(frame / Math.max(durationInFrames - 1, 1)) * 100}%`,
-                }}
-              />
-            </div>
-
-            {/* Time display */}
-            <span style={timeStyle}>
-              {formatTime(frame, fps)} / {formatTime(durationInFrames, fps)}
-            </span>
-
-            {/* Fullscreen */}
-            <button
-              onClick={toggleFullscreen}
-              style={btnStyle}
-              aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
-            >
-              {fullscreen ? "⊡" : "⛶"}
-            </button>
-          </div>
+          <PlayerControls
+            playing={playing}
+            frame={frame}
+            durationInFrames={durationInFrames}
+            fps={fps}
+            fullscreen={fullscreen}
+            onPlayPause={handlePlayPause}
+            onSeek={seekTo}
+            onToggleFullscreen={toggleFullscreen}
+          />
         )}
       </div>
     );
   },
 );
-
-// ---------------------------------------------------------------------------
-// Inline styles for controls (no CSS file dependency)
-// ---------------------------------------------------------------------------
-
-const controlsBarStyle: React.CSSProperties = {
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  right: 0,
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "6px 10px",
-  background: "linear-gradient(transparent, rgba(0,0,0,0.7))",
-  color: "#fff",
-  zIndex: 10,
-};
-
-const btnStyle: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  color: "#fff",
-  fontSize: 18,
-  cursor: "pointer",
-  padding: "2px 6px",
-  lineHeight: 1,
-};
-
-const progressTrackStyle: React.CSSProperties = {
-  flex: 1,
-  height: 6,
-  backgroundColor: "rgba(255,255,255,0.3)",
-  borderRadius: 3,
-  cursor: "pointer",
-  position: "relative",
-};
-
-const progressFillStyle: React.CSSProperties = {
-  height: "100%",
-  backgroundColor: "#3b82f6",
-  borderRadius: 3,
-  transition: "width 0.05s linear",
-};
-
-const timeStyle: React.CSSProperties = {
-  fontSize: 12,
-  fontFamily: "monospace",
-  whiteSpace: "nowrap",
-  minWidth: 80,
-  textAlign: "right",
-};

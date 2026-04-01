@@ -115,10 +115,16 @@
 | RM-152a | Perf | agentTools.ts 精简 — 4 个 tool response 减重：analyze_data 不回声 data (-2.1KB)、get_element_catalog 只返 type 列表 (-15KB)、draft_storyboard 移除 reminders、generate_palette 移除 usage_guide。移除 ELEMENT_TIPS import + extractInlineData helper。 | Done |
 | RM-152b | Perf | Compact/Hybrid JSON — buildUserMessage 用 hybrid serializer (rows 一行一条，其余 compact，省 27%)。evaluate.ts 用 compact JSON (省 41%)。 | Done |
 | RM-152c | Perf | Evaluate issues-only summary mode — 去掉不可靠 fixes 机制 (Gemini 重建完整 script 常 JSON 出错)。新增 buildEvalSummary() 按 element type strip 渲染字段 (colors/animation/stagger)，只保留 evaluator 7 项检查所需的数据值 + 结构。EVALUATE_SYSTEM prompt 精简 (4KB→3.2KB)。EvalResult 去掉 fixes 字段。generateScript.ts 消费端简化。Input -2.5KB, prompt -0.8KB, output -7KB (不再生成 corrected script)。 | Done |
+| RM-153 | Bug | App.tsx 内存泄漏修复 — loadScript unmount guard (`let cancelled`)、TTS session guard (`ttsSessionRef` 递增 ID 取消过期 TTS)、URL.revokeObjectURL 集中化 (useEffect `[script]` cleanup 为唯一入口)。移除 useGenerate 和 handleRestore 散落的 revoke。useVideoActions.ts 移除 `currentScript` 参数。 | Done |
+| RM-154 | Perf | ParticleBg 性能优化 — Grid 空间分区 (CONNECTION_DIST cell，只查自身+4 邻居 cell，O(n²)→~O(n))、Alpha 分桶批量 stroke (5 桶，100+ stroke→5 stroke)、粒子批量 fill (100 fill→2 fill)。总 draw call 减少 ~90%。 | Done |
+| RM-154a | Bug | WebGLTransitionOverlay unmount 安全 — async init 3 层 abort guard (toPng/loadImage/createRenderer 后各检查 `aborted` flag)、已 unmount 时立即 dispose 新建 renderer 防止 WebGL context 泄漏、WeakMap 截图缓存 (同一 DOM element 跳过重复 toPng)、移除 useCallback 包装简化闭包层。 | Done |
+| RM-158 | Refactor | 拆分 6 个超 300 行文件 — SceneRenderer(439→117) + sceneTimeline.ts(142) + transitionStyles.ts(176)；validate(422→296) + validateEnums.ts(65) + validateSettings.ts(97)；VideoPlayer(390→288) + playerStyles.ts(53) + PlayerControls.tsx(94)；agentTools(366→265) + agentToolRegistry.ts(61) + agentToolScript.ts(64)；App(347→207) + useAppState.ts(182)；agentLoop(328→300) + agentLoopTypes.ts(23)。+10 新文件，所有文件 ≤300 行。re-export 保持向后兼容，零 import 破坏。tsc 零新增错误。 | Done |
 
 ### In Progress / Testing
 
-(None)
+| Key | Type | Summary | Status | Notes |
+|-----|------|---------|--------|-------|
+| RM-155 | Story | Phase 4B Step 2 — 功能/体验改进 (SceneEditor + TTS Voice + Element Editing) | In Progress | 3 任务: 2-A SceneEditor 面板+删除排序 (RM-125a+b), 2-B TTS 语音选择 (RM-123), 2-C 场景属性+元素编辑 (RM-125c+d) |
 
 ### To Do — Remaining
 
@@ -444,9 +450,14 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 
 **Remove Remotion (RM-EPIC-04) — 11/11 COMPLETE ✅**
 
+**Stability Hardening (Step 1) — 3/3 COMPLETE ✅:**
+- ✅ App.tsx 内存泄漏修复 (RM-153: loadScript guard + TTS session + URL revoke 集中化)
+- ✅ ParticleBg 性能优化 (RM-154: Grid 分区 + 批量绘制，draw call -90%)
+- ✅ WebGL unmount 安全 (RM-154a: 3 层 abort guard + WeakMap 截图缓存)
+
 **Phase 4 Roadmap:**
 - 🟡 Phase 4A: Video Quality (RM-121~124) — RM-121 ✅, RM-122 ✅, RM-123 ⬜, RM-124 ✅ (3/4)
-- ⬜ Phase 4B: User Experience (RM-125~128) — scene editor, images, templates, subtitles
+- 🟡 Phase 4B: User Experience (RM-125~128) — RM-155 Step 2 进行中 (SceneEditor + TTS Voice + Element Editing)
 - ⬜ Phase 4C: Enterprise Scale (RM-129~132) — API gateway, PPTX, batch, brand kit
 - 🟡 Phase 5: Export Performance (RM-133~137) — RM-133 ✅ (WebCodecs HW, 2.7x faster), RM-134~137 ⬜ (1/5)
 
@@ -672,6 +683,12 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 | 2026-04-01 | TTS IndexedDB persistence (RM-121) | WAV blobs persisted via ttsCache.ts. DB v3→v4 adds `ttsAudio` object store. Save: fetch blob URL → store Blob. Load: read Blob → createObjectURL. Key format: `cache:sceneId` / `history-{id}:sceneId`. Cleanup on cache expire / history delete. `onblocked` + `onversionchange` handlers for reliable DB upgrades during HMR. |
 | 2026-04-01 | VideoPlayer fullscreen + layout fix | Composition div changed to position:absolute (was in normal flow causing 1080px DOM height + 540px spacer = 1620px container). Fullscreen: browser Fullscreen API + `f` key shortcut + responsive fit (min width/height). |
 | 2026-04-01 | Phase 4 roadmap — end-user perspective deep dive | Codebase review from end-user POV for 10K business users. Key gaps identified: (1) frameStep=3 choppy animation, (2) CRF=28 text blur, (3) single TTS voice, (4) no image/logo embed, (5) no post-gen editing, (6) PPTX missing 6/15 elements. Three phases: 4A video quality (RM-121~124), 4B UX/media (RM-125~128), 4C enterprise (RM-129~132). Priority: quality first (biggest user perception impact), then editing, then scale. |
+| 2026-04-01 | Stability first — Step 1 before features | Deep dive 发现 3 类稳定性问题：(1) App.tsx 内存泄漏 (unmount 后 setState + 散落 URL revoke)，(2) ParticleBg O(n²) draw calls 性能瓶颈，(3) WebGL async race condition 导致 context 泄漏。全部修复后再进入功能开发。 |
+| 2026-04-01 | URL revoke 集中化 — single source of truth | blob URL 生命周期统一由 useEffect `[script]` cleanup 管理。移除 useGenerate、handleRestore 中散落的 revoke 调用。避免重复/遗漏 revoke。 |
+| 2026-04-01 | TTS session guard 模式 — 递增 ID 取消过期 async | 替代 AbortController（generateSceneTTS 不支持 signal）。每次 restore/unmount 递增 `ttsSessionRef`，async 完成后比对 ID，不匹配则丢弃结果。轻量级 cancel 模式。 |
+| 2026-04-01 | ParticleBg grid 空间分区 + alpha 分桶 | O(n²) 距离计算 → grid cell 只查邻居 ~O(n)。连接线按 alpha 分 5 桶批量 stroke（100+ → 5 次）。粒子 glow+core 各合并为 1 个 path（100 → 2 次 fill）。总 draw call -90%。 |
+| 2026-04-01 | WebGL snapshot WeakMap 缓存 | toPng ~100ms/次，同一 DOM element 在 transition 期间内容不变。用 `WeakMap<HTMLElement, string>` 缓存 data URL，element 被 GC 时缓存自动释放。 |
+| 2026-04-01 | Step 2 功能/体验优先级 — SceneEditor > TTS Voice > Element Editing | 用户最常见反馈"差一点就完美"→ 场景删除/排序解决 80% 编辑需求。TTS 语音选择独立且低风险。属性/元素编辑建立在面板基础上。暂不进入图片上传(存储复杂)和快捷键(polish)。 |
 | 2026-04-01 | AudioTrack integrated into ReportComposition (RM-115) | Bare `<audio>` placeholder replaced with `<AudioTrack src={ttsAudioUrl}>`. Play/pause synced via usePlaying(), frame-to-time drift correction (>0.3s threshold), volume clamp 0-1, auto-pause on unmount. 12/12 Remotion features now fully replaced. |
 | 2026-04-01 | Remotion packages removed from package.json (RM-118) | 5 packages removed: remotion, @remotion/lottie, @remotion/noise, @remotion/player, @remotion/transitions. npm pruned 8 packages. Zero Remotion deps in project. Build OK, 167 tests pass. |
 | 2026-04-01 | RM-EPIC-04 complete — all docs updated (RM-120) | 7 doc files updated: AGENTS.md, task.md, docs/architecture.md, render-flow.md, project-structure.md, template-contracts.md, cfml-integration.md. Zero active Remotion references in docs. Architecture Decisions Log historical entries preserved. |

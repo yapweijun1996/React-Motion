@@ -1,74 +1,20 @@
-/**
- * Unified runtime schema validation.
- *
- * Single source of truth for all enums, ranges, and structural checks.
- * Called by: parseScript, cache, settingsStore, agentLoop.
- *
- * Design: validate functions return { ok, data?, errors } — never throw.
- * Callers decide whether to throw, log, or recover.
- */
+/** Unified runtime schema validation — validate functions return { ok, data?, errors }. */
 
 import type { VideoScript, VideoScene, SceneElement, ThemeConfig } from "../types";
+import {
+  VALID_ELEMENT_TYPES,
+  VALID_LAYOUTS,
+  VALID_TRANSITIONS,
+  VALID_ANIMATIONS,
+  VALID_STAGGER_SPEEDS,
+  VALID_THEME_STYLES,
+  CONSTRAINTS,
+} from "./validateEnums";
+import type { ValidationResult } from "./validateEnums";
 
-// ============================================================
-// Canonical enums — used everywhere (prompt, parser, renderer)
-// ============================================================
-
-export const VALID_ELEMENT_TYPES = [
-  "text", "metric", "bar-chart", "pie-chart", "line-chart",
-  "sankey", "list", "divider", "callout", "kawaii", "lottie", "icon", "annotation", "svg", "map",
-  "progress", "timeline", "comparison",
-] as const;
-
-export const VALID_LAYOUTS = ["column", "center", "row"] as const;
-
-export const VALID_TRANSITIONS = [
-  "fade", "slide", "wipe", "clock-wipe",
-  "radial-wipe", "diamond-wipe", "iris", "zoom-out",
-  "zoom-blur", "slide-up", "split", "rotate",
-  "dissolve", "pixelate",
-] as const;
-
-export const VALID_ANIMATIONS = [
-  "fade", "slide-up", "slide-left", "slide-right",
-  "zoom", "bounce", "rubber-band", "scale-rotate", "flip",
-  "typewriter",
-] as const;
-
-export const VALID_STAGGER_SPEEDS = ["tight", "normal", "relaxed", "dramatic"] as const;
-
-export const VALID_THEME_STYLES = ["corporate", "modern", "minimal"] as const;
-
-// ============================================================
-// Range constraints
-// ============================================================
-
-export const CONSTRAINTS = {
-  MIN_VIDEO_WIDTH: 1920,
-  MIN_VIDEO_HEIGHT: 1080,
-  MIN_SCENE_FRAMES: 30,   // Must exceed TRANSITION_FRAMES (20)
-  MAX_SCENE_FRAMES: 1800,  // 60s at 30fps
-  MIN_FPS: 24,
-  MAX_FPS: 60,
-  DEFAULT_FPS: 30,
-  DEFAULT_DURATION: 300,   // 10s at 30fps
-  DEFAULT_SCENE_DURATION: 150, // 5s at 30fps
-  MAX_ELEMENTS_PER_SCENE: 10,
-} as const;
-
-// ============================================================
-// Validation result type
-// ============================================================
-
-export type ValidationResult<T> = {
-  ok: true;
-  data: T;
-  warnings: string[];
-} | {
-  ok: false;
-  errors: string[];
-  warnings: string[];
-};
+// Re-export for backward compatibility
+export * from "./validateEnums";
+export * from "./validateSettings";
 
 // ============================================================
 // Type guard helpers
@@ -342,81 +288,9 @@ function validateTheme(input: unknown): ThemeConfig | null {
 }
 
 // ============================================================
-// Settings validation
-// ============================================================
-
-export type ExportQuality = "draft" | "standard" | "high";
-
-export type BgmMood = "corporate" | "upbeat" | "calm" | "dramatic" | "inspirational" | "playful" | "cinematic" | "ambient";
-
-export type AppSettings = {
-  geminiApiKey: string;
-  geminiModel: string;
-  ttsConcurrency: number;
-  exportQuality: ExportQuality;
-  canvasEffects: boolean;
-  bgMusicEnabled: boolean;
-  bgMusicMood: BgmMood;
-};
-
-const VALID_MODEL_IDS = [
-  "gemini-2.0-flash",
-  "gemini-2.5-flash-preview-05-20",
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro-preview-05-06",
-  "gemini-3-pro-preview",
-] as const;
-
-export function validateSettings(input: unknown): ValidationResult<AppSettings> {
-  const warnings: string[] = [];
-
-  if (!isObj(input)) {
-    return { ok: false, errors: ["Settings is not an object"], warnings };
-  }
-
-  const geminiApiKey = isStr(input.geminiApiKey) ? input.geminiApiKey.trim() : "";
-  let geminiModel = isStr(input.geminiModel) ? input.geminiModel.trim() : "";
-
-  if (geminiModel && !(VALID_MODEL_IDS as readonly string[]).includes(geminiModel)) {
-    warnings.push(`Unknown model "${geminiModel}", falling back to default`);
-    geminiModel = "gemini-2.0-flash";
-  }
-
-  if (!geminiModel) {
-    geminiModel = "gemini-2.0-flash";
-  }
-
-  let ttsConcurrency = isNum(input.ttsConcurrency) ? input.ttsConcurrency : 2;
-  if (ttsConcurrency < 1 || ttsConcurrency > 5) {
-    warnings.push(`ttsConcurrency ${ttsConcurrency} out of range [1-5], clamping`);
-    ttsConcurrency = Math.max(1, Math.min(5, Math.round(ttsConcurrency)));
-  }
-
-  const VALID_EXPORT_QUALITIES: ExportQuality[] = ["draft", "standard", "high"];
-  let exportQuality: ExportQuality = isStr(input.exportQuality) && VALID_EXPORT_QUALITIES.includes(input.exportQuality as ExportQuality)
-    ? (input.exportQuality as ExportQuality)
-    : "standard";
-
-  const canvasEffects = typeof input.canvasEffects === "boolean" ? input.canvasEffects : false;
-
-  const bgMusicEnabled = typeof input.bgMusicEnabled === "boolean" ? input.bgMusicEnabled : false;
-
-  const VALID_BGM_MOODS: BgmMood[] = ["corporate", "upbeat", "calm", "dramatic", "inspirational", "playful", "cinematic", "ambient"];
-  const bgMusicMood: BgmMood = isStr(input.bgMusicMood) && VALID_BGM_MOODS.includes(input.bgMusicMood as BgmMood)
-    ? (input.bgMusicMood as BgmMood)
-    : "ambient";
-
-  return {
-    ok: true,
-    data: { geminiApiKey, geminiModel, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood },
-    warnings,
-  };
-}
-
-// ============================================================
 // Utility
 // ============================================================
 
-function clamp(value: number, min: number, max: number): number {
+export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }

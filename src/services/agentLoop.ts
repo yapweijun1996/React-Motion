@@ -1,15 +1,4 @@
-/**
- * OODAE Agent Loop — Observe → Orient → Decide → Act → Evaluate
- *
- * AI drives the loop. It decides which tools to call and when to stop.
- * We do NOT hardcode the order of tool calls.
- * Max iterations prevent infinite loops.
- *
- * Hooks (Claude Code pattern):
- * - PostToolUse: storyboard advisory when produce_script called without planning
- * - Stop Hook: deterministic quality checks before accepting result
- * - Budget tracking: warn on high token usage
- */
+/** OODAE Agent Loop — Observe → Orient → Decide → Act → Evaluate */
 
 import {
   callGeminiRaw,
@@ -34,28 +23,13 @@ import {
   recordUserMessage,
   checkBudget,
   getBudgetSummary,
-  type BudgetSummary,
 } from "./budgetTracker";
+import type { AgentProgress, AgentLoopResult } from "./agentLoopTypes";
+
+// Re-export for backward compatibility
+export type { AgentProgress, AgentLoopResult } from "./agentLoopTypes";
 
 const MAX_ITERATIONS = 12;
-
-export type AgentProgress = {
-  iteration: number;
-  maxIterations: number;
-  action: string;
-  detail?: string;
-};
-
-export type AgentLoopResult = {
-  /** The final script JSON (from produce_script tool) */
-  scriptJson: Record<string, unknown>;
-  /** Full conversation log for debugging */
-  conversationLog: AgentProgress[];
-  /** How many iterations the agent used */
-  iterations: number;
-  /** Token budget summary for observability */
-  budgetSummary: BudgetSummary;
-};
 
 export async function runAgentLoop(
   systemPrompt: string,
@@ -293,11 +267,9 @@ export async function runAgentLoop(
 
   // Max iterations reached — force JSON output
   report(MAX_ITERATIONS, "max_reached", "Requesting final output...");
-
   const forceMsg = "You have reached the maximum number of iterations. Please output the final VideoScript JSON now. Return ONLY the JSON object.";
   messages.push({ role: "user", parts: [{ text: forceMsg }] });
   recordUserMessage(budget, forceMsg);
-
   const finalResult = await callGeminiRaw(systemPrompt, messages, {
     temperature: 0.5,
     jsonOutput: true,
