@@ -7,7 +7,7 @@
  */
 
 const DB_NAME = "react-motion";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 export const STORE_SCRIPTS = "scripts";
 export const STORE_HISTORY = "history";
@@ -23,62 +23,51 @@ export function openDB(): Promise<IDBDatabase> {
       const db = req.result;
       const oldVersion = event.oldVersion;
 
-      // v1: scripts store
       if (oldVersion < 1) {
         db.createObjectStore(STORE_SCRIPTS);
       }
-
-      // v2: history + exports
       if (oldVersion < 2) {
-        const historyStore = db.createObjectStore(STORE_HISTORY, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        historyStore.createIndex("createdAt", "createdAt", { unique: false });
-
-        const exportsStore = db.createObjectStore(STORE_EXPORTS, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        exportsStore.createIndex("exportedAt", "exportedAt", { unique: false });
+        const hs = db.createObjectStore(STORE_HISTORY, { keyPath: "id", autoIncrement: true });
+        hs.createIndex("createdAt", "createdAt", { unique: false });
+        const es = db.createObjectStore(STORE_EXPORTS, { keyPath: "id", autoIncrement: true });
+        es.createIndex("exportedAt", "exportedAt", { unique: false });
       }
-
-      // v3: metrics store
       if (oldVersion < 3) {
-        const metricsStore = db.createObjectStore(STORE_METRICS, {
-          keyPath: "id",
-          autoIncrement: true,
-        });
-        metricsStore.createIndex("timestamp", "timestamp", { unique: false });
-        metricsStore.createIndex("type", "type", { unique: false });
+        const ms = db.createObjectStore(STORE_METRICS, { keyPath: "id", autoIncrement: true });
+        ms.createIndex("timestamp", "timestamp", { unique: false });
+        ms.createIndex("type", "type", { unique: false });
       }
-
-      // v4/v5: TTS audio blob store (key = "cache:scene-0" or "history-5:scene-0")
-      // Defensive: check existence to handle edge case where DB was at v4 without this store
-      if (oldVersion < 5) {
-        if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
-          db.createObjectStore(STORE_TTS_AUDIO);
-        }
+      // Defensive: always ensure ttsAudio exists (handles blocked upgrade edge cases)
+      if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+        db.createObjectStore(STORE_TTS_AUDIO);
       }
     };
 
-    // Handle blocked upgrade — another tab/connection holds the old version.
-    // Close stale connections so the version upgrade can proceed.
-    req.onblocked = () => {
-      console.warn("[DB] Upgrade blocked — closing stale connections");
-    };
+    req.onblocked = () => console.warn("[DB] Upgrade blocked");
 
     req.onsuccess = () => {
       const db = req.result;
-      // If another openDB() call triggers an upgrade later, close this connection
-      // so it doesn't block the upgrade.
-      db.onversionchange = () => {
-        db.close();
-        console.log("[DB] Closed connection due to version change");
-      };
+      db.onversionchange = () => { db.close(); };
       resolve(db);
     };
-    req.onerror = () => reject(req.error);
+
+    req.onerror = () => {
+      const err = req.error;
+      // VersionError: DB was upgraded beyond DB_VERSION by ttsCache self-healing.
+      // Retry without version constraint to open at current version.
+      if (err?.name === "VersionError") {
+        console.log("[DB] VersionError — reopening at current version");
+        const retry = indexedDB.open(DB_NAME);
+        retry.onsuccess = () => {
+          const db = retry.result;
+          db.onversionchange = () => { db.close(); };
+          resolve(db);
+        };
+        retry.onerror = () => reject(retry.error);
+      } else {
+        reject(err);
+      }
+    };
   });
 }
 

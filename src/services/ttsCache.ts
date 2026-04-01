@@ -21,6 +21,42 @@ type TTSAudioEntry = {
   durationMs: number;
 };
 
+// --- Self-healing store creation ---
+
+/**
+ * Open DB and ensure ttsAudio store exists.
+ * If the store is missing (upgrade was blocked), force-creates it
+ * by reopening at current version + 1.
+ */
+async function openDBWithTTSStore(): Promise<IDBDatabase> {
+  const db = await openDB();
+  if (db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+    return db;
+  }
+
+  // Store missing — force upgrade to create it
+  const nextVersion = db.version + 1;
+  db.close();
+  console.log(`[TTSCache] Store missing — upgrading DB to v${nextVersion}`);
+
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("react-motion", nextVersion);
+    req.onupgradeneeded = () => {
+      const upgradedDb = req.result;
+      if (!upgradedDb.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+        upgradedDb.createObjectStore(STORE_TTS_AUDIO);
+        console.log("[TTSCache] Created ttsAudio store");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => {
+      console.warn("[TTSCache] Upgrade blocked — will retry on next call");
+      reject(new Error("DB upgrade blocked"));
+    };
+  });
+}
+
 // --- Public API ---
 
 /**
@@ -54,12 +90,7 @@ export async function saveTTSAudio(
 
   // Step 2: Write all in one IDB transaction
   try {
-    const db = await openDB();
-    if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
-      console.warn("[TTSCache] Store not found — skipping save");
-      db.close();
-      return false;
-    }
+    const db = await openDBWithTTSStore();
     const tx = db.transaction(STORE_TTS_AUDIO, "readwrite");
     const store = tx.objectStore(STORE_TTS_AUDIO);
     for (const e of entries) {
@@ -86,12 +117,7 @@ export async function restoreTTSAudio(
   scenes: VideoScene[],
 ): Promise<VideoScene[]> {
   try {
-    const db = await openDB();
-    if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
-      console.warn("[TTSCache] Store not found — skipping restore");
-      db.close();
-      return scenes;
-    }
+    const db = await openDBWithTTSStore();
     const tx = db.transaction(STORE_TTS_AUDIO, "readonly");
     const store = tx.objectStore(STORE_TTS_AUDIO);
 
@@ -139,7 +165,7 @@ export async function restoreTTSAudio(
  */
 export async function clearTTSAudio(prefix: string): Promise<void> {
   try {
-    const db = await openDB();
+    const db = await openDBWithTTSStore();
     const tx = db.transaction(STORE_TTS_AUDIO, "readwrite");
     const store = tx.objectStore(STORE_TTS_AUDIO);
 
