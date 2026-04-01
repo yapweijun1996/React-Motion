@@ -31,6 +31,7 @@ export type BgmMood = "corporate" | "upbeat" | "calm" | "dramatic" | "inspiratio
 export type AppSettings = {
   geminiApiKey: string;
   geminiModel: string;
+  ttsVoice: string;
   ttsConcurrency: number;
   exportQuality: ExportQuality;
   canvasEffects: boolean;
@@ -69,6 +70,10 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
     geminiModel = "gemini-2.0-flash";
   }
 
+  // TTS voice — lazy import avoided; just validate as non-empty string, default "Kore"
+  let ttsVoice = isStr(input.ttsVoice) ? input.ttsVoice.trim() : "Kore";
+  if (!ttsVoice) ttsVoice = "Kore";
+
   let ttsConcurrency = isNum(input.ttsConcurrency) ? input.ttsConcurrency : 2;
   if (ttsConcurrency < 1 || ttsConcurrency > 5) {
     warnings.push(`ttsConcurrency ${ttsConcurrency} out of range [1-5], clamping`);
@@ -91,7 +96,7 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
 
   return {
     ok: true,
-    data: { geminiApiKey, geminiModel, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood },
+    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood },
     warnings,
   };
 }

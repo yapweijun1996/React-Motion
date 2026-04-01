@@ -63,6 +63,33 @@
   color: var(--rm-gray-600);
 }
 
+/* TTS Voice — dropdown + preview button row */
+.rm-voice-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.rm-voice-preview {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--rm-gray-300);
+  border-radius: var(--rm-radius);
+  background: white;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 40px;
+}
+.rm-voice-preview:hover:not(:disabled) {
+  background: var(--rm-gray-100);
+  border-color: var(--rm-gray-400);
+}
+.rm-voice-preview:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .rm-settings-footer {
   display: flex;
   gap: 8px;

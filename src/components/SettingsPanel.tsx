@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   loadSettings,
   saveSettings,
@@ -8,6 +8,7 @@ import {
   type BgmMood,
 } from "../services/settingsStore";
 import { BGM_MOODS } from "../services/bgMusic";
+import { getAvailableTtsVoices, previewVoice } from "../services/tts";
 import { clearCache } from "../services/cache";
 
 type Props = {
@@ -19,6 +20,9 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [previewState, setPreviewState] = useState<"idle" | "loading" | "playing">("idle");
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   // Sync when panel opens
   useEffect(() => {
@@ -26,7 +30,39 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
       setSettings(loadSettings());
       setSaved(false);
     }
+    if (!open) stopPreview();
   }, [open]);
+
+  const stopPreview = () => {
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current = null;
+    }
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+    setPreviewState("idle");
+  };
+
+  const handlePreview = async () => {
+    if (previewState === "playing") { stopPreview(); return; }
+    if (!settings.geminiApiKey) return;
+    stopPreview();
+    setPreviewState("loading");
+    try {
+      const url = await previewVoice(settings.ttsVoice);
+      previewUrlRef.current = url;
+      const audio = new Audio(url);
+      previewAudioRef.current = audio;
+      audio.onended = () => stopPreview();
+      audio.onerror = () => stopPreview();
+      await audio.play();
+      setPreviewState("playing");
+    } catch {
+      stopPreview();
+    }
+  };
 
   const handleSave = () => {
     saveSettings(settings);
@@ -92,6 +128,40 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
           </select>
           <div className="rm-hint">
             Flash models are faster and cheaper. Pro models produce higher quality.
+          </div>
+        </div>
+
+        {/* TTS Voice */}
+        <div className="rm-field">
+          <label className="rm-label">TTS Voice</label>
+          <div className="rm-voice-row">
+            <select
+              value={settings.ttsVoice}
+              onChange={(e) => { setSettings({ ...settings, ttsVoice: e.target.value }); stopPreview(); }}
+              className="rm-select"
+              style={{ flex: 1 }}
+            >
+              {getAvailableTtsVoices().map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.id} ({v.desc}){v.id === "Kore" ? " — Default" : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              className="rm-voice-preview"
+              onClick={handlePreview}
+              disabled={!settings.geminiApiKey || previewState === "loading"}
+              title={previewState === "playing" ? "Stop" : "Preview voice"}
+              type="button"
+            >
+              {previewState === "loading" ? "..." : previewState === "playing" ? "\u23F9" : "\u25B6"}
+              {" "}Preview
+            </button>
+          </div>
+          <div className="rm-hint">
+            {!settings.geminiApiKey
+              ? "Set API key above to enable voice preview."
+              : "Click Preview to hear a sample of this voice."}
           </div>
         </div>
 
@@ -207,7 +277,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
                 clearSettings();
                 clearCache();
-                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient" });
+                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsVoice: "Kore", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient" });
                 alert("All local data cleared.");
               }}
             >

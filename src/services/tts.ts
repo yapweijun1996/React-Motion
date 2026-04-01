@@ -9,6 +9,47 @@ const DEFAULT_VOICE = "Kore";
 const SAMPLE_RATE = 24000;
 const BYTES_PER_SAMPLE = 2; // 16-bit PCM
 
+// --- Gemini TTS voice catalog (30 voices) ---
+
+export const TTS_VOICES = [
+  { id: "Kore", desc: "Firm" },
+  { id: "Zephyr", desc: "Bright" },
+  { id: "Puck", desc: "Upbeat" },
+  { id: "Charon", desc: "Informative" },
+  { id: "Fenrir", desc: "Excitable" },
+  { id: "Aoede", desc: "Breezy" },
+  { id: "Leda", desc: "Youthful" },
+  { id: "Orus", desc: "Firm" },
+  { id: "Perseus", desc: "Gruff" },
+  { id: "Tanpura", desc: "Calm" },
+  { id: "Achernar", desc: "Soft" },
+  { id: "Gacrux", desc: "Mature" },
+  { id: "Achird", desc: "Friendly" },
+  { id: "Sulafat", desc: "Warm" },
+  { id: "Schedar", desc: "Even" },
+  { id: "Algieba", desc: "Smooth" },
+  { id: "Despina", desc: "Smooth" },
+  { id: "Erinome", desc: "Clear" },
+  { id: "Pulcherrima", desc: "Forward" },
+  { id: "Sadachbia", desc: "Lively" },
+  { id: "Sadaltager", desc: "Knowledgeable" },
+  { id: "Zubenelgenubi", desc: "Casual" },
+  { id: "Vindemiatrix", desc: "Gentle" },
+  { id: "Iapetus", desc: "Clear" },
+  { id: "Umbriel", desc: "Easy-going" },
+  { id: "Callirhoe", desc: "Easy-going" },
+  { id: "Enceladus", desc: "Breathy" },
+  { id: "Autonoe", desc: "Bright" },
+  { id: "Laomedeia", desc: "Upbeat" },
+  { id: "Rasalgethi", desc: "Informative" },
+] as const;
+
+export const VALID_TTS_VOICE_IDS = TTS_VOICES.map((v) => v.id);
+
+export function getAvailableTtsVoices() {
+  return TTS_VOICES;
+}
+
 export type TTSProgress = {
   scenesProcessed: number;
   totalScenes: number;
@@ -42,6 +83,7 @@ export async function generateSceneTTS(
   console.log(`[TTS] Generating audio for ${total} scenes (concurrency: ${ttsConcurrency})`);
   const ttsStart = performance.now();
 
+  const { ttsVoice } = loadSettings();
   const results = new Map<string, { url: string; durationMs: number }>();
   let processed = 0;
   let failedCount = 0;
@@ -49,7 +91,7 @@ export async function generateSceneTTS(
   const processSingle = async (scene: VideoScene): Promise<void> => {
     let url: string | null = null;
     try {
-      const { pcmBase64 } = await callGeminiTTSWithRetry(scene.narration!);
+      const { pcmBase64 } = await callGeminiTTSWithRetry(scene.narration!, ttsVoice);
       const { blob: wavBlob, durationMs } = pcmToWav(pcmBase64, SAMPLE_RATE);
       url = URL.createObjectURL(wavBlob);
       results.set(scene.id, { url, durationMs });
@@ -117,12 +159,13 @@ const RETRYABLE_CODES = ["429", "500", "502", "503"];
  */
 async function callGeminiTTSWithRetry(
   text: string,
+  voiceName?: string,
 ): Promise<{ pcmBase64: string; mimeType: string }> {
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      return await callGeminiTTS(text);
+      return await callGeminiTTS(text, voiceName);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
@@ -264,4 +307,16 @@ function writeString(view: DataView, offset: number, str: string): void {
   for (let i = 0; i < str.length; i++) {
     view.setUint8(offset + i, str.charCodeAt(i));
   }
+}
+
+// --- Voice preview ---
+
+/** Generate a short TTS sample for the given voice. Returns a blob URL (caller must revoke). */
+export async function previewVoice(voiceId: string): Promise<string> {
+  const { pcmBase64 } = await callGeminiTTS(
+    "Hello, this is a preview of my voice. How does it sound?",
+    voiceId,
+  );
+  const { blob } = pcmToWav(pcmBase64, SAMPLE_RATE);
+  return URL.createObjectURL(blob);
 }

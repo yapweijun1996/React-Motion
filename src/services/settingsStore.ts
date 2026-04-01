@@ -40,6 +40,7 @@ export function loadSettings(): AppSettings {
         import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
         import.meta.env.VITE_GEMINI_MODEL ||
         "gemini-2.0-flash",
+      ttsVoice: stored.ttsVoice ?? "Kore",
       ttsConcurrency: stored.ttsConcurrency ?? 1,
       exportQuality: stored.exportQuality ?? "standard",
       canvasEffects: stored.canvasEffects ?? false,
@@ -73,6 +74,7 @@ export function saveSettings(settings: AppSettings): void {
     const stored: StoredSettings = {
       k: obfuscate(result.data.geminiApiKey),
       geminiModel: result.data.geminiModel,
+      ttsVoice: result.data.ttsVoice,
       ttsConcurrency: result.data.ttsConcurrency,
       exportQuality: result.data.exportQuality,
       canvasEffects: result.data.canvasEffects,
@@ -106,6 +108,7 @@ export function clearSettings(): void {
 type StoredSettings = {
   k?: string;
   geminiModel?: string;
+  ttsVoice?: string;
   ttsConcurrency?: number;
   exportQuality?: ExportQuality;
   canvasEffects?: boolean;
@@ -125,6 +128,7 @@ function getDefaults(): AppSettings {
       import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
       import.meta.env.VITE_GEMINI_MODEL ||
       "gemini-2.0-flash",
+    ttsVoice: "Kore",
     ttsConcurrency: 1,
     exportQuality: "standard",
     canvasEffects: false,
