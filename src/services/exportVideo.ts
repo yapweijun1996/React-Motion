@@ -1,7 +1,7 @@
 import { toPng } from "html-to-image";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
-import type { PlayerRef } from "@remotion/player";
+import type { PlayerHandle } from "../video/PlayerHandle";
 import type { VideoScene } from "../types";
 import { muxAudioIntoVideo } from "./exportAudio";
 import { ClassifiedError, normalizeError, logError, logWarn } from "./errors";
@@ -122,7 +122,7 @@ export type ExportProgress = {
 };
 
 export async function exportToMp4(
-  playerRef: PlayerRef,
+  playerRef: PlayerHandle,
   captureTarget: HTMLElement,
   width: number,
   height: number,

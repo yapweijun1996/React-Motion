@@ -10,7 +10,7 @@ import { exportToMp4, downloadBlob, type ExportProgress } from "../services/expo
 import { saveToHistory } from "../services/historyStore";
 import { saveExportRecord } from "../services/exportStore";
 import { getUserMessage, logError, logWarn } from "../services/errors";
-import type { PlayerRef } from "@remotion/player";
+import type { PlayerHandle } from "../video/PlayerHandle";
 import type { BusinessData, VideoScript } from "../types";
 
 // --- Generate ---
@@ -67,7 +67,7 @@ export function useGenerate(opts: GenerateOptions) {
 
 type ExportOptions = {
   script: VideoScript | null;
-  exportPlayerRef: React.RefObject<PlayerRef>;
+  exportPlayerRef: React.RefObject<PlayerHandle>;
   exportSurfaceRef: React.RefObject<HTMLDivElement>;
   onProgress: (p: ExportProgress | null) => void;
   onShowStage: (v: boolean) => void;

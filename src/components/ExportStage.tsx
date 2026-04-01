@@ -1,5 +1,6 @@
-import { Player, type PlayerRef } from "@remotion/player";
+import { VideoSurface } from "../video/VideoSurface";
 import { ReportComposition } from "../video/ReportComposition";
+import type { PlayerHandle } from "../video/PlayerHandle";
 import type { VideoScript } from "../types";
 
 // --- Export overlay (modal dialog during export) ---
@@ -27,7 +28,7 @@ export function ExportOverlay({ message }: ExportOverlayProps) {
 
 type ExportStageProps = {
   script: VideoScript;
-  playerRef: React.RefObject<PlayerRef>;
+  playerRef: React.RefObject<PlayerHandle>;
   surfaceRef: React.RefObject<HTMLDivElement>;
 };
 
@@ -57,7 +58,7 @@ export function ExportStage({ script, playerRef, surfaceRef }: ExportStageProps)
             backgroundColor: "#000",
           }}
         >
-          <Player
+          <VideoSurface
             ref={playerRef}
             component={ReportComposition}
             inputProps={{ script }}
@@ -65,8 +66,6 @@ export function ExportStage({ script, playerRef, surfaceRef }: ExportStageProps)
             fps={script.fps}
             compositionWidth={script.width}
             compositionHeight={script.height}
-            style={{ width: script.width, height: script.height }}
-            controls={false}
           />
         </div>
       </div>

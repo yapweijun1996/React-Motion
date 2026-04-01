@@ -8,7 +8,21 @@
  * AI picks a preset by name. Custom animationData JSON is also supported.
  */
 
-import type { LottieAnimationData } from "@remotion/lottie";
+/**
+ * Lottie animation data type — minimal definition for our preset JSON.
+ * Replaces @remotion/lottie's LottieAnimationData.
+ */
+export type LottieAnimationData = {
+  v: string;           // Lottie spec version
+  nm: string;          // name
+  fr: number;          // framerate
+  w: number;           // width
+  h: number;           // height
+  ip: number;          // in-point (start frame)
+  op: number;          // out-point (end frame = totalFrames)
+  layers: unknown[];   // layer definitions
+  [key: string]: unknown;
+};
 
 // Helper to build minimal Lottie JSON
 function makeLottie(
@@ -25,7 +39,7 @@ function makeLottie(
     ip: 0,
     op: opts.op ?? 60,
     layers,
-  } as LottieAnimationData;
+  };
 }
 
 // --- Checkmark animation ---

@@ -113,34 +113,37 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 | Key | Type | Summary | Priority | Status | Notes |
 |-----|------|---------|----------|--------|-------|
 | RM-110 | Task | `animation.ts` — custom `spring()`, `interpolate()`, `noise2D/3D` | High | ✅ Done | Drop-in API replacement. 18 tests pass. ~230 lines. |
-| RM-111 | Task | `VideoContext.tsx` — custom `useCurrentFrame`, `useVideoConfig` via React Context + rAF | High | To Do | Core frame engine. Provides fps/width/height/currentFrame to all children. |
+| RM-111 | Task | `VideoContext.tsx` — custom `useCurrentFrame`, `useVideoConfig` via React Context + rAF | High | ✅ Done | Dual-context design: FrameContext (nestable for scene-local frames) + VideoConfigContext (global). VideoProvider (top-level) + FrameProvider (per-scene remap). 7 tests pass. ~100 lines. |
 | RM-112 | Task | `SceneRenderer.tsx` — custom scene sequencer + CSS transitions | High | To Do | Replaces `TransitionSeries` + `fade/slide/wipe/clockWipe`. Scene dispatch by startFrame. |
-| RM-113 | Task | `VideoPlayer.tsx` — custom player with play/pause/seek/progress bar | High | To Do | Replaces `@remotion/player`. Controls + frame loop + audio sync. |
-| RM-114 | Task | `AbsoluteFill.tsx` — trivial div wrapper | Low | To Do | `position:absolute; inset:0` div. ~5 lines. |
+| RM-113 | Task | `VideoPlayer.tsx` + `VideoSurface.tsx` + `PlayerHandle.ts` — custom player | High | ✅ Done | VideoPlayer: rAF playback, play/pause/seek/progress bar/keyboard/responsive scaling/loop. VideoSurface: headless export player (seekTo only). PlayerHandle: imperative ref type replacing Remotion PlayerRef. 11 tests pass. ~355 lines total. |
+| RM-114 | Task | `AbsoluteFill.tsx` — trivial div wrapper | Low | ✅ Done | Drop-in replacement. 28 lines. `position:absolute; inset:0; flex column`. Supports `style` merge + `children`. |
 | RM-115 | Task | `AudioTrack.tsx` — HTML5 Audio API synced to frame engine | Medium | To Do | Replaces Remotion `<Audio>`. Sync play/pause/seek with frame. |
 | RM-116 | Task | Batch update all element imports — switch from `remotion` to custom modules | Medium | To Do | ~15 element files + useStagger.ts + ReportComposition.tsx + GenericScene.tsx. |
-| RM-117 | Task | Replace `@remotion/lottie` — use `lottie-web` directly | Low | To Do | Already have lottie-web dependency. Just need frame-sync wrapper. |
+| RM-117 | Task | Replace `@remotion/lottie` — use `lottie-web` directly | Low | ✅ Done | Custom `LottieAnimationData` type in lottiePresets.ts. LottieElement rewritten: lottie-web `loadAnimation` + `goToAndStop(frame, true)` frame sync via useCurrentFrame. Removed useDelayRender/continueRender (SSR-only). |
 | RM-118 | Task | Remove all `remotion` and `@remotion/*` from package.json | Medium | To Do | Final cleanup. Verify build + tests pass. Bundle size reduction. |
-| RM-119 | Task | Update ExportStage.tsx — use custom player for frame capture | Medium | To Do | Currently uses Remotion PlayerRef. Switch to custom player ref. |
+| RM-119 | Task | Update ExportStage.tsx — use VideoSurface for frame capture | Medium | ✅ Done | ExportStage: `Player` → `VideoSurface`, `PlayerRef` → `PlayerHandle`. exportVideo.ts + useVideoActions.ts: pure type swap. App.tsx: `Player` → `VideoPlayer` for preview. `@remotion/player` import count: 0. |
 | RM-120 | Task | Update AGENTS.md + docs — reflect custom engine architecture | Low | To Do | Remove all Remotion references from docs. |
 
-**Execution order:** RM-110 → RM-111 → RM-114 → RM-112 → RM-115 → RM-113 → RM-116 → RM-117 → RM-119 → RM-118 → RM-120
+**Execution order:** RM-110 ✅ → RM-111 ✅ → RM-114 ✅ → RM-113 ✅ → RM-117 ✅ → RM-119 ✅ → RM-112 → RM-115 → RM-116 → RM-118 → RM-120
 
 **Remotion replacement map:**
 
-| Remotion Feature | Replacement | Difficulty |
-|-----------------|-------------|------------|
+| Remotion Feature | Replacement | Status |
+|-----------------|-------------|--------|
 | `spring()` | `animation.ts` spring() | ✅ Done (RM-110) |
 | `interpolate()` | `animation.ts` interpolate() | ✅ Done (RM-110) |
 | `noise2D/3D` | `animation.ts` noise2D/3D() | ✅ Done (RM-110) |
-| `useCurrentFrame` | `VideoContext.tsx` | To Do (RM-111) |
-| `useVideoConfig` | `VideoContext.tsx` | To Do (RM-111) |
-| `AbsoluteFill` | `AbsoluteFill.tsx` | To Do (RM-114) |
+| `useCurrentFrame` | `VideoContext.tsx` useCurrentFrame() | ✅ Done (RM-111) |
+| `useVideoConfig` | `VideoContext.tsx` useVideoConfig() | ✅ Done (RM-111) |
+| `AbsoluteFill` | `AbsoluteFill.tsx` | ✅ Done (RM-114) |
+| `@remotion/player` | `VideoPlayer.tsx` + `VideoSurface.tsx` | ✅ Done (RM-113+119) |
+| `PlayerRef` type | `PlayerHandle.ts` | ✅ Done (RM-113+119) |
+| `@remotion/lottie` | `lottie-web` direct | ✅ Done (RM-117) |
+| `@remotion/noise` | `animation.ts` noise2D/3D | ✅ Done (RM-110) |
 | `TransitionSeries` + effects | `SceneRenderer.tsx` | To Do (RM-112) |
 | `<Audio>` | `AudioTrack.tsx` | To Do (RM-115) |
-| `@remotion/player` | `VideoPlayer.tsx` | To Do (RM-113) |
-| `@remotion/noise` | `animation.ts` noise2D/3D | ✅ Done (RM-110) |
-| `@remotion/lottie` | `lottie-web` direct | To Do (RM-117) |
+
+**Progress: 10/12 Remotion features replaced. 6/11 tasks done.**
 
 ### To Do — Priority 3 (Post-MVP)
 
@@ -362,10 +365,14 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 | 2026-03-31 | TTS parallel generation (RM-92) | Serial for-loop replaced with runPool() concurrency=3 pool. 3 workers pull from shared index — at most 3 API calls in flight. 429 retry: single attempt after 1.5s delay. Progress callback fires per-completion (atomic counter). Zero new deps (~25 lines). Estimated 3-5x speedup (10-16s → 3-5s for 5-8 scenes). |
 | 2026-03-31 | Fully frontend — no Node.js server (RM-53 removed) | User requires 100% browser-side architecture. No server-side rendering (Remotion renderMedia), no API proxy, no backend processing. All export via FFmpeg.wasm in-browser. |
 | 2026-03-31 | Comlink rejected (RM-82 removed) | Deep analysis: FFmpeg.wasm already uses Emscripten pthreads internally. Zero raw postMessage in codebase. Frame capture blocked by DOM/html-to-image (not movable to Worker). OffscreenCanvas not applicable (requires Canvas API, not DOM/SVG). Comlink adds abstraction layer with no concrete benefit. |
+| 2026-04-01 | Custom video context: dual-context frame remapping (RM-111) | Remotion TransitionSeries.Sequence remaps useCurrentFrame() to scene-local frames. Custom design: FrameContext (nestable, scene remap via FrameProvider) + VideoConfigContext (global, immutable). VideoProvider is controlled component — parent owns frame state, context only distributes. This enables both rAF-driven preview and seekTo-driven export to share the same composition tree. |
+| 2026-04-01 | VideoPlayer/VideoSurface split (RM-113) | Preview and export need different player behavior. VideoPlayer: rAF loop + controls + responsive scaling + keyboard. VideoSurface: headless, seekTo-only, fixed resolution. Both share PlayerHandle interface (pause/play/seekTo/getCurrentFrame). This replaces the Remotion pattern of two <Player> instances (controls=true vs controls=false) with purpose-built components. |
+| 2026-04-01 | Added @testing-library/react + jsdom devDependency | Required for testing React component hooks (VideoContext, VideoPlayer). Vitest config extended: include test/**/*.test.{ts,tsx}. jsdom selected per-file via `// @vitest-environment jsdom` comment to avoid affecting pure-node tests. |
 | 2026-03-31 | Remove Remotion — build custom video engine (RM-EPIC-04) | Remotion dual-license requires paid Company License for 4+ person teams. Project only uses ~10% of Remotion (spring, interpolate, Player, TransitionSeries, Audio, noise). Export pipeline already self-built (html-to-image + FFmpeg.wasm). Building custom replacements: ~450 lines new code, eliminates ~44MB bundle weight from Remotion packages, zero license risk, full control over animation/rendering. Execution: animation.ts (done) → VideoContext → AbsoluteFill → SceneRenderer → AudioTrack → VideoPlayer → batch import update → remove packages. |
 | 2026-03-31 | CSS domain split (RM-95) | Single 862-line styles.css split into 9 domain files under src/styles/ (tokens, base, header, forms, settings, export, templates, panel, responsive). styles.css becomes @import hub (14 lines). Vite resolves @import natively. Each file < 180 lines, single responsibility. No runtime cost — CSS is bundled at build time. |
 | 2026-03-31 | HistoryPanel CSS + layout fixes (RM-94, RM-96) | HistoryPanel had 16 undefined CSS classes (panel overlay, tabs, history list, btn-sm, btn-danger). backdrop-filter removed (GPU pressure). PromptTemplates moved above Player. History button H→↻. Mobile bottom-sheet for both Settings and History panels. |
 | 2026-03-31 | PPT export — dual-format output from single VideoScript (RM-103) | pptxgenjs (~795KB) generates .pptx entirely in-browser. Same VideoScript drives both MP4 (Remotion+FFmpeg) and PPTX (pptxgenjs). Element mapping: text→addText, metric→multi addText, bar/pie/line→native addChart (editable in PowerPoint!), sankey→addTable (no native support), list→addText with bullets, callout→addShape+addText, divider→addShape(rect). kawaii→caption text only, lottie→skipped. Narration→slide speaker notes. Layout engine calculates x/y/w/h from scene.layout (column/row/center). Font sizes scaled ×0.6 (video 1080p→PPT 10"). Zero AI pipeline changes. |
+| 2026-04-01 | AbsoluteFill.tsx — minimal drop-in (RM-114) | 27 lines. Remotion's AbsoluteFill has ~100 lines of Tailwind className detection — skipped entirely (project does not use Tailwind). Only `style` + `children` props needed (verified: 2 usage sites in GenericScene + ReportComposition). `forwardRef` deferred — not needed until RM-113 (VideoPlayer) or RM-119 (export frame capture). |
 
 ---
 

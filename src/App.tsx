@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Player, type PlayerRef } from "@remotion/player";
+import { VideoPlayer } from "./video/VideoPlayer";
+import type { PlayerHandle } from "./video/PlayerHandle";
 import { ReportComposition } from "./video/ReportComposition";
 import { loadScript } from "./services/cache";
 import { type ExportProgress } from "./services/exportVideo";
@@ -34,8 +35,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
   const [pptxExporting, setPptxExporting] = useState(false);
   const [apiReady, setApiReady] = useState(hasApiKey);
 
-  const playerRef = useRef<PlayerRef>(null);
-  const exportPlayerRef = useRef<PlayerRef>(null);
+  const playerRef = useRef<PlayerHandle>(null);
+  const exportPlayerRef = useRef<PlayerHandle>(null);
   const exportSurfaceRef = useRef<HTMLDivElement>(null);
 
   // Restore cached script on mount
@@ -269,7 +270,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
       {script && !loading && (
         <>
           <div className="rm-player-wrap">
-            <Player
+            <VideoPlayer
               ref={playerRef}
               component={ReportComposition}
               inputProps={{ script }}
