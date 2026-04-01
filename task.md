@@ -92,6 +92,24 @@
 | RM-97a | Task | Export failure-path fix — error alert auto-clear 5s + dismiss button. 3 new tests. | Done |
 | RM-97b | Task | FFmpeg MT downgrade validation — 7 tests (SAB/COOP detection, MT→ST fallback, both-fail throw). | Done |
 | RM-38 | Task | FFmpeg.wasm multi-thread — `@ffmpeg/core-mt` UMD from `public/ffmpeg-mt/`. Runtime detection + auto-fallback. 7 tests validate MT/ST paths. | Done |
+| RM-133 | Task | Canvas Effects — particle background (ParticleBg.tsx). Canvas 2D, 50 particles + connection lines + glow. Settings toggle (default OFF). Auto color contrast for dark/light backgrounds. 9 tests. | Done |
+| RM-134 | Task | Settings panel UX — max-height 80vh, fixed header/footer, scrollable body (rm-settings-body). | Done |
+| RM-135 | Task | Enhanced CSS transitions Phase 3.1 — 8 new transition types (radial-wipe, diamond-wipe, iris, zoom-out, zoom-blur, slide-up, split, rotate). Total 12 CSS transitions. 19 new tests. | Done |
+| RM-136 | Task | WebGL transitions Phase 3.2 — dissolve (noise-based pixel reveal) + pixelate (mosaic effect). GLSL shaders + WebGL renderer + React overlay. Snapshot-based: toPng capture → texture upload → shader blend. CSS fade fallback when Canvas Effects OFF or WebGL unavailable. Total 14 transitions. | Done |
+| RM-137 | Task | Export blob fix — html-to-image toPng filter skips `<audio>`/`<video>` elements. Eliminates ERR_FILE_NOT_FOUND spam during MP4 export. | Done |
+| RM-138 | Task | Pie chart overflow fix — SVG maxWidth: 50% prevents full-scene overflow. | Done |
+| RM-139 | Task | Content overflow protection — AbsoluteFill overflow:hidden + GenericScene minHeight:0. Evaluator layout fit check (height estimation per element type). | Done |
+| RM-140 | Task | Storytelling prompt overhaul — Step Zero (audience awareness + key message), Visual Metaphor Rule (SVG/kawaii/annotation for concrete visuals), Hook Rule (question/surprise, no title cards), Action Close (call-to-action, not "thank you"), Analogy Rule (human-scale comparisons). | Done |
+| RM-141 | Task | Evaluator storytelling checks — 7 new checks: hook test, audience awareness, "So What?" test, visual metaphor, action close, emotional arc, tone variation. | Done |
+| RM-142 | Task | Test templates — Canvas Effects Demo (cybersecurity/dark), Transition Showcase (7 scenes/7 transitions), WebGL Effects Demo (quantum/dissolve+pixelate), Coffee Culture (warm/kawaii). Total 32 templates. | Done |
+
+| RM-144 | Task | Cinematic element: typewriter animation — per-char (≤40) / per-word (>40) reveal with blinking cursor on TextElement. New `animation: "typewriter"` type. 10 tests. | Done |
+| RM-145 | Task | Cinematic element: ProgressElement — circular/semicircle/linear gauge. Spring arc fill + count-up number. SVG-based, export-safe. 7 tests. | Done |
+| RM-146 | Task | Cinematic element: TimelineElement — horizontal/vertical milestones. SVG line draw + staggered node pop-in. activeIndex highlight + glow. 7 tests. | Done |
+| RM-147 | Task | Cinematic element: ComparisonElement — side-by-side cards with VS divider. Left/right slide-in + VS pop. Supports title/value/subtitle/items/color. 8 tests. | Done |
+| RM-148 | Task | Gradient backgrounds — `bgGradient` CSS prop on VideoScene. linear-gradient/radial-gradient. Overrides bgColor. isDarkBg extracts first hex for luminance. 9 tests. | Done |
+| RM-149 | Task | Text glow/shadow — `glow` (neon text-shadow) + `shadow` (drop shadow) boolean props on TextElement. Works in standard + typewriter modes. 5 tests. | Done |
+| RM-150 | Task | Tone adaptation — formal/conversational auto-detection based on audience. Business data defaults to formal (no kawaii, no rhetorical questions, benchmark comparisons). Prompt + evaluator updated. | Done |
 
 ### In Progress / Testing
 
@@ -100,6 +118,41 @@
 ### To Do — Remaining
 
 **Visual Enhancement Layer 1 & 2: ✅ ALL DONE** (RM-68~75: spring, transitions, noise, stagger, kawaii, lottie, chroma-js, 9 entrance animations)
+
+**Canvas & 3D Enhancement Layer: ✅ Phase 3.1 + 3.2 DONE**
+
+| Phase | Summary | Status |
+|-------|---------|--------|
+| Phase 3.1 | 8 new CSS transitions (12 total) | ✅ Done (RM-135) |
+| Phase 3.2 | 2 WebGL transitions (dissolve + pixelate, 14 total) | ✅ Done (RM-136) |
+| Phase 3.3 | Agentic loop refactor — Claude Code patterns (hooks, stop validation, storyboard enforcement) | To Do (RM-143) |
+| Phase 4 | Three.js 3D elements (3D charts, globe, 3D text) | Future |
+
+**Cinematic Enhancement Layer: ✅ ALL DONE (RM-144~150)**
+
+Total: 18 atomic elements, 11 entrance animations (incl. typewriter), 12+ transitions, gradient backgrounds, text glow/shadow.
+
+| Key | Element/Feature | Visual Impact |
+|-----|----------------|---------------|
+| RM-144 | `typewriter` animation | Per-char/word reveal + blinking cursor |
+| RM-145 | `progress` element | Circular/semicircle/linear gauge with spring arc fill |
+| RM-146 | `timeline` element | Milestones with line draw + node pop-in |
+| RM-147 | `comparison` element | Side-by-side A vs B cards with VS divider |
+| RM-148 | `bgGradient` scene prop | CSS linear/radial gradient backgrounds |
+| RM-149 | `glow` / `shadow` text props | Neon glow + drop shadow on titles |
+| RM-150 | Tone adaptation | Formal vs conversational auto-detection |
+
+**To Do — RM-143: Agentic Loop Refactor (Claude Code Patterns)**
+
+Goal: Refactor agentLoop.ts to follow Claude Code / Claude Agent SDK patterns. Improve storytelling output quality.
+
+| Key | Type | Summary | Priority | Status | Notes |
+|-----|------|---------|----------|--------|-------|
+| RM-143a | Task | PostToolUse hook — after produce_script, check if draft_storyboard was called. If not, send feedback to AI: "You skipped storyboard planning. The output may lack narrative arc. Consider calling draft_storyboard first." AI decides whether to redo. | High | To Do | Not hard-blocking, but strong AI-first guidance. |
+| RM-143b | Task | Stop hook — before returning final script, run quick deterministic checks (has hook? has action close? >3 element types used?). If fails, send result + issues back to AI for one more iteration. | High | To Do | Replaces non-blocking evaluate for critical checks. |
+| RM-143c | Task | is_error flag — tool errors return `{ error: msg, is_error: true }` instead of `{ error: msg }`. Clearer signal for AI. | Medium | To Do | Aligns with Anthropic SDK pattern. |
+| RM-143d | Task | Smart text-only handling — when AI responds with text only, check if it's thinking/planning (allow) vs stuck (nudge). Current approach always nudges. | Medium | To Do | Claude Code allows AI to "think out loud" between tool calls. |
+| RM-143e | Task | Budget tracking — log token usage per iteration, warn at threshold, abort at hard limit. | Low | To Do | Prevents runaway API costs on complex prompts. |
 
 **Maintenance**
 
@@ -317,11 +370,12 @@ Current bottleneck breakdown (30s video = 900 frames @ 30fps):
 - Audio Mux (FFmpeg.wasm): ~5s
 - Total: ~8 minutes
 
-WebCodecs projected performance:
-- Frame Capture (toSvg + createImageBitmap): ~90s (1.5-2x faster)
-- Video Encode (VideoEncoder HW H.264): ~5-15s (20-60x faster)
-- Audio Mix (OfflineAudioContext + AudioEncoder): ~1s (3-5x faster)
-- Total: ~1.5-2 minutes (4x improvement)
+WebCodecs **measured** performance (Chrome 146, 2965 frames, 1920x1080, 98.8s video, 2026-04-01):
+- Frame Capture + HW Encode (toCanvas → streaming VideoEncoder): ~180s combined (~60ms/frame)
+- Video encoding overhead: **near zero** (GPU HW, merged into capture loop)
+- Audio Mux (FFmpeg `-c:v copy`): ~2s (75.9x speed — only encodes audio, copies video)
+- Total: **183s (~3 minutes)** — down from ~8 minutes = **2.7x faster**
+- Remaining bottleneck: 100% DOM capture (html-to-image toCanvas)
 
 Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox (flag only → FFmpeg fallback).
 
@@ -339,8 +393,8 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 
 | Key | Type | Summary | Priority | Status | Notes |
 |-----|------|---------|----------|--------|-------|
-| RM-133 | Task | Phase 1: WebCodecs video encoding — VideoEncoder + mp4-muxer replace FFmpeg.wasm libx264 | Highest | To Do | Keep html-to-image frame capture. PNG→ImageBitmap→VideoFrame→EncodedVideoChunk→mp4-muxer. HW accel `prefer-hardware`. Quality profiles: draft=2Mbps, standard=5Mbps, high=10Mbps (VBR). H.264 Main Profile Level 4.0. Feature detect → FFmpeg fallback. Est: 2-3 days. **Expected: encoding 3fps→60-200fps, total export -50%.** |
-| RM-134 | Task | Phase 2: Optimized frame capture — toSvg + createImageBitmap, skip PNG encode/decode | High | To Do | Replace `toPng()` with `toSvg()→Blob→createImageBitmap()→VideoFrame`. Eliminates PNG compression + base64 round-trip. Or intercept html-to-image internal canvas via `transferToImageBitmap()`. Est: 1-2 days. **Expected: frame prep 20-40% faster.** |
+| RM-133 | Task | Phase 1: WebCodecs video encoding — VideoEncoder + mp4-muxer replace FFmpeg.wasm libx264 | Highest | ✅ Done | **Streaming encode: `toCanvas()→Canvas→ImageBitmap→VideoFrame→HW encode`, 边截边编码零内存积累。** `webCodecsSupport.ts` (特性检测+质量映射) + `exportVideoWebCodecs.ts` (StreamingEncoder: feedFrame/finalize/close) + `exportVideo.ts` 路由分叉。`canUseWebCodecs()` → Chrome HW / Firefox FFmpeg fallback。WebCodecs 失败自动 fallback。新依赖 `mp4-muxer` (~15KB)。**实测 (Chrome 146, 2965帧 1080p 98.8s视频):** 总耗时 183s (之前 ~480s), **2.7x 提速**。编码瓶颈完全消除 — 100% 时间花在 DOM 截图 (~60ms/帧)。FFmpeg 仅用于音频 mux (`-c:v copy` @ 75.9x)。 |
+| RM-134 | Task | Phase 2: Optimized frame capture — further DOM capture speedup | High | To Do | 当前瓶颈: html-to-image `toCanvas()` ~60ms/帧 (DOM clone + SVG serialize)。Phase 1 已从 toPng 升级到 toCanvas (跳过 PNG 编码)。进一步方向: (1) `toSvg()→Blob→createImageBitmap()` 跳过 canvas 中间步骤; (2) 选择性 OffscreenCanvas 渲染热元素 (D3 charts); (3) 帧间差异检测 (静态场景跳帧)。Est: 1-2 days. |
 | RM-135 | Task | Phase 3: Web Audio mixing — OfflineAudioContext replaces FFmpeg audio filters | Medium | To Do | Decode TTS WAVs + BGM MP3 via `decodeAudioData()`. BufferSource per TTS with `.start(delaySec)`. GainNode automation `linearRampToValueAtTime` for smooth BGM ducking (better than FFmpeg step-function `between()`). `startRendering()→AudioBuffer→AudioData→AudioEncoder(AAC)→mp4-muxer`. Est: 3-4 days. |
 | RM-136 | Task | Phase 4: Firefox fallback — lazy-load FFmpeg.wasm only when WebCodecs unavailable | Low | To Do | Dynamic `import()` for FFmpeg packages. Only Firefox loads ~25MB WASM. Add telemetry for path usage (WebCodecs vs FFmpeg). Consider WebM via MediaRecorder as lighter Firefox alternative. |
 | RM-137 | Task | Phase 5 (future): Canvas-native rendering for hot elements — D3 charts on OffscreenCanvas | Low | To Do | Research-only. If frame capture remains bottleneck after Phase 1-3, selectively render BarChart/PieChart/LineChart via D3 canvas renderer instead of SVG DOM. Compositing into main frame. Multi-month effort — only pursue if justified by profiling. |
@@ -353,8 +407,12 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 - Firefox WebCodecs still behind flag — must maintain complete FFmpeg.wasm fallback
 - Safari AudioEncoder AAC had issues in 16.x — need careful feature detection, Safari 17+ is reliable
 
-**Dependencies to add:** `mp4-muxer` (~15KB gzipped)
+**Dependencies added:** `mp4-muxer` (~15KB gzipped) ✅
 **Dependencies to remove (after Phase 3):** `@ffmpeg/core`, `@ffmpeg/core-mt` (lazy-load for Firefox only)
+
+**New files (RM-133):**
+- `src/services/webCodecsSupport.ts` — feature detection, codec config, quality profiles
+- `src/services/exportVideoWebCodecs.ts` — StreamingEncoder (feedFrame/finalize/close)
 
 ### To Do — Maintenance / Superseded
 
@@ -384,7 +442,7 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 - 🟡 Phase 4A: Video Quality (RM-121~124) — RM-121 ✅, RM-122 ✅, RM-123 ⬜, RM-124 ✅
 - ⬜ Phase 4B: User Experience (RM-125~128) — scene editor, images, templates, subtitles
 - ⬜ Phase 4C: Enterprise Scale (RM-129~132) — API gateway, PPTX, batch, brand kit
-- ⬜ Phase 5: Export Performance (RM-133~137) — WebCodecs HW encoding, Web Audio mixing, -25MB bundle
+- 🟡 Phase 5: Export Performance (RM-133~137) — RM-133 ✅ (WebCodecs HW, 2.7x faster), RM-134~137 ⬜
 
 ### JIRA Backlog Format
 
