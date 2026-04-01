@@ -21,7 +21,11 @@ export const VALID_ELEMENT_TYPES = [
 
 export const VALID_LAYOUTS = ["column", "center", "row"] as const;
 
-export const VALID_TRANSITIONS = ["fade", "slide", "wipe", "clock-wipe"] as const;
+export const VALID_TRANSITIONS = [
+  "fade", "slide", "wipe", "clock-wipe",
+  "radial-wipe", "diamond-wipe", "iris", "zoom-out",
+  "zoom-blur", "slide-up", "split", "rotate",
+] as const;
 
 export const VALID_ANIMATIONS = [
   "fade", "slide-up", "slide-left", "slide-right",

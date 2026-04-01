@@ -96,18 +96,32 @@ When you call \`produce_script\`, the script object must follow this schema:
       "bgColor": "#hex",
       "layout": "column"|"center"|"row",
       "narration": "spoken narration for TTS (2-4 sentences, 8-15 seconds per scene)",
-      "transition": "fade"|"slide"|"wipe"|"clock-wipe" (how THIS scene enters, default "fade"),
+      "transition": "fade"|"slide"|"wipe"|"clock-wipe"|"radial-wipe"|"diamond-wipe"|"iris"|"zoom-out"|"zoom-blur"|"slide-up"|"split"|"rotate"|"dissolve"|"pixelate" (how THIS scene enters, default "fade"),
       "elements": [ ... element objects ... ]
     }
   ]
 }
 
-## Scene transitions
+## Scene transitions (14 types — use variety!)
+**Classic:**
 - "fade": crossfade (default, smooth and safe)
-- "slide": new scene pushes old scene out (great for sequential flow)
-- "wipe": new scene slides over old scene (great for reveals)
-- "clock-wipe": circular reveal (great for dramatic moments)
-Use variety! Don't use the same transition for every scene.
+- "slide": new scene pushes old scene horizontally (sequential flow)
+- "wipe": new scene slides over from left (reveals)
+- "clock-wipe": clockwise circular sweep (dramatic moments)
+**Geometric reveals:**
+- "radial-wipe": circle expanding from center (focus/spotlight effect)
+- "diamond-wipe": diamond shape expanding from center (elegant, unique)
+- "iris": rectangle expanding from center outward (classic film)
+- "split": vertical split — two halves open from center (dramatic reveal)
+**Motion-based:**
+- "slide-up": new scene pushes up from bottom (vertical flow, lists)
+- "zoom-out": exiting scene shrinks + fades (pulling back, overview)
+- "zoom-blur": exiting scene zooms + blurs out (dreamy, cinematic)
+- "rotate": exiting scene rotates + shrinks away (playful, energetic)
+**Premium WebGL (requires Canvas Effects ON in settings):**
+- "dissolve": noise-based pixel dissolve between scenes (cinematic, mysterious)
+- "pixelate": mosaic pixelation that peaks at midpoint then resolves (retro, tech)
+Use at least 4 different transitions per video. Never repeat the same transition 3 times in a row.
 
 ## Element stagger (animation rhythm)
 Every element supports a "stagger" prop that controls animation timing:
@@ -198,7 +212,7 @@ You have atomic elements to compose scenes. There are no fixed templates. You de
       "bgColor": "hex",
       "layout": "column" | "center" | "row",
       "narration": "spoken narration text for this scene (1-3 sentences)",
-      "transition": "fade"|"slide"|"wipe"|"clock-wipe" (how this scene enters, default "fade"),
+      "transition": "fade"|"slide"|"wipe"|"clock-wipe"|"radial-wipe"|"diamond-wipe"|"iris"|"zoom-out"|"zoom-blur"|"slide-up"|"split"|"rotate"|"dissolve"|"pixelate" (how this scene enters, default "fade"),
       "elements": [ ... ]
     }
   ]

@@ -8,6 +8,8 @@ import {
   getVisibleScenes,
   getTransitionStyle,
   clockWipePolygon,
+  diamondPolygon,
+  splitPolygon,
 } from "../src/video/SceneRenderer";
 import type { VideoScene } from "../src/types";
 
@@ -297,5 +299,124 @@ describe("clockWipePolygon", () => {
     const smallPoints = small.split(",").length;
     const largePoints = large.split(",").length;
     expect(largePoints).toBeGreaterThan(smallPoints);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// New transitions (Phase 3.1)
+// ---------------------------------------------------------------------------
+
+describe("new transitions — getTransitionStyle", () => {
+  describe("radial-wipe", () => {
+    it("entering: circle clip-path expands", () => {
+      const s = getTransitionStyle("radial-wipe", 0.5, "entering");
+      expect(s.clipPath).toMatch(/^circle\(/);
+    });
+    it("exiting: no style (sits behind)", () => {
+      const s = getTransitionStyle("radial-wipe", 0.5, "exiting");
+      expect(Object.keys(s)).toHaveLength(0);
+    });
+  });
+
+  describe("diamond-wipe", () => {
+    it("entering: polygon clip-path", () => {
+      const s = getTransitionStyle("diamond-wipe", 0.5, "entering");
+      expect(s.clipPath).toMatch(/^polygon\(/);
+    });
+  });
+
+  describe("iris", () => {
+    it("entering at 0: fully clipped (all 50%)", () => {
+      const s = getTransitionStyle("iris", 0, "entering");
+      expect(s.clipPath).toBe("inset(50% 50% 50% 50%)");
+    });
+    it("entering at 1: fully revealed (all 0%)", () => {
+      const s = getTransitionStyle("iris", 1, "entering");
+      expect(s.clipPath).toBe("inset(0% 0% 0% 0%)");
+    });
+  });
+
+  describe("zoom-out", () => {
+    it("exiting: scale down + fade", () => {
+      const s = getTransitionStyle("zoom-out", 0.5, "exiting");
+      expect(s.transform).toContain("scale(");
+      expect(s.opacity).toBe(0.5);
+    });
+    it("entering: opacity fade in", () => {
+      const s = getTransitionStyle("zoom-out", 0.5, "entering");
+      expect(s.opacity).toBe(0.5);
+    });
+  });
+
+  describe("zoom-blur", () => {
+    it("exiting: scale + blur + fade", () => {
+      const s = getTransitionStyle("zoom-blur", 0.5, "exiting");
+      expect(s.transform).toContain("scale(");
+      expect(s.filter).toContain("blur(");
+      expect(s.opacity).toBe(0.5);
+    });
+  });
+
+  describe("slide-up", () => {
+    it("entering: translateY from 100% to 0%", () => {
+      const at0 = getTransitionStyle("slide-up", 0, "entering");
+      expect(at0.transform).toBe("translateY(100%)");
+      const at1 = getTransitionStyle("slide-up", 1, "entering");
+      expect(at1.transform).toBe("translateY(0%)");
+    });
+    it("exiting: translateY from 0% to -100%", () => {
+      const s = getTransitionStyle("slide-up", 1, "exiting");
+      expect(s.transform).toBe("translateY(-100%)");
+    });
+  });
+
+  describe("split", () => {
+    it("entering: polygon clip-path opens from center", () => {
+      const s = getTransitionStyle("split", 0.5, "entering");
+      expect(s.clipPath).toMatch(/^polygon\(/);
+    });
+  });
+
+  describe("rotate", () => {
+    it("exiting: rotate + scale + fade", () => {
+      const s = getTransitionStyle("rotate", 0.5, "exiting");
+      expect(s.transform).toContain("rotate(");
+      expect(s.transform).toContain("scale(");
+      expect(s.opacity).toBe(0.5);
+    });
+    it("entering: opacity fade in", () => {
+      const s = getTransitionStyle("rotate", 0.5, "entering");
+      expect(s.opacity).toBe(0.5);
+    });
+  });
+});
+
+describe("diamondPolygon", () => {
+  it("returns degenerate at progress=0", () => {
+    expect(diamondPolygon(0)).toContain("50% 50%");
+  });
+  it("returns 'none' at progress=1", () => {
+    expect(diamondPolygon(1)).toBe("none");
+  });
+  it("returns 4-point polygon at 0.5", () => {
+    const poly = diamondPolygon(0.5);
+    expect(poly).toMatch(/^polygon\(/);
+    expect(poly.split(",")).toHaveLength(4);
+  });
+});
+
+describe("splitPolygon", () => {
+  it("returns closed polygon at progress=0", () => {
+    expect(splitPolygon(0)).toContain("50%");
+  });
+  it("returns 'none' at progress=1", () => {
+    expect(splitPolygon(1)).toBe("none");
+  });
+  it("opens wider as progress increases", () => {
+    const narrow = splitPolygon(0.2);
+    const wide = splitPolygon(0.8);
+    // Extract first x coordinate — wider progress = smaller left x
+    const getLeftX = (p: string) => parseFloat(p.match(/polygon\((\d+\.?\d*)%/)?.[1] ?? "50");
+    expect(getLeftX(wide)).toBeLessThan(getLeftX(narrow));
   });
 });

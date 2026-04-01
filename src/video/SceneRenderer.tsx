@@ -16,6 +16,10 @@
  *   Replace TransitionSeries in ReportComposition with <SceneRenderer>.
  */
 
+import { useRef, useCallback } from "react";
+import { WebGLTransitionOverlay } from "./WebGLTransitionOverlay";
+import { loadSettings } from "../services/settingsStore";
+import type { WebGLTransitionType } from "./transitionShaders";
 import type { VideoScene } from "../types";
 
 export const TRANSITION_FRAMES = 20;
@@ -174,6 +178,8 @@ export function getTransitionStyle(
   const t = type ?? "fade";
 
   switch (t) {
+    // --- Original 4 ---
+
     case "fade":
       return direction === "entering"
         ? { opacity: progress }
@@ -185,18 +191,77 @@ export function getTransitionStyle(
         : { transform: `translateX(${progress * 100}%)` };
 
     case "wipe":
-      // Entering: reveal from left (right inset shrinks as progress grows)
-      // Exiting: sits behind — no clip needed
       return direction === "entering"
         ? { clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)` }
         : {};
 
     case "clock-wipe":
-      // Entering: circular sweep reveals content
-      // Exiting: sits behind — no clip needed
       return direction === "entering"
         ? { clipPath: clockWipePolygon(progress) }
         : {};
+
+    // --- New 8: Enhanced CSS transitions ---
+
+    case "radial-wipe":
+      // Circle expanding from center
+      return direction === "entering"
+        ? { clipPath: `circle(${progress * 150}% at 50% 50%)` }
+        : {};
+
+    case "diamond-wipe":
+      // Diamond shape expanding from center
+      return direction === "entering"
+        ? { clipPath: diamondPolygon(progress) }
+        : {};
+
+    case "iris":
+      // Rectangle expanding from center
+      return direction === "entering"
+        ? {
+            clipPath: `inset(${(1 - progress) * 50}% ${(1 - progress) * 50}% ${(1 - progress) * 50}% ${(1 - progress) * 50}%)`,
+          }
+        : {};
+
+    case "zoom-out":
+      // Exiting scene shrinks + fades, entering fades in
+      return direction === "exiting"
+        ? {
+            transform: `scale(${1 - progress * 0.3})`,
+            opacity: 1 - progress,
+          }
+        : { opacity: progress };
+
+    case "zoom-blur":
+      // Exiting scene zooms + blurs, entering fades in
+      return direction === "exiting"
+        ? {
+            transform: `scale(${1 + progress * 0.2})`,
+            opacity: 1 - progress,
+            filter: `blur(${progress * 12}px)`,
+          }
+        : { opacity: progress };
+
+    case "slide-up":
+      // New scene pushes up from bottom
+      return direction === "entering"
+        ? { transform: `translateY(${(1 - progress) * 100}%)` }
+        : { transform: `translateY(${progress * -100}%)` };
+
+    case "split":
+      // Left and right halves split apart to reveal entering scene
+      return direction === "entering"
+        ? { clipPath: splitPolygon(progress) }
+        : {};
+
+    case "rotate":
+      // Exiting rotates + shrinks out, entering fades in
+      return direction === "exiting"
+        ? {
+            transform: `rotate(${progress * 15}deg) scale(${1 - progress * 0.4})`,
+            opacity: 1 - progress,
+            transformOrigin: "center center",
+          }
+        : { opacity: progress };
 
     default:
       return direction === "entering"
@@ -235,6 +300,38 @@ export function clockWipePolygon(progress: number): string {
   }
 
   return `polygon(${pts.join(", ")})`;
+}
+
+/**
+ * Generate CSS polygon() for diamond-wipe effect.
+ * Diamond expands from center to corners.
+ */
+export function diamondPolygon(progress: number): string {
+  if (progress <= 0) return "polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%)";
+  if (progress >= 1) return "none";
+  const d = progress * 55; // % from center
+  return `polygon(50% ${50 - d}%, ${50 + d}% 50%, 50% ${50 + d}%, ${50 - d}% 50%)`;
+}
+
+/**
+ * Generate CSS polygon() for split effect.
+ * Vertical split — two halves reveal from center outward.
+ */
+export function splitPolygon(progress: number): string {
+  if (progress <= 0) return "polygon(50% 0%, 50% 0%, 50% 100%, 50% 100%)";
+  if (progress >= 1) return "none";
+  const half = progress * 50; // each side opens by this %
+  return `polygon(${50 - half}% 0%, ${50 + half}% 0%, ${50 + half}% 100%, ${50 - half}% 100%)`;
+}
+
+// ---------------------------------------------------------------------------
+// WebGL transition detection
+// ---------------------------------------------------------------------------
+
+const WEBGL_TRANSITIONS = new Set<string>(["dissolve", "pixelate"]);
+
+function isWebGLTransition(type: VideoScene["transition"]): type is WebGLTransitionType {
+  return !!type && WEBGL_TRANSITIONS.has(type);
 }
 
 // ---------------------------------------------------------------------------
@@ -283,24 +380,60 @@ export const SceneRenderer: React.FC<SceneRendererProps> = ({
   renderScene,
 }) => {
   const visible = getVisibleScenes(frame, scenes);
+  const sceneRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const canvasEffects = loadSettings().canvasEffects;
+
+  const setSceneRef = useCallback(
+    (id: string) => (el: HTMLDivElement | null) => {
+      sceneRefs.current[id] = el;
+    },
+    [],
+  );
+
+  // Detect if current transition is a WebGL type
+  const enteringScene = visible.find((v) => v.direction === "entering");
+  const exitingScene = visible.find((v) => v.direction === "exiting");
+  const useWebGL =
+    canvasEffects &&
+    visible.length === 2 &&
+    enteringScene &&
+    exitingScene &&
+    isWebGLTransition(enteringScene.transitionType);
 
   return (
     <>
       {visible.map((v, zIndex) => {
+        // For WebGL transitions: render both scenes normally (CSS fade as fallback)
+        // The WebGL overlay will cover them once textures are ready
         const transStyle =
           v.direction !== "static"
-            ? getTransitionStyle(v.transitionType, v.progress, v.direction)
+            ? getTransitionStyle(
+                useWebGL ? "fade" : v.transitionType,
+                v.progress,
+                v.direction,
+              )
             : {};
 
         return (
           <div
             key={v.scene.id}
+            ref={setSceneRef(v.scene.id)}
             style={{ ...FILL_STYLE, zIndex, ...transStyle }}
           >
             {renderScene(v.scene, v.localFrame)}
           </div>
         );
       })}
+
+      {/* WebGL overlay — captures both scene divs, renders shader on top */}
+      {useWebGL && enteringScene && exitingScene && (
+        <WebGLTransitionOverlay
+          sceneAEl={sceneRefs.current[exitingScene.scene.id] ?? null}
+          sceneBEl={sceneRefs.current[enteringScene.scene.id] ?? null}
+          progress={enteringScene.progress}
+          type={enteringScene.transitionType as WebGLTransitionType}
+        />
+      )}
     </>
   );
 };
