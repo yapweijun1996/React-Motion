@@ -15,6 +15,8 @@ import { AnnotationElement } from "./elements/AnnotationElement";
 import { SvgElement } from "./elements/SvgElement";
 import { MapElement } from "./elements/MapElement";
 import { NoiseBackground } from "./NoiseBackground";
+import { ParticleBg } from "./ParticleBg";
+import { loadSettings } from "../services/settingsStore";
 import type { VideoScene, SceneElement } from "../types";
 
 /** Detect if a hex color is dark (luminance < 0.4). */
@@ -41,6 +43,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
 }) => {
   const layout = scene.layout ?? "column";
   const dark = isDarkBg(scene.bgColor);
+  const canvasEffects = loadSettings().canvasEffects;
 
   const flexProps: React.CSSProperties =
     layout === "center"
@@ -57,9 +60,13 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
         fontFamily: "Arial, sans-serif",
         ...flexProps,
         gap: layout === "row" ? 40 : 20,
+        // Prevent content from overflowing the 1080px viewport:
+        // minHeight:0 lets flex children shrink below their natural size
+        minHeight: 0,
       }}
     >
       <NoiseBackground color={primaryColor} />
+      {canvasEffects && <ParticleBg color={primaryColor} bgColor={scene.bgColor} />}
       {scene.elements.map((el, i) => (
         <ElementRenderer
           key={i}

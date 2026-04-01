@@ -99,6 +99,7 @@ export function useExport(opts: ExportOptions) {
         script.durationInFrames, script.fps,
         (p) => opts.onProgress(p),
         script.scenes,
+        script.bgMusicUrl,
       );
 
       const filename = `${script.title.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`;
@@ -117,6 +118,8 @@ export function useExport(opts: ExportOptions) {
     } finally {
       isRunning.current = false;
       opts.onShowStage(false);
+      // Auto-clear progress state after 5s so error/done alerts don't persist forever
+      setTimeout(() => opts.onProgress(null), 5000);
     }
   }, [opts]);
 }

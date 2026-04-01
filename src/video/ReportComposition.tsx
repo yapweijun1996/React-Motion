@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { AbsoluteFill } from "./AbsoluteFill";
 import { AudioTrack } from "./AudioTrack";
 import { useCurrentFrame } from "./VideoContext";
@@ -5,6 +6,10 @@ import { FrameProvider } from "./VideoContext";
 import { SceneRenderer } from "./SceneRenderer";
 import { GenericScene } from "./GenericScene";
 import type { VideoScript } from "../types";
+
+/** BGM volume when narration is playing vs silent */
+const BGM_VOLUME_FULL = 0.35;
+const BGM_VOLUME_DUCKED = 0.1;
 
 type ReportCompositionProps = {
   script: VideoScript;
@@ -14,6 +19,16 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
   script,
 }) => {
   const frame = useCurrentFrame();
+
+  // Auto-ducking: lower BGM volume when current scene has TTS narration
+  const bgmVolume = useMemo(() => {
+    if (!script.bgMusicUrl) return 0;
+    const currentScene = script.scenes.find((s) => {
+      const end = s.startFrame + s.durationInFrames;
+      return frame >= s.startFrame && frame < end;
+    });
+    return currentScene?.ttsAudioUrl ? BGM_VOLUME_DUCKED : BGM_VOLUME_FULL;
+  }, [frame, script.bgMusicUrl, script.scenes]);
 
   return (
     <AbsoluteFill>
@@ -30,6 +45,11 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
           </FrameProvider>
         )}
       />
+
+      {/* Background music — global track with auto-ducking */}
+      {script.bgMusicUrl && (
+        <AudioTrack src={script.bgMusicUrl} volume={bgmVolume} />
+      )}
 
       {/* Progress bar */}
       <div

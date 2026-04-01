@@ -336,11 +336,16 @@ function validateTheme(input: unknown): ThemeConfig | null {
 
 export type ExportQuality = "draft" | "standard" | "high";
 
+export type BgmMood = "corporate" | "upbeat" | "calm" | "dramatic" | "inspirational" | "playful" | "cinematic" | "ambient";
+
 export type AppSettings = {
   geminiApiKey: string;
   geminiModel: string;
   ttsConcurrency: number;
   exportQuality: ExportQuality;
+  canvasEffects: boolean;
+  bgMusicEnabled: boolean;
+  bgMusicMood: BgmMood;
 };
 
 const VALID_MODEL_IDS = [
@@ -380,9 +385,18 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
     ? (input.exportQuality as ExportQuality)
     : "standard";
 
+  const canvasEffects = typeof input.canvasEffects === "boolean" ? input.canvasEffects : false;
+
+  const bgMusicEnabled = typeof input.bgMusicEnabled === "boolean" ? input.bgMusicEnabled : false;
+
+  const VALID_BGM_MOODS: BgmMood[] = ["corporate", "upbeat", "calm", "dramatic", "inspirational", "playful", "cinematic", "ambient"];
+  const bgMusicMood: BgmMood = isStr(input.bgMusicMood) && VALID_BGM_MOODS.includes(input.bgMusicMood as BgmMood)
+    ? (input.bgMusicMood as BgmMood)
+    : "ambient";
+
   return {
     ok: true,
-    data: { geminiApiKey, geminiModel, ttsConcurrency, exportQuality },
+    data: { geminiApiKey, geminiModel, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood },
     warnings,
   };
 }

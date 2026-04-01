@@ -5,11 +5,13 @@ import { evaluateScript } from "./evaluate";
 import { runAgentLoop, type AgentProgress } from "./agentLoop";
 import { callGemini, type GeminiMessage } from "./gemini";
 import { generateSceneTTS } from "./tts";
+import { generateBgMusic } from "./bgMusic";
 import { adjustSceneTimings } from "./adjustTiming";
+import { loadSettings } from "./settingsStore";
 import { trackEvent } from "./metrics";
 
 export type GenerationProgress = {
-  stage: "agent" | "evaluate" | "tts" | "done";
+  stage: "agent" | "evaluate" | "tts" | "bgm" | "done";
   message: string;
   agentDetail?: AgentProgress;
 };
@@ -101,6 +103,23 @@ export async function generateScript(
     console.log("[TTS] Done. Adjusted duration:", script.durationInFrames, "frames");
   } catch (err) {
     console.warn("[TTS] Failed (non-fatal):", err);
+  }
+
+  // --- Phase 4: Background Music (if enabled) ---
+  const { bgMusicEnabled, bgMusicMood } = loadSettings();
+  if (bgMusicEnabled) {
+    onProgress?.({ stage: "bgm", message: "Generating background music..." });
+    console.log(`[BGM] Generating (mood: ${bgMusicMood})...`);
+
+    try {
+      const bgm = await generateBgMusic(bgMusicMood, (status) => {
+        onProgress?.({ stage: "bgm", message: status });
+      });
+      script = { ...script, bgMusicUrl: bgm.blobUrl, bgMusicDurationMs: bgm.durationMs };
+      console.log(`[BGM] Done. Duration: ${bgm.durationMs}ms`);
+    } catch (err) {
+      console.warn("[BGM] Failed (non-fatal):", err);
+    }
   }
 
   onProgress?.({ stage: "done", message: "Done" });

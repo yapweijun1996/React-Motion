@@ -5,7 +5,9 @@ import {
   clearSettings,
   getAvailableModels,
   type AppSettings,
+  type BgmMood,
 } from "../services/settingsStore";
+import { BGM_MOODS } from "../services/bgMusic";
 import { clearCache } from "../services/cache";
 
 type Props = {
@@ -49,6 +51,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
           </button>
         </div>
 
+        <div className="rm-settings-body">
         {/* API Key */}
         <div className="rm-field">
           <label className="rm-label">Gemini API Key</label>
@@ -128,6 +131,58 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
           </div>
         </div>
 
+        {/* Canvas Effects */}
+        <div className="rm-field">
+          <label className="rm-label" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            Canvas Effects
+            <input
+              type="checkbox"
+              checked={settings.canvasEffects}
+              onChange={(e) => setSettings({ ...settings, canvasEffects: e.target.checked })}
+              style={{ width: 18, height: 18, cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 12, fontWeight: 400, color: settings.canvasEffects ? "#16a34a" : "#9ca3af" }}>
+              {settings.canvasEffects ? "ON" : "OFF"}
+            </span>
+          </label>
+          <div className="rm-hint">
+            Adds animated particle background to scenes using Canvas 2D. May increase GPU usage on low-end devices. Default: off.
+          </div>
+        </div>
+
+        {/* Background Music */}
+        <div className="rm-field">
+          <label className="rm-label" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            Background Music
+            <input
+              type="checkbox"
+              checked={settings.bgMusicEnabled}
+              onChange={(e) => setSettings({ ...settings, bgMusicEnabled: e.target.checked })}
+              style={{ width: 18, height: 18, cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 12, fontWeight: 400, color: settings.bgMusicEnabled ? "#16a34a" : "#9ca3af" }}>
+              {settings.bgMusicEnabled ? "ON" : "OFF"}
+            </span>
+          </label>
+          {settings.bgMusicEnabled && (
+            <select
+              value={settings.bgMusicMood}
+              onChange={(e) => setSettings({ ...settings, bgMusicMood: e.target.value as BgmMood })}
+              className="rm-select"
+              style={{ marginTop: 6 }}
+            >
+              {BGM_MOODS.map((mood) => (
+                <option key={mood} value={mood}>
+                  {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="rm-hint">
+            AI-generated background music via Lyria. Adds ~10s to generation time. Default: off to save API cost.
+          </div>
+        </div>
+
         {/* Data & Privacy */}
         <div className="rm-field">
           <label className="rm-label">Data & Privacy</label>
@@ -152,13 +207,14 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
                 clearSettings();
                 clearCache();
-                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsConcurrency: 2, exportQuality: "standard" });
+                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient" });
                 alert("All local data cleared.");
               }}
             >
               Clear All Data
             </button>
           </div>
+        </div>
         </div>
 
         {/* Save */}

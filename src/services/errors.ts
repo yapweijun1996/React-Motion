@@ -31,6 +31,7 @@ export type ErrorCode =
   | "CACHE_SAVE_FAILED"
   | "EVAL_PARSE_FAILED"
   | "PPTX_EXPORT_FAILED"
+  | "BGM_GENERATION_FAILED"
   | "UNKNOWN";
 
 // --- User-friendly messages ---

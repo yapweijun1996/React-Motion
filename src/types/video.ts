@@ -10,6 +10,8 @@ export type VideoScript = {
   scenes: VideoScene[];
   narrative: string;
   theme?: ThemeConfig;
+  bgMusicUrl?: string;         // blob: URL to generated BGM (runtime only)
+  bgMusicDurationMs?: number;  // BGM audio duration in ms
 };
 
 // AI designs each scene from scratch using atomic elements

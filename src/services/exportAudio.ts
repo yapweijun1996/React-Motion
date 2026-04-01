@@ -10,9 +10,14 @@ type AudioEntry = {
   volume: number;
 };
 
+/** BGM volume levels — match ReportComposition preview values */
+const BGM_VOLUME_FULL = 0.35;
+const BGM_VOLUME_DUCKED = 0.1;
+
 /**
- * Mux TTS audio tracks into the silent output.mp4 already in FFmpeg FS.
+ * Mux TTS audio tracks + optional BGM into the silent output.mp4 already in FFmpeg FS.
  * Uses adelay + amix filters to position each scene's narration at the correct time.
+ * BGM gets auto-ducked during narration scenes via volume filter.
  * Video stream is copied (not re-encoded). Audio is encoded as AAC.
  *
  * Returns true if audio was muxed, false if no audio tracks were found.
@@ -21,17 +26,20 @@ export async function muxAudioIntoVideo(
   ff: FFmpeg,
   scenes: VideoScene[],
   fps: number,
+  bgMusicUrl?: string,
 ): Promise<boolean> {
   const audioScenes = scenes.filter((s) => s.ttsAudioUrl);
+  const hasTTS = audioScenes.length > 0;
+  const hasBGM = !!bgMusicUrl;
 
-  if (audioScenes.length === 0) {
+  if (!hasTTS && !hasBGM) {
     console.log("[ExportAudio] No audio tracks, skipping mux");
     return false;
   }
 
-  console.log(`[ExportAudio] Muxing ${audioScenes.length} audio tracks`);
+  console.log(`[ExportAudio] Muxing: ${audioScenes.length} TTS tracks, BGM: ${hasBGM}`);
 
-  // Write each WAV to FFmpeg FS
+  // Write each TTS WAV to FFmpeg FS
   const entries: AudioEntry[] = [];
 
   for (let i = 0; i < audioScenes.length; i++) {
@@ -52,13 +60,28 @@ export async function muxAudioIntoVideo(
     }
   }
 
-  if (entries.length === 0) {
+  // Write BGM to FFmpeg FS
+  if (hasBGM) {
+    try {
+      const response = await fetch(bgMusicUrl!);
+      const blob = await response.blob();
+      const data = await fetchFile(blob);
+      await ff.writeFile("bgm.mp3", data);
+      console.log("[ExportAudio] Wrote bgm.mp3");
+    } catch (err) {
+      logWarn("ExportAudio", "BGM_GENERATION_FAILED", "Failed to fetch BGM audio", { error: err });
+    }
+  }
+
+  const bgmWritten = hasBGM && await fileExists(ff, "bgm.mp3");
+
+  if (entries.length === 0 && !bgmWritten) {
     console.warn("[ExportAudio] No audio files written, skipping mux");
     return false;
   }
 
   // Build FFmpeg command
-  const args = buildMuxArgs(entries);
+  const args = buildMuxArgs(entries, scenes, fps, bgmWritten);
   console.log("[ExportAudio] FFmpeg args:", args.join(" "));
 
   const exitCode = await ff.exec(args);
@@ -68,6 +91,9 @@ export async function muxAudioIntoVideo(
     await ff.deleteFile(entry.filename).catch(() => {
       logWarn("ExportAudio", "UNKNOWN", `Failed to clean up ${entry.filename}`);
     });
+  }
+  if (bgmWritten) {
+    await ff.deleteFile("bgm.mp3").catch(() => {});
   }
 
   if (exitCode !== 0) {
@@ -91,40 +117,103 @@ export async function muxAudioIntoVideo(
   }
 }
 
-function buildMuxArgs(entries: AudioEntry[]): string[] {
+async function fileExists(ff: FFmpeg, name: string): Promise<boolean> {
+  try {
+    const data = await ff.readFile(name);
+    return (data as Uint8Array).length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Build FFmpeg args for muxing TTS + optional BGM.
+ *
+ * BGM auto-ducking: The BGM track gets volume segments — lower during scenes
+ * with narration, normal otherwise. This is done via FFmpeg's volume filter
+ * with enable expressions based on time ranges.
+ */
+function buildMuxArgs(
+  entries: AudioEntry[],
+  scenes: VideoScene[],
+  fps: number,
+  hasBGM: boolean,
+): string[] {
   const args: string[] = ["-i", "output.mp4"];
 
-  // Add audio inputs
+  // Add TTS audio inputs
   for (const entry of entries) {
     args.push("-i", entry.filename);
   }
 
-  if (entries.length === 1) {
-    // Single audio — simple mux, apply delay if needed
-    const e = entries[0];
-    if (e.delayMs > 0) {
-      args.push(
-        "-filter_complex",
-        `[1:a]adelay=${e.delayMs}|${e.delayMs}[aout]`,
-        "-map", "0:v",
-        "-map", "[aout]",
-      );
+  // Add BGM input (always last input)
+  const bgmInputIdx = entries.length + 1; // 0=video, 1..N=TTS, N+1=BGM
+  if (hasBGM) {
+    args.push("-i", "bgm.mp3");
+  }
+
+  // --- Build filter_complex ---
+  const ttsCount = entries.length;
+
+  if (ttsCount === 0 && hasBGM) {
+    // BGM only — simple volume
+    args.push(
+      "-filter_complex",
+      `[${bgmInputIdx}:a]volume=${BGM_VOLUME_FULL}[aout]`,
+      "-map", "0:v",
+      "-map", "[aout]",
+    );
+  } else if (ttsCount > 0 && !hasBGM) {
+    // TTS only — original logic
+    if (ttsCount === 1) {
+      const e = entries[0];
+      if (e.delayMs > 0) {
+        args.push(
+          "-filter_complex",
+          `[1:a]adelay=${e.delayMs}|${e.delayMs}[aout]`,
+          "-map", "0:v",
+          "-map", "[aout]",
+        );
+      } else {
+        args.push("-map", "0:v", "-map", "1:a");
+      }
     } else {
-      args.push("-map", "0:v", "-map", "1:a");
+      const filters = entries.map((e, i) => {
+        const inputIdx = i + 1;
+        return `[${inputIdx}:a]adelay=${e.delayMs}|${e.delayMs},volume=${e.volume}[a${i}]`;
+      });
+      const mixInputs = entries.map((_, i) => `[a${i}]`).join("");
+      const filterStr =
+        filters.join(";") +
+        `;${mixInputs}amix=inputs=${ttsCount}:duration=longest:normalize=0[aout]`;
+      args.push("-filter_complex", filterStr, "-map", "0:v", "-map", "[aout]");
     }
   } else {
-    // Multiple audio — adelay each, then amix
-    const filters = entries.map((e, i) => {
-      const inputIdx = i + 1; // 0 is video
-      return `[${inputIdx}:a]adelay=${e.delayMs}|${e.delayMs},volume=${e.volume}[a${i}]`;
+    // TTS + BGM — build combined filter with auto-ducking
+    const filters: string[] = [];
+
+    // TTS tracks: adelay each
+    entries.forEach((e, i) => {
+      const inputIdx = i + 1;
+      filters.push(`[${inputIdx}:a]adelay=${e.delayMs}|${e.delayMs},volume=${e.volume}[a${i}]`);
     });
 
-    const mixInputs = entries.map((_, i) => `[a${i}]`).join("");
-    const filterStr =
-      filters.join(";") +
-      `;${mixInputs}amix=inputs=${entries.length}:duration=longest:normalize=0[aout]`;
+    // Mix all TTS into one track
+    if (ttsCount === 1) {
+      filters.push(`[a0]acopy[tts_mix]`);
+    } else {
+      const mixInputs = entries.map((_, i) => `[a${i}]`).join("");
+      filters.push(`${mixInputs}amix=inputs=${ttsCount}:duration=longest:normalize=0[tts_mix]`);
+    }
 
-    args.push("-filter_complex", filterStr, "-map", "0:v", "-map", "[aout]");
+    // BGM with auto-ducking: build volume enable expressions
+    const bgmVolumeFilter = buildBgmDuckingFilter(scenes, fps, bgmInputIdx);
+    filters.push(bgmVolumeFilter);
+
+    // Final mix: TTS + BGM
+    filters.push(`[tts_mix][bgm_duck]amix=inputs=2:duration=longest:normalize=0[aout]`);
+
+    args.push("-filter_complex", filters.join(";"), "-map", "0:v", "-map", "[aout]");
   }
 
   args.push(
@@ -137,4 +226,37 @@ function buildMuxArgs(entries: AudioEntry[]): string[] {
   );
 
   return args;
+}
+
+/**
+ * Build FFmpeg volume filter for BGM with auto-ducking.
+ * Uses time-based volume enable expressions to lower BGM during narration.
+ *
+ * Example: volume='if(between(t,2,8),0.1,if(between(t,12,18),0.1,0.35))'
+ */
+function buildBgmDuckingFilter(
+  scenes: VideoScene[],
+  fps: number,
+  bgmInputIdx: number,
+): string {
+  const narrationRanges = scenes
+    .filter((s) => s.ttsAudioUrl)
+    .map((s) => {
+      const startSec = (s.startFrame / fps).toFixed(3);
+      const endSec = ((s.startFrame + s.durationInFrames) / fps).toFixed(3);
+      return { startSec, endSec };
+    });
+
+  if (narrationRanges.length === 0) {
+    return `[${bgmInputIdx}:a]volume=${BGM_VOLUME_FULL}[bgm_duck]`;
+  }
+
+  // Build nested if(between(...)) expression
+  // Start from innermost (default volume) and wrap with between checks
+  let expr = String(BGM_VOLUME_FULL);
+  for (const range of narrationRanges.reverse()) {
+    expr = `if(between(t\\,${range.startSec}\\,${range.endSec})\\,${BGM_VOLUME_DUCKED}\\,${expr})`;
+  }
+
+  return `[${bgmInputIdx}:a]volume='${expr}':eval=frame[bgm_duck]`;
 }

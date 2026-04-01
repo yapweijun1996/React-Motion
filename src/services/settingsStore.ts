@@ -1,6 +1,6 @@
-import { validateSettings, type AppSettings, type ExportQuality } from "./validate";
+import { validateSettings, type AppSettings, type ExportQuality, type BgmMood } from "./validate";
 
-export type { AppSettings, ExportQuality } from "./validate";
+export type { AppSettings, ExportQuality, BgmMood } from "./validate";
 
 const STORAGE_KEY = "react-motion-settings";
 
@@ -41,6 +41,9 @@ export function loadSettings(): AppSettings {
         "gemini-2.0-flash",
       ttsConcurrency: stored.ttsConcurrency ?? 1,
       exportQuality: stored.exportQuality ?? "standard",
+      canvasEffects: stored.canvasEffects ?? false,
+      bgMusicEnabled: stored.bgMusicEnabled ?? false,
+      bgMusicMood: stored.bgMusicMood ?? "ambient",
     };
 
     const result = validateSettings(merged);
@@ -71,6 +74,9 @@ export function saveSettings(settings: AppSettings): void {
       geminiModel: result.data.geminiModel,
       ttsConcurrency: result.data.ttsConcurrency,
       exportQuality: result.data.exportQuality,
+      canvasEffects: result.data.canvasEffects,
+      bgMusicEnabled: result.data.bgMusicEnabled,
+      bgMusicMood: result.data.bgMusicMood,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch (err) {
@@ -101,6 +107,9 @@ type StoredSettings = {
   geminiModel?: string;
   ttsConcurrency?: number;
   exportQuality?: ExportQuality;
+  canvasEffects?: boolean;
+  bgMusicEnabled?: boolean;
+  bgMusicMood?: BgmMood;
   // Legacy field — read for migration then discard
   geminiApiKey?: string;
 };
@@ -117,6 +126,9 @@ function getDefaults(): AppSettings {
       "gemini-2.0-flash",
     ttsConcurrency: 1,
     exportQuality: "standard",
+    canvasEffects: false,
+    bgMusicEnabled: false,
+    bgMusicMood: "ambient",
   };
 }
 

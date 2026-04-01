@@ -143,6 +143,49 @@ Create a talent acquisition review video for leadership. Show funnel conversion,
 
   // ── Technology ────────────────────────────────────────
   {
+    id: "tech-canvas-demo",
+    icon: "\u2728",
+    label: "Canvas Effects Demo",
+    category: "Technology",
+    desc: "Test particle background with dark theme (enable Canvas Effects in Settings)",
+    prompt: `Cybersecurity threat landscape 2024:
+Total incidents: 5.4 million. Ransomware: 37%, Phishing: 29%, DDoS: 18%, Zero-day: 11%, Other: 5%.
+Average breach cost: $4.88 million, up 10% from 2023.
+Mean detection time: 194 days. Mean containment: 64 days.
+Top targeted sectors: Healthcare 22%, Finance 19%, Government 14%, Education 12%.
+Use DARK backgrounds (#0f172a, #1e293b, #0c0a09) for all scenes to create a high-tech cybersecurity briefing. Keep it to 3 scenes max. Focus on impact metrics, sector breakdown, and one key insight.`,
+  },
+  {
+    id: "tech-transition-showcase",
+    icon: "\u{1F3AC}",
+    label: "Transition Showcase",
+    category: "Technology",
+    desc: "Test all 14 transition effects with 7 short scenes",
+    prompt: `Global smartphone market share 2024:
+Apple 23%, Samsung 19%, Xiaomi 14%, Oppo 9%, vivo 8%, Others 27%.
+Total units shipped: 1.2 billion.
+Average selling price: $322 (up 5%).
+5G adoption: 68% of new phones.
+Top growth market: India (+18%), Africa (+22%).
+Fastest declining: China (-3%).
+Create a 7-scene video, each scene using a DIFFERENT transition effect. Use these transitions: radial-wipe, diamond-wipe, iris, split, zoom-blur, dissolve, slide-up. Dark and light backgrounds alternating. Keep each scene short (5s). This is a showcase of visual variety.`,
+  },
+  {
+    id: "tech-webgl-demo",
+    icon: "\u{1F52E}",
+    label: "WebGL Effects Demo",
+    category: "Technology",
+    desc: "Test dissolve + pixelate WebGL transitions (enable Canvas Effects)",
+    prompt: `Quantum computing milestones:
+2019: Google achieves quantum supremacy — 53 qubits.
+2021: IBM Eagle — 127 qubits.
+2023: IBM Condor — 1,121 qubits.
+2024: Google Willow — error correction breakthrough.
+Investment: $35.5B total VC funding since 2015.
+Top players: IBM, Google, IonQ, Rigetti, D-Wave.
+Use DARK backgrounds (#0a0a1a, #0f172a, #1a1a2e) for a futuristic feel. Use "dissolve" and "pixelate" transitions to create a mysterious, sci-fi atmosphere. Keep to 4 scenes. Focus on the exponential qubit growth curve and the key breakthrough moments.`,
+  },
+  {
     id: "tech-ai-growth",
     icon: "\u{1F916}",
     label: "AI Industry",
@@ -293,6 +336,23 @@ Paper D: energy density +10%, cycle life 1600.
 Safety score out of 10: A 7.2, B 8.4, C 6.1, D 8.8.
 Main tradeoff: the highest energy density papers show weaker durability or safety.
 Create an academic-style comparison video summarizing the tradeoffs, strongest candidate, and the key takeaway for further study.`,
+  },
+
+  // ── Lifestyle ────────────────────────────────────────
+  {
+    id: "lifestyle-coffee",
+    icon: "\u2615",
+    label: "Coffee Culture",
+    category: "Lifestyle",
+    desc: "Global coffee consumption with fun transitions",
+    prompt: `World coffee consumption data:
+Top consumers per capita (kg/year): Finland 12.0, Norway 9.9, Iceland 9.0, Denmark 8.7, Netherlands 8.4.
+Global production: Brazil 39%, Vietnam 16%, Colombia 8%, Indonesia 7%.
+Total market value: $495 billion (2024).
+Specialty coffee share: 55% of US market (up from 30% in 2010).
+Average cups per day: Finland 4.1, USA 3.1, Japan 1.5.
+Most expensive coffee: Black Ivory (Thailand) $500/lb, Kopi Luwak (Indonesia) $300/lb.
+Create a fun, visually rich coffee culture video. Use warm colors (#78350f, #92400e, #fef3c7). Use zoom-out, iris, and split transitions for visual variety. Include a kawaii character reacting to the data.`,
   },
 
   // ── Sports ────────────────────────────────────────────

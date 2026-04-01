@@ -14,7 +14,7 @@ import type { ErrorCode } from "./errors";
 // Event types
 // ============================================================
 
-export type MetricEventType = "generation" | "export" | "tts" | "error";
+export type MetricEventType = "generation" | "export" | "tts" | "bgm" | "error";
 
 export type MetricEvent = {
   id?: number;                       // auto-increment by IndexedDB
