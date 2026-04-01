@@ -110,6 +110,7 @@
 | RM-148 | Task | Gradient backgrounds — `bgGradient` CSS prop on VideoScene. linear-gradient/radial-gradient. Overrides bgColor. isDarkBg extracts first hex for luminance. 9 tests. | Done |
 | RM-149 | Task | Text glow/shadow — `glow` (neon text-shadow) + `shadow` (drop shadow) boolean props on TextElement. Works in standard + typewriter modes. 5 tests. | Done |
 | RM-150 | Task | Tone adaptation — formal/conversational auto-detection based on audience. Business data defaults to formal (no kawaii, no rhetorical questions, benchmark comparisons). Prompt + evaluator updated. | Done |
+| RM-151 | Refactor | Legacy prompt 合并 — 提取 AGENT/LEGACY prompt 共享部分至 `promptBlocks.ts` (8 const)，消除 4 处重复区块。AGENT 获得 Available Elements 目录，LEGACY 获得 Transitions/Stagger/Animations。prompt.ts 417→245 行，新 promptBlocks.ts 173 行，均 ≤300 行。11 tests pass。 | Done |
 
 ### In Progress / Testing
 
@@ -152,7 +153,7 @@ Goal: Refactor agentLoop.ts to follow Claude Code / Claude Agent SDK patterns. I
 | RM-143b | Task | Stop hook — 5 deterministic quality checks before accepting script. One retry on failure. | High | ✅ Done | New `agentHooks.ts` (pure functions). Checks: hook, action close, element diversity, transition diversity, visual personality. 12 tests. |
 | RM-143c | Task | is_error flag — tool errors return `{ error: msg, is_error: true }`. | Medium | ✅ Done | Aligns with Anthropic SDK pattern. 2-line change. |
 | RM-143d | Task | Smart text-only handling — streak counter, first text-only allowed (AI thinking), second+ gently guided. | Medium | ✅ Done | Replaces forced "Please use tools" with `textOnlyStreak` logic. |
-| RM-143e | Task | Budget tracking — cumulative char count, warn at 200K chars (~50K tokens). | Low | ✅ Done | Information-only, no abort. Reports via `onProgress`. |
+| RM-143e | Task | Budget tracking — structured BudgetTracker with 3-level decisions (continue/warn/force_finish), diminishing returns detection, dynamic temperature + tool restriction. | Low | ✅ Done | `budgetTracker.ts` (new). Replaces ad-hoc `totalChars`. 80K token budget, warn@70%, force@90%. 20 tests. |
 
 **Maintenance**
 
