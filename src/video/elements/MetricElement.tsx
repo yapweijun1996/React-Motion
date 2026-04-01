@@ -3,6 +3,13 @@ import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle, type EntranceAnimation } from "../useStagger";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  COLOR_PRIMARY, SPRING_COUNT_UP,
+  METRIC_SUFFIX_ML, METRIC_LABEL_MT, METRIC_SUBTEXT_MT,
+  METRIC_LINE_HEIGHT, METRIC_COUNT_OFFSET,
+  metricSizeTier, metricGap,
+} from "../elementDefaults";
 
 type MetricItem = {
   value: string;
@@ -11,12 +18,8 @@ type MetricItem = {
   color?: string;
 };
 
-// Adaptive font sizes based on item count
-function metricSizes(count: number) {
-  if (count <= 2) return { value: 160, label: 56, subtext: 42, suffix: 72 };
-  if (count <= 3) return { value: 120, label: 48, subtext: 36, suffix: 54 };
-  return { value: 96, label: 40, subtext: 32, suffix: 44 };
-}
+// Adaptive font sizes — delegated to elementDefaults
+const metricSizes = metricSizeTier;
 
 // Sub-component — hooks called at legal component top level
 type MetricItemCardProps = {
@@ -47,9 +50,9 @@ const MetricItemCard: React.FC<MetricItemCardProps> = ({
   });
 
   const countProgress = spring({
-    frame: frame - delay - 5,
+    frame: frame - delay - METRIC_COUNT_OFFSET,
     fps,
-    config: { damping: 20, mass: 0.8 },
+    config: SPRING_COUNT_UP,
   });
 
   const numericValue = parseFloat(item.value.replace(/[^0-9.]/g, ""));
@@ -63,7 +66,8 @@ const MetricItemCard: React.FC<MetricItemCardProps> = ({
       : Math.round(displayNum).toLocaleString()
     : item.value;
 
-  const color = item.color ?? primaryColor ?? "#2563eb";
+  const c = resolveColors(colors, dark);
+  const color = item.color ?? primaryColor ?? COLOR_PRIMARY;
   const entrance = computeEntranceStyle(progress, animation);
 
   return (
@@ -80,18 +84,18 @@ const MetricItemCard: React.FC<MetricItemCardProps> = ({
           fontSize: sizes.value,
           fontWeight: 800,
           color,
-          lineHeight: 1.1,
+          lineHeight: METRIC_LINE_HEIGHT,
           fontVariantNumeric: "tabular-nums",
         }}
       >
         {formatted}
-        {suffix && <span style={{ fontSize: sizes.suffix, marginLeft: 8 }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: sizes.suffix, marginLeft: METRIC_SUFFIX_ML }}>{suffix}</span>}
       </div>
-      <div style={{ fontSize: sizes.label, color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"), marginTop: 16, fontWeight: 500 }}>
+      <div style={{ fontSize: sizes.label, color: c.label, marginTop: METRIC_LABEL_MT, fontWeight: 500 }}>
         {item.label}
       </div>
       {item.subtext && (
-        <div style={{ fontSize: sizes.subtext, color: colors?.muted ?? (dark ? "#94a3b8" : "#6b7280"), marginTop: 8 }}>
+        <div style={{ fontSize: sizes.subtext, color: c.muted, marginTop: METRIC_SUBTEXT_MT }}>
           {item.subtext}
         </div>
       )}
@@ -113,9 +117,7 @@ export const MetricElement: React.FC<Props> = ({ el, index, primaryColor, dark, 
     subtext: Math.round(sizes.subtext * fontScale),
     suffix: Math.round(sizes.suffix * fontScale),
   };
-  const gap = Math.round(
-    (items.length <= 2 ? 120 : items.length <= 3 ? 80 : 56) * fontScale,
-  );
+  const gap = Math.round(metricGap(items.length) * fontScale);
 
   return (
     <div

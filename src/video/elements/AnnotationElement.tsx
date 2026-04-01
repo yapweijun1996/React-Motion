@@ -5,6 +5,12 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring } from "../animation";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  COLOR_ANNOTATION, SPRING_ANNOTATION_DRAW,
+  ANNO_DEFAULT_SHAPE, ANNO_STROKE_W, ANNO_ROUGHNESS,
+  ANNO_SIZE, ANNO_LABEL_SIZE, ANNO_GAP,
+} from "../elementDefaults";
 
 // --- Shape registry ---
 
@@ -113,16 +119,17 @@ function generatePaths(
 type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
 export const AnnotationElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors, fontScale = 1 }) => {
+  const c = resolveColors(colors, dark);
   const shape = (VALID_ANNOTATION_SHAPES.includes(el.shape as AnnotationShape)
-    ? el.shape : "circle") as AnnotationShape;
-  const color = (el.color as string) ?? primaryColor ?? "#ef4444";
+    ? el.shape : ANNO_DEFAULT_SHAPE) as AnnotationShape;
+  const color = (el.color as string) ?? primaryColor ?? COLOR_ANNOTATION;
   const fillColor = el.fillColor as string | undefined;
-  const strokeWidth = (el.strokeWidth as number) ?? 2.5;
-  const roughness = Math.max(0.5, Math.min(3, (el.roughness as number) ?? 1.5));
-  const size = Math.round(((el.size as number) ?? 120) * fontScale);
+  const strokeWidth = (el.strokeWidth as number) ?? ANNO_STROKE_W;
+  const roughness = Math.max(0.5, Math.min(3, (el.roughness as number) ?? ANNO_ROUGHNESS));
+  const size = Math.round(((el.size as number) ?? ANNO_SIZE) * fontScale);
   const label = el.label as string | undefined;
-  const labelColor = (el.labelColor as string) ?? colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
-  const labelSize = Math.round(((el.labelSize as number) ?? 18) * fontScale);
+  const labelColor = (el.labelColor as string) ?? c.text;
+  const labelSize = Math.round(((el.labelSize as number) ?? ANNO_LABEL_SIZE) * fontScale);
 
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -135,7 +142,7 @@ export const AnnotationElement: React.FC<Props> = ({ el, index, primaryColor, da
   });
 
   // Spring for stroke drawing effect (0→1)
-  const drawProgress = spring({ frame: frame - delay, fps, config: { damping: 18, mass: 0.8 } });
+  const drawProgress = spring({ frame: frame - delay, fps, config: SPRING_ANNOTATION_DRAW });
 
   const [vbW, vbH] = VIEWBOX[shape];
 
@@ -151,7 +158,7 @@ export const AnnotationElement: React.FC<Props> = ({ el, index, primaryColor, da
   const svgH = aspect >= 1 ? size / aspect : size;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, opacity: Math.min(drawProgress * 3, 1) }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: ANNO_GAP, opacity: Math.min(drawProgress * 3, 1) }}>
       <svg
         width={svgW}
         height={svgH}

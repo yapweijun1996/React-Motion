@@ -1,6 +1,11 @@
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle, type EntranceAnimation } from "../useStagger";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  COLOR_PRIMARY, LIST_FONT_SIZE, LIST_ICON_GAP, LIST_LINE_HEIGHT,
+  LIST_ICON_SCALE, LIST_ICON_MARGIN_TOP, LIST_BASE_GAP, itemScale,
+} from "../elementDefaults";
 
 const ICON_MAP: Record<string, string> = {
   bullet: "\u25cf",
@@ -46,11 +51,11 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
         transform: entrance.transform,
         display: "flex",
         alignItems: "flex-start",
-        gap: 20,
-        lineHeight: 1.4,
+        gap: LIST_ICON_GAP,
+        lineHeight: LIST_LINE_HEIGHT,
       }}
     >
-      <span style={{ color, fontWeight: 700, fontSize: Math.round(fontSize * 0.9), marginTop: 4, flexShrink: 0 }}>
+      <span style={{ color, fontWeight: 700, fontSize: Math.round(fontSize * LIST_ICON_SCALE), marginTop: LIST_ICON_MARGIN_TOP, flexShrink: 0 }}>
         {icon}
       </span>
       <span>{item}</span>
@@ -63,16 +68,16 @@ type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: bo
 export const ListElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors, fontScale = 1 }) => {
   const items = (el.items as string[]) ?? [];
   const icon = ICON_MAP[(el.icon as string) ?? "bullet"] ?? "\u25cf";
-  const color = (el.color as string) ?? primaryColor ?? "#2563eb";
-  // Body text always uses high-contrast defaults — AI-set textColor is unreliable
-  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
+  const color = (el.color as string) ?? primaryColor ?? COLOR_PRIMARY;
+  const c = resolveColors(colors, dark);
+  const textColor = c.text;
   const stagger = parseStagger(el);
   const animation = (el.animation as string) ? parseAnimation(el) : "slide-left";
-  const baseFontSize = (el.fontSize as number) ?? 56;
+  const baseFontSize = (el.fontSize as number) ?? LIST_FONT_SIZE;
   // Adaptive: shrink font + gap when many items to prevent overflow
-  const itemScale = items.length > 8 ? 0.75 : items.length > 6 ? 0.85 : 1;
-  const fontSize = Math.round(baseFontSize * fontScale * itemScale);
-  const gap = Math.round(28 * fontScale * itemScale);
+  const itemSc = itemScale(items.length);
+  const fontSize = Math.round(baseFontSize * fontScale * itemSc);
+  const gap = Math.round(LIST_BASE_GAP * fontScale * itemSc);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap, width: "100%" }}>

@@ -15,6 +15,11 @@ import {
 import { useStagger, parseStagger } from "../useStagger";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  COLOR_KAWAII, KAWAII_DEFAULT_CHAR, KAWAII_DEFAULT_MOOD,
+  KAWAII_SIZE, KAWAII_CAPTION_SIZE, KAWAII_CAPTION_MAX_W, KAWAII_GAP,
+} from "../elementDefaults";
 
 // Character registry
 const CHARACTERS: Record<string, FunctionComponent<KawaiiProps>> = {
@@ -39,12 +44,13 @@ const CHARACTERS: Record<string, FunctionComponent<KawaiiProps>> = {
 type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors };
 
 export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors }) => {
-  const character = (el.character as string) ?? "ghost";
-  const mood = (el.mood as KawaiiProps["mood"]) ?? "blissful";
-  const size = (el.size as number) ?? 180;
-  const color = (el.color as string) ?? primaryColor ?? "#FFD882";
+  const c = resolveColors(colors, dark);
+  const character = (el.character as string) ?? KAWAII_DEFAULT_CHAR;
+  const mood = (el.mood as KawaiiProps["mood"]) ?? KAWAII_DEFAULT_MOOD;
+  const size = (el.size as number) ?? KAWAII_SIZE;
+  const color = (el.color as string) ?? primaryColor ?? COLOR_KAWAII;
   const caption = el.caption as string | undefined;
-  const captionColor = (el.captionColor as string) ?? colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
+  const captionColor = (el.captionColor as string) ?? c.text;
 
   const { progress, opacity } = useStagger({
     elementIndex: index,
@@ -66,7 +72,7 @@ export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor, dark, 
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 12,
+        gap: KAWAII_GAP,
         opacity,
         transform: `scale(${bounceScale}) rotate(${rotate}deg)`,
         transformOrigin: "center bottom",
@@ -76,11 +82,11 @@ export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor, dark, 
       {caption && (
         <div
           style={{
-            fontSize: (el.captionSize as number) ?? 42,
+            fontSize: (el.captionSize as number) ?? KAWAII_CAPTION_SIZE,
             color: captionColor,
             fontWeight: 600,
             textAlign: "center",
-            maxWidth: 600,
+            maxWidth: KAWAII_CAPTION_MAX_W,
             lineHeight: 1.4,
           }}
         >

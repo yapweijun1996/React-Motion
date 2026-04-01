@@ -5,6 +5,14 @@ import { chartColor, formatValue, formatPercent, extractValue, extractLabel } fr
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  BAR_MAX_H, BAR_GAP, BAR_MIN_H, BAR_MAX_BAR_H, BAR_RADIUS,
+  BAR_CHAR_WIDTH, BAR_LABEL_MIN_W, BAR_LABEL_MAX_W, BAR_LABEL_PR,
+  BAR_VALUE_MIN_W, BAR_VALUE_PCT_MIN_W,
+  SPRING_BAR_REVEAL, BAR_LABEL_ADVANCE, BAR_VALUE_DELAY,
+  barFontSize,
+} from "../elementDefaults";
 
 type BarItem = { label: string; value: number; color?: string };
 
@@ -17,20 +25,16 @@ function normalizeBars(el: SceneElement): BarItem[] {
   }));
 }
 
-// Dynamic bar sizing — ensures all bars fit within 1920×1080 canvas
-const MAX_CHART_H = 880; // 1008px usable height minus ~120px title reserve
-const GAP = 10;
-
 function computeBarLayout(count: number) {
-  const barHeight = Math.max(28, Math.min(80, Math.floor((MAX_CHART_H - (count - 1) * GAP) / count)));
-  const fontSize = barHeight >= 64 ? 42 : barHeight >= 48 ? 36 : barHeight >= 36 ? 30 : 24;
+  const barHeight = Math.max(BAR_MIN_H, Math.min(BAR_MAX_BAR_H, Math.floor((BAR_MAX_H - (count - 1) * BAR_GAP) / count)));
+  const fontSize = barFontSize(barHeight);
   return { barHeight, fontSize };
 }
 
 function computeLabelWidth(bars: BarItem[], fontSize: number): number {
   const maxLen = Math.max(...bars.map((b) => b.label.length), 1);
-  const charWidth = fontSize * 0.55;
-  return Math.min(400, Math.max(160, Math.round(maxLen * charWidth)));
+  const charWidth = fontSize * BAR_CHAR_WIDTH;
+  return Math.min(BAR_LABEL_MAX_W, Math.max(BAR_LABEL_MIN_W, Math.round(maxLen * charWidth)));
 }
 
 // Sub-component — hooks called at legal component top level
@@ -73,8 +77,8 @@ const BarItemRow: React.FC<BarItemRowProps> = ({
   const barProgress = spring({ frame: frame - delay, fps, config: springConfig });
   const barWidth = interpolate(barProgress, [0, 1], [0, (bar.value / maxValue) * 100]);
 
-  const labelOpacity = spring({ frame: frame - delay + 4, fps, config: { damping: 20 } });
-  const valueOpacity = spring({ frame: frame - delay - 15, fps, config: { damping: 20 } });
+  const labelOpacity = spring({ frame: frame - delay + BAR_LABEL_ADVANCE, fps, config: SPRING_BAR_REVEAL });
+  const valueOpacity = spring({ frame: frame - delay - BAR_VALUE_DELAY, fps, config: SPRING_BAR_REVEAL });
 
   const pct = totalValue > 0 ? formatPercent((bar.value / totalValue) * 100) : "0%";
   const fmtVal = formatValue(bar.value);
@@ -85,7 +89,7 @@ const BarItemRow: React.FC<BarItemRowProps> = ({
         style={{
           width: labelWidth,
           textAlign: "right",
-          paddingRight: 12,
+          paddingRight: BAR_LABEL_PR,
           fontSize,
           color: textCol,
           opacity: labelOpacity,
@@ -104,14 +108,14 @@ const BarItemRow: React.FC<BarItemRowProps> = ({
             height: "100%",
             width: `${barWidth}%`,
             backgroundColor: color,
-            borderRadius: 4,
+            borderRadius: BAR_RADIUS,
             boxShadow: isHl ? `0 2px 8px ${color}66` : "none",
           }}
         />
       </div>
       <div
         style={{
-          minWidth: showPct ? 220 : 140,
+          minWidth: showPct ? BAR_VALUE_PCT_MIN_W : BAR_VALUE_MIN_W,
           paddingLeft: 8,
           fontSize,
           fontWeight: 600,
@@ -155,11 +159,12 @@ export const BarChartElement: React.FC<Props> = ({ el, index, dark, colors }) =>
 
   const { barHeight, fontSize } = computeBarLayout(bars.length);
   const labelWidth = computeLabelWidth(bars, fontSize);
-  const textCol = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
-  const mutedCol = colors?.muted ?? (dark ? "#94a3b8" : "#6b7280");
+  const c = resolveColors(colors, dark);
+  const textCol = c.text;
+  const mutedCol = c.muted;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: GAP, width: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: BAR_GAP, width: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
       {bars.map((bar, i) => (
         <BarItemRow
           key={i}

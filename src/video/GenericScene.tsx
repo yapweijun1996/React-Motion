@@ -1,23 +1,8 @@
 import { AbsoluteFill } from "./AbsoluteFill";
 import { useCurrentFrame, useVideoConfig } from "./VideoContext";
-import { TextElement } from "./elements/TextElement";
-import { MetricElement } from "./elements/MetricElement";
-import { BarChartElement } from "./elements/BarChartElement";
-import { ListElement } from "./elements/ListElement";
-import { DividerElement } from "./elements/DividerElement";
-import { CalloutElement } from "./elements/CalloutElement";
-import { PieChartElement } from "./elements/PieChartElement";
-import { LineChartElement } from "./elements/LineChartElement";
-import { SankeyElement } from "./elements/SankeyElement";
-import { KawaiiElement } from "./elements/KawaiiElement";
-import { LottieElement } from "./elements/LottieElement";
-import { IconElement } from "./elements/IconElement";
-import { AnnotationElement } from "./elements/AnnotationElement";
-import { SvgElement } from "./elements/SvgElement";
-import { MapElement } from "./elements/MapElement";
-import { ProgressElement } from "./elements/ProgressElement";
-import { TimelineElement } from "./elements/TimelineElement";
-import { ComparisonElement } from "./elements/ComparisonElement";
+import { getCameraTransform, parseCameraType } from "./cameraMotion";
+import { SpotlightWrapper } from "./SpotlightWrapper";
+import { ELEMENT_REGISTRY, type ElementProps } from "./elementRegistry";
 import { ParticleBg } from "./ParticleBg";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { getLayoutTokens, type LayoutTokens } from "./sceneLayout";
@@ -95,30 +80,7 @@ function isSceneDark(scene: { bgColor?: string; bgGradient?: string }): boolean 
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// Ken Burns — subtle camera motion for cinematic feel
-// ---------------------------------------------------------------------------
-
-const KB_PRESETS = [
-  { sf: 1.00, st: 1.03, xf: 0, xt: -8, yf: 0, yt: -5 },  // zoom in + drift left-up
-  { sf: 1.03, st: 1.00, xf: -5, xt: 3, yf: -3, yt: 2 },   // zoom out + drift right-down
-  { sf: 1.00, st: 1.02, xf: 0, xt: 6, yf: 0, yt: -4 },    // zoom in + drift right-up
-  { sf: 1.02, st: 1.00, xf: 4, xt: -4, yf: 2, yt: -2 },   // zoom out + drift left
-  { sf: 1.00, st: 1.03, xf: 0, xt: 0, yf: 0, yt: -6 },    // pure zoom in + drift up
-  { sf: 1.02, st: 1.00, xf: 0, xt: 0, yf: -4, yt: 4 },    // zoom out + drift down
-];
-
-/** Simple hash from scene id → stable preset index */
-function sceneHash(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
-/** Smooth ease-in-out cubic */
-function easeInOut(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
+// Camera motion is now in cameraMotion.ts — AI can set scene.camera
 
 type GenericSceneProps = {
   scene: VideoScene;
@@ -130,19 +92,17 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
   primaryColor,
 }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames } = useVideoConfig();
+  const { durationInFrames, fps } = useVideoConfig();
   const layout = scene.layout ?? "column";
   const dark = isSceneDark(scene);
   const colors = getSceneColors(dark);
   const canvasEffects = loadSettings().canvasEffects;
   const tokens = getLayoutTokens(scene.elements);
 
-  // Ken Burns — subtle camera motion
-  const kb = KB_PRESETS[sceneHash(scene.id) % KB_PRESETS.length];
-  const t = easeInOut(Math.min(frame / Math.max(durationInFrames - 1, 1), 1));
-  const kbScale = kb.sf + (kb.st - kb.sf) * t;
-  const kbX = kb.xf + (kb.xt - kb.xf) * t;
-  const kbY = kb.yf + (kb.yt - kb.yf) * t;
+  // Camera motion — AI-controllable via scene.camera, defaults to "drift" (Ken Burns)
+  const cameraType = parseCameraType((scene as Record<string, unknown>).camera);
+  const normalT = Math.min(frame / Math.max(durationInFrames - 1, 1), 1);
+  const cam = getCameraTransform(cameraType, normalT, scene.id);
 
   const rowGap = Math.round(40 * tokens.fontScale);
   const flexProps: React.CSSProperties =
@@ -164,7 +124,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
         position: "absolute",
         inset: 0,
         overflow: "hidden",
-        transform: `scale(${kbScale}) translate(${kbX}px, ${kbY}px)`,
+        transform: `scale(${cam.scale}) translate(${cam.x}px, ${cam.y}px)`,
         transformOrigin: "center center",
         display: "flex",
         flexDirection: "column",
@@ -176,17 +136,45 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
         minHeight: 0,
       }}
     >
-      {canvasEffects && <ParticleBg color={primaryColor} bgColor={scene.bgColor} />}
+      {/* AI-generated background image layer */}
+      {scene.imageUrl && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${scene.imageUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: scene.imageOpacity ?? 0.35,
+            zIndex: 0,
+            pointerEvents: "none",
+          }}
+        />
+      )}
+      {canvasEffects && (
+        <ParticleBg
+          color={primaryColor}
+          bgColor={scene.bgColor}
+          effect={scene.bgEffect}
+        />
+      )}
       {scene.elements.map((el, i) => (
         <ErrorBoundary key={i} level="element" label={el.type}>
-          <ElementRenderer
-            el={el}
-            index={i}
-            primaryColor={primaryColor}
-            dark={dark}
-            tokens={tokens}
-            colors={colors}
-          />
+          <SpotlightWrapper
+            elements={scene.elements}
+            elementIndex={i}
+            frame={frame}
+            fps={fps}
+          >
+            <ElementRenderer
+              el={el}
+              index={i}
+              primaryColor={primaryColor}
+              dark={dark}
+              tokens={tokens}
+              colors={colors}
+            />
+          </SpotlightWrapper>
         </ErrorBoundary>
       ))}
     </div>
@@ -203,9 +191,6 @@ type ElementRendererProps = {
   colors: SceneColors;
 };
 
-const CHART_TYPES = new Set(["bar-chart", "pie-chart", "line-chart", "sankey", "svg", "map"]);
-const DECOR_TYPES = new Set(["annotation", "kawaii", "icon", "lottie"]);
-
 const chartWrapStyle: React.CSSProperties = {
   width: "100%",
   display: "flex",
@@ -213,7 +198,7 @@ const chartWrapStyle: React.CSSProperties = {
   alignItems: "center",
   flex: 1,
   minHeight: 0,
-  overflow: "visible", // AbsoluteFill has overflow:hidden as safety net
+  overflow: "visible",
 };
 
 const ElementRenderer: React.FC<ElementRendererProps> = ({
@@ -224,58 +209,23 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
   tokens,
   colors,
 }) => {
-  const fs = tokens.fontScale;
-  const inner = (() => {
-    switch (el.type) {
-      case "text":
-        return <TextElement el={el} index={index} dark={dark} fontScale={fs} />;
-      case "metric":
-        return <MetricElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
-      case "bar-chart":
-        return <BarChartElement el={el} index={index} dark={dark} colors={colors} />;
-      case "pie-chart":
-        return <PieChartElement el={el} index={index} dark={dark} colors={colors} fontScale={fs} />;
-      case "line-chart":
-        return <LineChartElement el={el} index={index} dark={dark} colors={colors} />;
-      case "sankey":
-        return <SankeyElement el={el} index={index} dark={dark} colors={colors} />;
-      case "list":
-        return <ListElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
-      case "divider":
-        return <DividerElement el={el} index={index} primaryColor={primaryColor} />;
-      case "callout":
-        return <CalloutElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
-      case "kawaii":
-        return <KawaiiElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} />;
-      case "lottie":
-        return <LottieElement el={el} index={index} />;
-      case "icon":
-        return <IconElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} />;
-      case "annotation":
-        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
-      case "svg":
-        return <SvgElement el={el} index={index} />;
-      case "map":
-        return <MapElement el={el} index={index} />;
-      case "progress":
-        return <ProgressElement el={el} index={index} dark={dark} colors={colors} />;
-      case "timeline":
-        return <TimelineElement el={el} index={index} dark={dark} colors={colors} fontScale={fs} />;
-      case "comparison":
-        return <ComparisonElement el={el} index={index} dark={dark} colors={colors} fontScale={fs} />;
-      default:
-        console.warn(`[GenericScene] Unknown element type: "${el.type}"`);
-        return null;
-    }
-  })();
+  const entry = ELEMENT_REGISTRY[el.type];
+  if (!entry) {
+    console.warn(`[GenericScene] Unknown element type: "${el.type}"`);
+    return null;
+  }
 
-  if (CHART_TYPES.has(el.type)) {
-    if (!inner) return null;
+  const Component = entry.component;
+  const props: ElementProps = {
+    el, index, primaryColor, dark, colors,
+    fontScale: tokens.fontScale,
+  };
+  const inner = <Component {...props} />;
+
+  if (entry.category === "chart") {
     return <div style={chartWrapStyle}>{inner}</div>;
   }
-  // Decoration elements: shrink vertical footprint by absorbing scene gap
-  if (DECOR_TYPES.has(el.type)) {
-    if (!inner) return null;
+  if (entry.category === "decor") {
     const halfGap = Math.round(tokens.gap / 2);
     return (
       <div style={{ marginTop: -halfGap, marginBottom: -halfGap, alignSelf: "center" }}>

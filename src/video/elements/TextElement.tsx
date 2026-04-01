@@ -2,6 +2,11 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { readableColor } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
+import {
+  TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LINE_HEIGHT,
+  TEXT_GLOW_BLUR, TEXT_GLOW_ALPHA, TEXT_DROP_SHADOW,
+  TYPEWRITER_CHARS_PER_FRAME, TYPEWRITER_CURSOR_BLINK, TYPEWRITER_CHAR_THRESHOLD,
+} from "../elementDefaults";
 
 type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
 
@@ -11,15 +16,13 @@ function resolveTextShadow(el: SceneElement, dark?: boolean): string | undefined
   const shadow = el.shadow as boolean | undefined;
   const color = readableColor(el.color as string | undefined, dark);
   const parts: string[] = [];
-  if (glow) parts.push(`0 0 24px ${color}88`, `0 0 48px ${color}44`);
-  if (shadow) parts.push("2px 4px 8px rgba(0,0,0,0.3)");
+  if (glow) parts.push(`0 0 ${TEXT_GLOW_BLUR[0]}px ${color}${TEXT_GLOW_ALPHA[0]}`, `0 0 ${TEXT_GLOW_BLUR[1]}px ${color}${TEXT_GLOW_ALPHA[1]}`);
+  if (shadow) parts.push(TEXT_DROP_SHADOW);
   return parts.length > 0 ? parts.join(", ") : undefined;
 }
 
-/** Characters revealed per frame at 30 fps (~60 chars/sec). */
-const CHARS_PER_FRAME = 2;
-/** Cursor blink cycle in frames (on for half, off for half). */
-const CURSOR_BLINK_FRAMES = 15;
+const CHARS_PER_FRAME = TYPEWRITER_CHARS_PER_FRAME;
+const CURSOR_BLINK_FRAMES = TYPEWRITER_CURSOR_BLINK;
 
 export const TextElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
   const animation = parseAnimation(el);
@@ -34,7 +37,7 @@ export const TextElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 })
   const content = (el.content as string) ?? "";
   const isTypewriter = animation === "typewriter" && content.length > 0;
   const textShadow = resolveTextShadow(el, dark);
-  const fontSize = Math.round(((el.fontSize as number) ?? 80) * fontScale);
+  const fontSize = Math.round(((el.fontSize as number) ?? TEXT_FONT_SIZE) * fontScale);
 
   // --- Typewriter mode ---
   if (isTypewriter) {
@@ -61,11 +64,11 @@ export const TextElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 })
       style={{
         fontSize,
         color: readableColor(el.color as string | undefined, dark),
-        fontWeight: (el.fontWeight as number) ?? 400,
+        fontWeight: (el.fontWeight as number) ?? TEXT_FONT_WEIGHT,
         textAlign: (el.align as "left" | "center" | "right") ?? "left",
         letterSpacing: (el.letterSpacing as number) ?? 0,
         textTransform: (el.textTransform as string) as React.CSSProperties["textTransform"],
-        lineHeight: 1.3,
+        lineHeight: TEXT_LINE_HEIGHT,
         textShadow,
         opacity,
         transform,
@@ -98,7 +101,7 @@ type TypewriterProps = {
  * - >40 chars → per-word (body text, sentences)
  */
 function tokenize(text: string): string[] {
-  if (text.length <= 40) {
+  if (text.length <= TYPEWRITER_CHAR_THRESHOLD) {
     // Per-character: each char is a token
     return text.split("");
   }
@@ -144,7 +147,7 @@ const TypewriterText: React.FC<TypewriterProps> = ({
         textAlign: align,
         letterSpacing,
         textTransform,
-        lineHeight: 1.3,
+        lineHeight: TEXT_LINE_HEIGHT,
         whiteSpace: "pre-wrap",
         textShadow,
       }}

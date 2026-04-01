@@ -13,6 +13,18 @@ import { usePaletteColors } from "../PaletteContext";
 import { IconCheck } from "../../components/Icons";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  SPRING_LINE_DRAW, SPRING_NODE_POP, SPRING_LABEL_FADE,
+  TIMELINE_NODE_R, TIMELINE_ACTIVE_R, TIMELINE_NODE_STROKE, TIMELINE_NODE_STROKE_W,
+  TIMELINE_GLOW_R, TIMELINE_GLOW_OPACITY,
+  TIMELINE_SVG_H, TIMELINE_LABEL_MT, TIMELINE_LABEL_PX, TIMELINE_EDGE_PAD, TIMELINE_TRACK_W,
+  TIMELINE_VERT_PX, TIMELINE_VERT_MIN_H, TIMELINE_VERT_GAP, TIMELINE_VERT_COL_W,
+  TIMELINE_VERT_LINE_W, TIMELINE_VERT_LINE_MIN_H,
+  TIMELINE_LABEL_FONT, TIMELINE_DESC_FONT, TIMELINE_DESC_MT,
+  TIMELINE_NODE_STAGGER, TIMELINE_VERT_NODE_STAGGER, TIMELINE_LABEL_DELAY,
+  itemScale,
+} from "../elementDefaults";
 
 type TimelineItem = {
   label: string;
@@ -22,10 +34,11 @@ type TimelineItem = {
 
 type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
-const NODE_R = 16;
-const NODE_ACTIVE_R = 20;
+const NODE_R = TIMELINE_NODE_R;
+const NODE_ACTIVE_R = TIMELINE_ACTIVE_R;
 
 export const TimelineElement: React.FC<Props> = ({ el, index, dark, colors, fontScale = 1 }) => {
+  const c = resolveColors(colors, dark);
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -50,17 +63,17 @@ export const TimelineElement: React.FC<Props> = ({ el, index, dark, colors, font
   const lineProgress = spring({
     frame: frame - delay,
     fps,
-    config: { damping: 16, mass: 0.7 },
+    config: SPRING_LINE_DRAW,
   });
 
-  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
-  const subColor = colors?.muted ?? (dark ? "#94a3b8" : "#6b7280");
+  const textColor = c.text;
+  const subColor = c.muted;
 
   if (items.length === 0) return null;
 
   // Adaptive: shrink fonts when many items
-  const itemScale = items.length > 6 ? 0.75 : items.length > 4 ? 0.85 : 1;
-  const fs = fontScale * itemScale;
+  const itemSc = itemScale(items.length, 6, 4);
+  const fs = fontScale * itemSc;
 
   if (orientation === "vertical") {
     return (
@@ -115,11 +128,11 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
       padding: "20px 0",
     }}>
       {/* Line + nodes (SVG overlay) */}
-      <svg viewBox="0 0 1000 60" style={{ width: "100%", height: 60, overflow: "visible" }}>
+      <svg viewBox={`0 0 1000 ${TIMELINE_SVG_H}`} style={{ width: "100%", height: TIMELINE_SVG_H, overflow: "visible" }}>
         {/* Track line */}
         <line
           x1={nodeX(0, count)} y1={30} x2={nodeX(count - 1, count)} y2={30}
-          stroke={lineColor} strokeWidth={3}
+          stroke={lineColor} strokeWidth={TIMELINE_TRACK_W}
         />
         {/* Animated fill line */}
         {count > 1 && (
@@ -127,16 +140,16 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
             x1={nodeX(0, count)} y1={30}
             x2={nodeX(0, count) + (nodeX(count - 1, count) - nodeX(0, count)) * lineProgress}
             y2={30}
-            stroke={items[0].color ?? chartColor(0, palette)} strokeWidth={3}
+            stroke={items[0].color ?? chartColor(0, palette)} strokeWidth={TIMELINE_TRACK_W}
             strokeLinecap="round"
           />
         )}
         {/* Nodes */}
         {items.map((item, i) => {
           const nodeProgress = spring({
-            frame: frame - delay - i * 8,
+            frame: frame - delay - i * TIMELINE_NODE_STAGGER,
             fps,
-            config: { damping: 14, mass: 0.5 },
+            config: SPRING_NODE_POP,
           });
           const isActive = i === activeIndex;
           const cx = nodeX(i, count);
@@ -147,20 +160,20 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
             <g key={i}>
               {/* Glow for active */}
               {isActive && (
-                <circle cx={cx} cy={30} r={r + 8}
-                  fill={color} opacity={0.2 * nodeProgress}
+                <circle cx={cx} cy={30} r={r + TIMELINE_GLOW_R}
+                  fill={color} opacity={TIMELINE_GLOW_OPACITY * nodeProgress}
                 />
               )}
               <circle
                 cx={cx} cy={30} r={r * nodeProgress}
-                fill={color} stroke="#fff" strokeWidth={3}
+                fill={color} stroke={TIMELINE_NODE_STROKE} strokeWidth={TIMELINE_NODE_STROKE_W}
               />
               {/* Checkmark inside completed nodes */}
               {i <= activeIndex && activeIndex >= 0 && (
                 <g opacity={nodeProgress}>
                   <polyline
                     points={`${cx - 6},${30} ${cx - 1},${36} ${cx + 7},${24}`}
-                    fill="none" stroke="#fff" strokeWidth={3}
+                    fill="none" stroke={TIMELINE_NODE_STROKE} strokeWidth={TIMELINE_NODE_STROKE_W}
                     strokeLinecap="round" strokeLinejoin="round"
                   />
                 </g>
@@ -171,12 +184,12 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
       </svg>
 
       {/* Labels below */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, padding: "0 20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: TIMELINE_LABEL_MT, padding: TIMELINE_LABEL_PX }}>
         {items.map((item, i) => {
           const nodeProgress = spring({
-            frame: frame - delay - i * 8 - 4,
+            frame: frame - delay - i * TIMELINE_NODE_STAGGER - TIMELINE_LABEL_DELAY,
             fps,
-            config: { damping: 16, mass: 0.6 },
+            config: SPRING_LABEL_FADE,
           });
           const isActive = i === activeIndex;
 
@@ -186,13 +199,13 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
               transform: `translateY(${(1 - nodeProgress) * 12}px)`,
             }}>
               <div style={{
-                fontSize: Math.round(48 * fontScale), fontWeight: isActive ? 700 : 500,
+                fontSize: Math.round(TIMELINE_LABEL_FONT * fontScale), fontWeight: isActive ? 700 : 500,
                 color: isActive ? (item.color ?? chartColor(i, palette)) : textColor,
               }}>
                 {item.label}
               </div>
               {item.description && (
-                <div style={{ fontSize: Math.round(36 * fontScale), color: subColor, marginTop: 4 }}>
+                <div style={{ fontSize: Math.round(TIMELINE_DESC_FONT * fontScale), color: subColor, marginTop: TIMELINE_DESC_MT }}>
                   {item.description}
                 </div>
               )}
@@ -207,7 +220,7 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
 /** X position for node i out of count nodes in a 1000-wide SVG. */
 function nodeX(i: number, count: number): number {
   if (count <= 1) return 500;
-  const pad = 60; // padding from edges
+  const pad = TIMELINE_EDGE_PAD;
   return pad + (i / (count - 1)) * (1000 - pad * 2);
 }
 
@@ -223,24 +236,24 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
     <div style={{
       display: "flex", flexDirection: "column", gap: 0,
       opacity: entrance.opacity, transform: entrance.transform,
-      width: "100%", padding: "0 48px",
+      width: "100%", padding: TIMELINE_VERT_PX,
     }}>
       {items.map((item, i) => {
         const nodeProgress = spring({
-          frame: frame - delay - i * 10,
+          frame: frame - delay - i * TIMELINE_VERT_NODE_STAGGER,
           fps,
-          config: { damping: 14, mass: 0.5 },
+          config: SPRING_NODE_POP,
         });
         const isActive = i === activeIndex;
         const color = item.color ?? chartColor(i, palette);
         const isLast = i === items.length - 1;
 
         return (
-          <div key={i} style={{ display: "flex", gap: 24, minHeight: 80 }}>
+          <div key={i} style={{ display: "flex", gap: TIMELINE_VERT_GAP, minHeight: TIMELINE_VERT_MIN_H }}>
             {/* Node column */}
             <div style={{
               display: "flex", flexDirection: "column", alignItems: "center",
-              width: 48, flexShrink: 0,
+              width: TIMELINE_VERT_COL_W, flexShrink: 0,
             }}>
               {/* Node circle */}
               <div style={{
@@ -248,7 +261,7 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
                 height: (isActive ? NODE_ACTIVE_R : NODE_R) * 2 * nodeProgress,
                 borderRadius: "50%",
                 backgroundColor: color,
-                border: "3px solid #fff",
+                border: `${TIMELINE_NODE_STROKE_W}px solid ${TIMELINE_NODE_STROKE}`,
                 boxShadow: isActive ? `0 0 12px ${color}44` : "none",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 16, color: "#fff", fontWeight: 700,
@@ -259,7 +272,7 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
               {/* Connecting line */}
               {!isLast && (
                 <div style={{
-                  flex: 1, width: 3, minHeight: 32,
+                  flex: 1, width: TIMELINE_VERT_LINE_W, minHeight: TIMELINE_VERT_LINE_MIN_H,
                   background: lineProgress > (i + 1) / items.length
                     ? color
                     : lineColor,
@@ -273,14 +286,14 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
               transform: `translateX(${(1 - nodeProgress) * 20}px)`,
             }}>
               <div style={{
-                fontSize: Math.round(48 * fontScale), fontWeight: isActive ? 700 : 500,
+                fontSize: Math.round(TIMELINE_LABEL_FONT * fontScale), fontWeight: isActive ? 700 : 500,
                 color: isActive ? color : textColor,
                 lineHeight: 1.2,
               }}>
                 {item.label}
               </div>
               {item.description && (
-                <div style={{ fontSize: Math.round(36 * fontScale), color: subColor, marginTop: 4 }}>
+                <div style={{ fontSize: Math.round(TIMELINE_DESC_FONT * fontScale), color: subColor, marginTop: TIMELINE_DESC_MT }}>
                   {item.description}
                 </div>
               )}

@@ -10,25 +10,32 @@ import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  COLOR_PROGRESS, SPRING_FILL_ARC,
+  PROGRESS_SIZE as SIZE, PROGRESS_STROKE as STROKE_DEFAULT,
+  PROGRESS_MAX, PROGRESS_SUFFIX, PROGRESS_VARIANT,
+  PROGRESS_CIRC_NUM, PROGRESS_CIRC_SUFFIX,
+  PROGRESS_SEMI_NUM, PROGRESS_SEMI_SUFFIX, PROGRESS_SEMI_PAD,
+  PROGRESS_LINEAR_NUM, PROGRESS_LINEAR_SUFFIX, PROGRESS_LINEAR_MIN_H, PROGRESS_LINEAR_MAX_W,
+  PROGRESS_LABEL_SIZE, PROGRESS_LABEL_MB,
+} from "../elementDefaults";
 
 type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
 type Variant = "circular" | "semicircle" | "linear";
-
-const SIZE = 320;        // SVG viewport for circular/semicircle
-const STROKE_DEFAULT = 14;
 
 export const ProgressElement: React.FC<Props> = ({ el, index, dark, colors }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   const value = Math.max(0, (el.value as number) ?? 0);
-  const max = Math.max(1, (el.max as number) ?? 100);
+  const max = Math.max(1, (el.max as number) ?? PROGRESS_MAX);
   const label = (el.label as string) ?? "";
-  const color = (el.color as string) ?? "#3b82f6";
+  const color = (el.color as string) ?? COLOR_PROGRESS;
   const variant: Variant = (["circular", "semicircle", "linear"].includes(el.variant as string)
-    ? el.variant : "circular") as Variant;
-  const suffix = (el.suffix as string) ?? "%";
+    ? el.variant : PROGRESS_VARIANT) as Variant;
+  const suffix = (el.suffix as string) ?? PROGRESS_SUFFIX;
   const thickness = Math.max(4, Math.min(32, (el.thickness as number) ?? STROKE_DEFAULT));
 
   const stagger = parseStagger(el);
@@ -46,7 +53,7 @@ export const ProgressElement: React.FC<Props> = ({ el, index, dark, colors }) =>
   const fillProgress = spring({
     frame: frame - delay,
     fps,
-    config: { damping: 18, mass: 0.8 },
+    config: SPRING_FILL_ARC,
   });
 
   const ratio = Math.min(value / max, 1);
@@ -58,8 +65,9 @@ export const ProgressElement: React.FC<Props> = ({ el, index, dark, colors }) =>
     ? Math.round(animatedValue).toLocaleString()
     : animatedValue.toFixed(1);
 
-  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
-  const trackColor = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
+  const c = resolveColors(colors, dark);
+  const textColor = c.text;
+  const trackColor = c.track;
 
   return (
     <div style={{
@@ -88,7 +96,7 @@ export const ProgressElement: React.FC<Props> = ({ el, index, dark, colors }) =>
         />
       )}
       {label && (
-        <div style={{ fontSize: 56, color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"), fontWeight: 500, textAlign: "center" }}>
+        <div style={{ fontSize: PROGRESS_LABEL_SIZE, color: c.label, fontWeight: 500, textAlign: "center" }}>
           {label}
         </div>
       )}
@@ -141,9 +149,9 @@ const CircularGauge: React.FC<GaugeProps> = ({
         display: "flex", alignItems: "center", justifyContent: "center",
         flexDirection: "column",
       }}>
-        <span style={{ fontSize: 96, fontWeight: 800, color: textColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+        <span style={{ fontSize: PROGRESS_CIRC_NUM, fontWeight: 800, color: textColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
           {displayNum}
-          <span style={{ fontSize: 48 }}>{suffix}</span>
+          <span style={{ fontSize: PROGRESS_CIRC_SUFFIX }}>{suffix}</span>
         </span>
       </div>
     </div>
@@ -162,7 +170,7 @@ const SemicircleGauge: React.FC<GaugeProps> = ({
   const offset = halfCirc * (1 - ratio);
 
   return (
-    <div style={{ position: "relative", width: SIZE, height: SIZE / 2 + 32 }}>
+    <div style={{ position: "relative", width: SIZE, height: SIZE / 2 + PROGRESS_SEMI_PAD }}>
       <svg viewBox={`0 0 ${SIZE} ${SIZE / 2 + thickness}`} style={{ width: "100%", height: "auto" }}>
         {/* Track (half circle) */}
         <path
@@ -182,9 +190,9 @@ const SemicircleGauge: React.FC<GaugeProps> = ({
         position: "absolute", bottom: 0, left: 0, right: 0,
         display: "flex", justifyContent: "center",
       }}>
-        <span style={{ fontSize: 80, fontWeight: 800, color: textColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
+        <span style={{ fontSize: PROGRESS_SEMI_NUM, fontWeight: 800, color: textColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
           {displayNum}
-          <span style={{ fontSize: 42 }}>{suffix}</span>
+          <span style={{ fontSize: PROGRESS_SEMI_SUFFIX }}>{suffix}</span>
         </span>
       </div>
     </div>
@@ -210,17 +218,17 @@ function describeArc(cx: number, cy: number, r: number, startDeg: number, endDeg
 const LinearGauge: React.FC<GaugeProps> = ({
   ratio, color, trackColor, thickness, displayNum, suffix, textColor,
 }) => {
-  const barHeight = Math.max(thickness, 20);
+  const barHeight = Math.max(thickness, PROGRESS_LINEAR_MIN_H);
 
   return (
-    <div style={{ width: "100%", maxWidth: 800 }}>
+    <div style={{ width: "100%", maxWidth: PROGRESS_LINEAR_MAX_W }}>
       <div style={{
         display: "flex", justifyContent: "space-between", alignItems: "baseline",
-        marginBottom: 12,
+        marginBottom: PROGRESS_LABEL_MB,
       }}>
-        <span style={{ fontSize: 80, fontWeight: 800, color: textColor, fontVariantNumeric: "tabular-nums" }}>
+        <span style={{ fontSize: PROGRESS_LINEAR_NUM, fontWeight: 800, color: textColor, fontVariantNumeric: "tabular-nums" }}>
           {displayNum}
-          <span style={{ fontSize: 42 }}>{suffix}</span>
+          <span style={{ fontSize: PROGRESS_LINEAR_SUFFIX }}>{suffix}</span>
         </span>
       </div>
       {/* Track */}

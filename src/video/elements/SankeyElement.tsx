@@ -7,6 +7,12 @@ import { chartColor, extractValue } from "../../services/chartHelpers";
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  SANKEY_W, SANKEY_H, SANKEY_NODE_W, SANKEY_NODE_PAD,
+  SANKEY_NODE_R, SANKEY_LABEL_FONT, SANKEY_LABEL_OFFSET, SANKEY_LINK_OPACITY,
+  SPRING_SANKEY_LINK,
+} from "../elementDefaults";
 
 type NodeInput = { name: string; color?: string };
 type LinkInput = { source: number; target: number; value: number };
@@ -28,14 +34,15 @@ function normalizeLinks(el: SceneElement): LinkInput[] {
   }));
 }
 
-const CHART_W = 1100;
-const CHART_H = 500;
-const NODE_W = 22;
-const NODE_PAD = 20;
+const CHART_W = SANKEY_W;
+const CHART_H = SANKEY_H;
+const NODE_W = SANKEY_NODE_W;
+const NODE_PAD = SANKEY_NODE_PAD;
 
 type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
 export const SankeyElement: React.FC<Props> = ({ el, index, dark, colors }) => {
+  const c = resolveColors(colors, dark);
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -86,8 +93,8 @@ export const SankeyElement: React.FC<Props> = ({ el, index, dark, colors }) => {
     <svg viewBox={`0 0 ${CHART_W} ${CHART_H + 24}`} style={{ width: "100%", height: "auto", overflow: "visible", opacity: entrance.opacity, transform: entrance.transform }}>
       {links.map((link, i) => {
         const linkDelay = baseDelay + 12 + i * 4;
-        const linkProgress = spring({ frame: frame - linkDelay, fps, config: { damping: 16, mass: 0.6 } });
-        const linkOpacity = interpolate(linkProgress, [0, 1], [0, 0.4]);
+        const linkProgress = spring({ frame: frame - linkDelay, fps, config: SPRING_SANKEY_LINK });
+        const linkOpacity = interpolate(linkProgress, [0, 1], [0, SANKEY_LINK_OPACITY]);
 
         const sourceNode = link.source as typeof nodes[0];
         const color = sourceNode.color ?? chartColor(sourceNode.index!, palette);
@@ -118,15 +125,15 @@ export const SankeyElement: React.FC<Props> = ({ el, index, dark, colors }) => {
               x={x0} y={y0}
               width={x1 - x0} height={h}
               fill={color}
-              rx={3}
+              rx={SANKEY_NODE_R}
             />
             <text
-              x={x0 < CHART_W / 2 ? x1 + 8 : x0 - 8}
+              x={x0 < CHART_W / 2 ? x1 + SANKEY_LABEL_OFFSET : x0 - SANKEY_LABEL_OFFSET}
               y={y0 + h / 2}
               textAnchor={x0 < CHART_W / 2 ? "start" : "end"}
               dominantBaseline="middle"
-              fontSize={38}
-              fill={colors?.text ?? (dark ? "#e2e8f0" : "#1e293b")}
+              fontSize={SANKEY_LABEL_FONT}
+              fill={c.text}
               fontWeight={500}
             >
               {node.name}

@@ -12,6 +12,10 @@ export type SceneColors = {
   label: string;
   /** Chart grid lines, dividers */
   gridLine: string;
+  /** Track / gauge background (progress bars, timeline tracks) */
+  track: string;
+  /** Card / surface background (comparison cards, etc.) */
+  cardBg: string;
 };
 
 const DARK: SceneColors = {
@@ -19,6 +23,8 @@ const DARK: SceneColors = {
   muted: "#94a3b8",
   label: "#cbd5e1",
   gridLine: "#374151",
+  track: "rgba(255,255,255,0.1)",
+  cardBg: "rgba(255,255,255,0.06)",
 };
 
 const LIGHT: SceneColors = {
@@ -26,6 +32,8 @@ const LIGHT: SceneColors = {
   muted: "#6b7280",
   label: "#6b7280",
   gridLine: "#e5e7eb",
+  track: "rgba(0,0,0,0.08)",
+  cardBg: "rgba(0,0,0,0.03)",
 };
 
 export function getSceneColors(dark: boolean): SceneColors {

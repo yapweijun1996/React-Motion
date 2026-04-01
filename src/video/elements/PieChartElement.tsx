@@ -7,6 +7,13 @@ import { chartColor, formatPercent, extractValue, extractLabel } from "../../ser
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  PIE_SIZE, PIE_MAX_LEGEND, PIE_DONUT_RATIO, PIE_PADDING,
+  PIE_HL_BONUS, PIE_STROKE_COLOR, PIE_STROKE_W, PIE_CORNER_R,
+  PIE_BASE_OPACITY, PIE_SWATCH, PIE_SWATCH_R, PIE_LEGEND_GAP, PIE_PCT_ML,
+  SPRING_PIE_REVEAL, pieLegendFont,
+} from "../elementDefaults";
 
 type SliceItem = { label: string; value: number; color?: string };
 
@@ -19,11 +26,12 @@ function normalizeSlices(el: SceneElement): SliceItem[] {
   }));
 }
 
-const MAX_LEGEND = 8;
+const MAX_LEGEND = PIE_MAX_LEGEND;
 
 type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
 export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, fontScale = 1 }) => {
+  const c = resolveColors(colors, dark);
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -47,9 +55,9 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, font
   });
   const entrance = computeEntranceStyle(containerProgress, animation);
 
-  const size = 480;
+  const size = PIE_SIZE;
   const outerR = size / 2;
-  const innerR = donut ? outerR * 0.55 : 0;
+  const innerR = donut ? outerR * PIE_DONUT_RATIO : 0;
 
   const totalValue = slices.reduce((s, d) => s + d.value, 0);
 
@@ -59,17 +67,17 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, font
   }, [slices]);
 
   const progress = spring({ frame: frame - delay, fps, config: springConfig });
-  const labelOpacity = spring({ frame: frame - delay - 20, fps, config: { damping: 18 } });
+  const labelOpacity = spring({ frame: frame - delay - 20, fps, config: SPRING_PIE_REVEAL });
 
-  const vb = `-${size / 2 + 10} -${size / 2 + 10} ${size + 20} ${size + 20}`;
+  const vb = `-${size / 2 + PIE_PADDING} -${size / 2 + PIE_PADDING} ${size + PIE_PADDING * 2} ${size + PIE_PADDING * 2}`;
 
   // Legend: cap at MAX_LEGEND items to prevent overflow
   const legendSlices = slices.length > MAX_LEGEND ? slices.slice(0, MAX_LEGEND) : slices;
-  const legendFontSize = Math.round((slices.length > 6 ? 36 : 42) * fontScale);
+  const legendFontSize = Math.round(pieLegendFont(slices.length) * fontScale);
   const truncated = slices.length - MAX_LEGEND;
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 48, width: "100%", height: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: PIE_LEGEND_GAP, width: "100%", height: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
       <svg viewBox={vb} style={{ flex: 1, maxWidth: "50%", maxHeight: "60vh", height: "auto", overflow: "visible" }}>
         {arcs.map((a, i) => {
           const color = slices[i].color ?? chartColor(i, palette);
@@ -79,8 +87,8 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, font
 
           const pathGen = arc<typeof a>()
             .innerRadius(innerR)
-            .outerRadius(isHl ? outerR + 10 : outerR)
-            .cornerRadius(2);
+            .outerRadius(isHl ? outerR + PIE_HL_BONUS : outerR)
+            .cornerRadius(PIE_CORNER_R);
 
           const d = pathGen({ ...a, endAngle: animatedEnd }) ?? "";
 
@@ -89,9 +97,9 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, font
               key={i}
               d={d}
               fill={color}
-              stroke="#fff"
-              strokeWidth={2}
-              opacity={isHl ? 1 : 0.9}
+              stroke={PIE_STROKE_COLOR}
+              strokeWidth={PIE_STROKE_W}
+              opacity={isHl ? 1 : PIE_BASE_OPACITY}
             />
           );
         })}
@@ -106,16 +114,16 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, font
           return (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{
-                width: 32, height: 32, borderRadius: 6,
+                width: PIE_SWATCH, height: PIE_SWATCH, borderRadius: PIE_SWATCH_R,
                 backgroundColor: color, flexShrink: 0,
               }} />
               <span style={{
-                fontSize: legendFontSize, color: colors?.text ?? (dark ? "#e2e8f0" : "#1e293b"),
+                fontSize: legendFontSize, color: c.text,
                 fontWeight: isHl ? 700 : 400,
               }}>
                 {s.label}
                 {showPercentage && (
-                  <span style={{ color: colors?.muted ?? (dark ? "#94a3b8" : "#6b7280"), marginLeft: 12, fontSize: legendFontSize - 6 }}>
+                  <span style={{ color: c.muted, marginLeft: PIE_PCT_ML, fontSize: legendFontSize - 6 }}>
                     {pct}
                   </span>
                 )}
@@ -124,7 +132,7 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, font
           );
         })}
         {truncated > 0 && (
-          <div style={{ fontSize: legendFontSize - 4, color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"), paddingLeft: 48 }}>
+          <div style={{ fontSize: legendFontSize - 4, color: c.label, paddingLeft: 48 }}>
             +{truncated} more
           </div>
         )}

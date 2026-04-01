@@ -2,6 +2,11 @@ import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
 import type { LucideIcon } from "lucide-react";
+import {
+  resolveColors,
+  COLOR_PRIMARY, ICON_DEFAULT_NAME, ICON_DEFAULT_SIZE,
+  ICON_STROKE_W, ICON_LABEL_SIZE, ICON_LABEL_GAP,
+} from "../elementDefaults";
 
 // --- Curated icon registry (~40 icons, tree-shaken imports) ---
 // Business / KPI
@@ -93,14 +98,15 @@ export const VALID_ICON_NAMES = Object.keys(ICON_REGISTRY);
 type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors };
 
 export const IconElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors }) => {
-  const name = (el.name as string) ?? "star";
+  const c = resolveColors(colors, dark);
+  const name = (el.name as string) ?? ICON_DEFAULT_NAME;
   const Icon = ICON_REGISTRY[name];
-  const size = (el.size as number) ?? 64;
-  const color = (el.color as string) ?? primaryColor ?? "#2563eb";
+  const size = (el.size as number) ?? ICON_DEFAULT_SIZE;
+  const color = (el.color as string) ?? primaryColor ?? COLOR_PRIMARY;
   const label = el.label as string | undefined;
-  const labelColor = (el.labelColor as string) ?? colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
-  const labelSize = (el.labelSize as number) ?? 20;
-  const strokeWidth = (el.strokeWidth as number) ?? 2;
+  const labelColor = (el.labelColor as string) ?? c.text;
+  const labelSize = (el.labelSize as number) ?? ICON_LABEL_SIZE;
+  const strokeWidth = (el.strokeWidth as number) ?? ICON_STROKE_W;
   const animation = parseAnimation(el, "bounce");
 
   const { progress } = useStagger({
@@ -123,7 +129,7 @@ export const IconElement: React.FC<Props> = ({ el, index, primaryColor, dark, co
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 12,
+        gap: ICON_LABEL_GAP,
         opacity: entrance.opacity,
         transform: entrance.transform,
       }}

@@ -8,13 +8,19 @@ import { chartColor, formatValue, extractValue, extractLabel } from "../../servi
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  LINE_W, LINE_H, LINE_MARGIN, LINE_Y_TICKS, LINE_X_PAD, LINE_Y_PAD,
+  LINE_AXIS_FONT, LINE_GRID_W, LINE_STROKE_W, LINE_DOT_R, LINE_DOT_STROKE, LINE_DOT_STROKE_W,
+  SPRING_CHART_REVEAL,
+} from "../elementDefaults";
 
 type DataPoint = { label: string; value: number };
 type LineSeries = { name: string; data: DataPoint[]; color?: string };
 
-const CHART_W = 1100;
-const CHART_H = 500;
-const MARGIN = { top: 24, right: 36, bottom: 50, left: 70 };
+const CHART_W = LINE_W;
+const CHART_H = LINE_H;
+const MARGIN = LINE_MARGIN;
 const INNER_W = CHART_W - MARGIN.left - MARGIN.right;
 const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom;
 
@@ -37,6 +43,7 @@ function normalizeSeries(el: SceneElement): LineSeries[] {
 type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
 export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) => {
+  const c = resolveColors(colors, dark);
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -64,16 +71,16 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) =
     let min = Math.min(...values, 0);
     let max = Math.max(...values, 1);
     if (min === max) { min = 0; max = max || 1; }
-    const pad = (max - min) * 0.1 || 1;
+    const pad = (max - min) * LINE_Y_PAD || 1;
 
-    const x = scalePoint<string>().domain(labels).range([0, INNER_W]).padding(0.1);
+    const x = scalePoint<string>().domain(labels).range([0, INNER_W]).padding(LINE_X_PAD);
     const y = scaleLinear().domain([min - pad, max + pad]).range([INNER_H, 0]);
 
-    return { allLabels: labels, xScale: x, yScale: y, yTicks: y.ticks(5) };
+    return { allLabels: labels, xScale: x, yScale: y, yTicks: y.ticks(LINE_Y_TICKS) };
   }, [series]);
 
   const drawProgress = spring({ frame: frame - delay, fps, config: springConfig });
-  const dotOpacity = spring({ frame: frame - delay - 20, fps, config: { damping: 16 } });
+  const dotOpacity = spring({ frame: frame - delay - 20, fps, config: SPRING_CHART_REVEAL });
 
   return (
     <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} style={{ width: "100%", height: "auto", overflow: "visible", opacity: entrance.opacity, transform: entrance.transform }}>
@@ -83,7 +90,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) =
             key={tick}
             x1={0} x2={INNER_W}
             y1={yScale(tick)} y2={yScale(tick)}
-            stroke={colors?.gridLine ?? (dark ? "#374151" : "#e5e7eb")} strokeWidth={1}
+            stroke={c.gridLine} strokeWidth={LINE_GRID_W}
           />
         ))}
 
@@ -92,7 +99,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) =
             key={`yl-${tick}`}
             x={-10} y={yScale(tick)}
             textAnchor="end" dominantBaseline="middle"
-            fontSize={36} fill={colors?.label ?? (dark ? "#cbd5e1" : "#6b7280")}
+            fontSize={LINE_AXIS_FONT} fill={c.label}
           >
             {formatValue(tick)}
           </text>
@@ -104,7 +111,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) =
             x={xScale(label)!}
             y={INNER_H + 30}
             textAnchor="middle"
-            fontSize={36} fill={colors?.label ?? (dark ? "#cbd5e1" : "#6b7280")}
+            fontSize={LINE_AXIS_FONT} fill={c.label}
           >
             {label}
           </text>
@@ -129,10 +136,10 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) =
                   key={di}
                   cx={xScale(d.label)!}
                   cy={yScale(d.value)}
-                  r={5}
+                  r={LINE_DOT_R}
                   fill={color}
-                  stroke="#fff"
-                  strokeWidth={2.5}
+                  stroke={LINE_DOT_STROKE}
+                  strokeWidth={LINE_DOT_STROKE_W}
                   opacity={dotOpacity}
                 />
               ))}
@@ -156,7 +163,7 @@ const AnimatedPath: React.FC<{ d: string; color: string; progress: number }> = (
       d={d}
       fill="none"
       stroke={color}
-      strokeWidth={3}
+      strokeWidth={LINE_STROKE_W}
       strokeLinecap="round"
       strokeDasharray={totalLen}
       strokeDashoffset={offset}

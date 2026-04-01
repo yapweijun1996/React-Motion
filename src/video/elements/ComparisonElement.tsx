@@ -10,6 +10,18 @@ import { spring, interpolate } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 import type { SceneColors } from "../sceneColors";
+import {
+  resolveColors,
+  COLOR_COMPARE_LEFT, COLOR_COMPARE_RIGHT,
+  SPRING_CARD_SLIDE, SPRING_VS_POP,
+  COMPARE_RIGHT_OFFSET, COMPARE_VS_OFFSET,
+  COMPARE_SLIDE_LEFT, COMPARE_SLIDE_RIGHT, COMPARE_VS_SCALE_FROM,
+  COMPARE_GAP, COMPARE_VS_W, COMPARE_VS_SPACING, COMPARE_VS_SIZE,
+  COMPARE_CARD_MAX_W, COMPARE_CARD_RADIUS, COMPARE_BORDER_TOP,
+  COMPARE_CARD_PADDING, COMPARE_CARD_GAP,
+  COMPARE_TITLE_SIZE, COMPARE_VALUE_SIZE, COMPARE_SUB_SIZE,
+  COMPARE_ITEM_SIZE, COMPARE_ITEM_GAP, COMPARE_DOT_SIZE,
+} from "../elementDefaults";
 
 type ComparisonSide = {
   title: string;
@@ -44,35 +56,36 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark, colors, fo
   const leftProgress = spring({
     frame: frame - delay,
     fps,
-    config: { damping: 15, mass: 0.6 },
+    config: SPRING_CARD_SLIDE,
   });
   const rightProgress = spring({
-    frame: frame - delay - 6, // slight stagger
+    frame: frame - delay - COMPARE_RIGHT_OFFSET,
     fps,
-    config: { damping: 15, mass: 0.6 },
+    config: SPRING_CARD_SLIDE,
   });
 
   // VS label pops after both cards
   const vsProgress = spring({
-    frame: frame - delay - 14,
+    frame: frame - delay - COMPARE_VS_OFFSET,
     fps,
-    config: { damping: 12, mass: 0.5 },
+    config: SPRING_VS_POP,
   });
 
-  const leftX = interpolate(leftProgress, [0, 1], [-60, 0]);
-  const rightX = interpolate(rightProgress, [0, 1], [60, 0]);
+  const leftX = interpolate(leftProgress, [0, 1], [COMPARE_SLIDE_LEFT, 0]);
+  const rightX = interpolate(rightProgress, [0, 1], [COMPARE_SLIDE_RIGHT, 0]);
 
-  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
-  const subColor = colors?.muted ?? (dark ? "#94a3b8" : "#6b7280");
-  const cardBg = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
+  const c = resolveColors(colors, dark);
+  const textColor = c.text;
+  const subColor = c.muted;
+  const cardBg = c.cardBg;
 
-  const leftColor = left.color ?? "#3b82f6";
-  const rightColor = right.color ?? "#ef4444";
+  const leftColor = left.color ?? COLOR_COMPARE_LEFT;
+  const rightColor = right.color ?? COLOR_COMPARE_RIGHT;
 
   return (
     <div style={{
       display: "flex", alignItems: "stretch", justifyContent: "center",
-      gap: 32, width: "100%",
+      gap: COMPARE_GAP, width: "100%",
       opacity: entrance.opacity, transform: entrance.transform,
     }}>
       {/* Left card */}
@@ -90,13 +103,13 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark, colors, fo
       {/* VS divider */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, width: 100,
+        flexShrink: 0, width: COMPARE_VS_W,
         opacity: vsProgress,
-        transform: `scale(${interpolate(vsProgress, [0, 1], [0.5, 1])})`,
+        transform: `scale(${interpolate(vsProgress, [0, 1], [COMPARE_VS_SCALE_FROM, 1])})`,
       }}>
         <div style={{
-          fontSize: Math.round(56 * fontScale), fontWeight: 800, color: colors?.muted ?? (dark ? "#94a3b8" : "#6b7280"),
-          letterSpacing: 4, textTransform: "uppercase",
+          fontSize: Math.round(COMPARE_VS_SIZE * fontScale), fontWeight: 800, color: c.muted,
+          letterSpacing: COMPARE_VS_SPACING, textTransform: "uppercase",
         }}>
           {vsLabel}
         </div>
@@ -137,18 +150,18 @@ const Card: React.FC<CardProps> = ({
 }) => {
   return (
     <div style={{
-      flex: 1, maxWidth: 700,
+      flex: 1, maxWidth: COMPARE_CARD_MAX_W,
       backgroundColor: cardBg,
-      borderRadius: 16,
-      borderTop: `5px solid ${color}`,
-      padding: "40px 44px",
+      borderRadius: COMPARE_CARD_RADIUS,
+      borderTop: `${COMPARE_BORDER_TOP}px solid ${color}`,
+      padding: COMPARE_CARD_PADDING,
       opacity: progress,
       transform: `translateX(${translateX}px)`,
-      display: "flex", flexDirection: "column", gap: 16,
+      display: "flex", flexDirection: "column", gap: COMPARE_CARD_GAP,
     }}>
       {/* Title */}
       <div style={{
-        fontSize: Math.round(52 * fontScale), fontWeight: 700, color,
+        fontSize: Math.round(COMPARE_TITLE_SIZE * fontScale), fontWeight: 700, color,
         lineHeight: 1.2,
       }}>
         {side.title}
@@ -157,7 +170,7 @@ const Card: React.FC<CardProps> = ({
       {/* Value (big number) */}
       {side.value && (
         <div style={{
-          fontSize: Math.round(120 * fontScale), fontWeight: 800, color: textColor,
+          fontSize: Math.round(COMPARE_VALUE_SIZE * fontScale), fontWeight: 800, color: textColor,
           lineHeight: 1.1, fontVariantNumeric: "tabular-nums",
         }}>
           {side.value}
@@ -167,7 +180,7 @@ const Card: React.FC<CardProps> = ({
       {/* Subtitle */}
       {side.subtitle && (
         <div style={{
-          fontSize: Math.round(44 * fontScale), color: subColor,
+          fontSize: Math.round(COMPARE_SUB_SIZE * fontScale), color: subColor,
           lineHeight: 1.3,
         }}>
           {side.subtitle}
@@ -179,10 +192,10 @@ const Card: React.FC<CardProps> = ({
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
           {side.items.map((item, i) => (
             <div key={i} style={{
-              fontSize: Math.round(40 * fontScale), color: textColor,
-              display: "flex", alignItems: "baseline", gap: 12,
+              fontSize: Math.round(COMPARE_ITEM_SIZE * fontScale), color: textColor,
+              display: "flex", alignItems: "baseline", gap: COMPARE_ITEM_GAP,
             }}>
-              <span style={{ color, fontSize: Math.round(28 * fontScale), lineHeight: 1 }}>●</span>
+              <span style={{ color, fontSize: Math.round(COMPARE_DOT_SIZE * fontScale), lineHeight: 1 }}>●</span>
               {item}
             </div>
           ))}
