@@ -50,6 +50,8 @@ const TYPE_SPRING: Record<string, SpringPreset> = {
   divider: "support",
   icon: "hero",
   annotation: "support",
+  progress: "data",
+  timeline: "support",
 };
 
 // --- Hook ---

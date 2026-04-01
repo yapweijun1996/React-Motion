@@ -14,6 +14,8 @@ import { IconElement } from "./elements/IconElement";
 import { AnnotationElement } from "./elements/AnnotationElement";
 import { SvgElement } from "./elements/SvgElement";
 import { MapElement } from "./elements/MapElement";
+import { ProgressElement } from "./elements/ProgressElement";
+import { TimelineElement } from "./elements/TimelineElement";
 import { NoiseBackground } from "./NoiseBackground";
 import { ParticleBg } from "./ParticleBg";
 import { loadSettings } from "../services/settingsStore";
@@ -137,6 +139,10 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
         return <SvgElement el={el} index={index} />;
       case "map":
         return <MapElement el={el} index={index} />;
+      case "progress":
+        return <ProgressElement el={el} index={index} dark={dark} />;
+      case "timeline":
+        return <TimelineElement el={el} index={index} dark={dark} />;
       default:
         console.warn(`[GenericScene] Unknown element type: "${el.type}"`);
         return null;

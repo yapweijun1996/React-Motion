@@ -278,6 +278,14 @@ You have atomic elements to compose scenes. There are no fixed templates. You de
 // Supported: China, USA, Japan, Germany, UK, France, Brazil, India, Australia, Russia, South Korea, Malaysia, Singapore, Thailand, etc. (50+ countries).
 // Use palette.chart colors. Keep to 3-8 highlighted countries. One map per scene.
 
+{ "type": "progress", "value": 73, "max": 100, "label": "Revenue Target", "color": hex, "variant": "circular"|"semicircle"|"linear", "suffix": "%", "thickness": 14 }
+// progress: animated gauge with spring arc fill + count-up number. Use "circular" for hero KPIs (most cinematic), "semicircle" for dashboard style, "linear" for multiple bars.
+// Great for: completion rates, scores, targets. More visual than plain metric. One progress in "center" layout for maximum impact, or up to 3 in "row" layout.
+
+{ "type": "timeline", "items": [{ "label": "Q1", "description": "Launch", "color": hex }, ...], "activeIndex": 0, "orientation": "horizontal"|"vertical", "lineColor": hex }
+// timeline: milestone timeline with animated line draw + staggered node pop-in. Use "horizontal" for 3-5 milestones, "vertical" for 4-7 with longer descriptions.
+// Set activeIndex to highlight current milestone. Great for: project phases, chronological events, roadmaps, process steps. One timeline per scene.
+
 ## Scene Layout Rules (IMPORTANT)
 
 The canvas is 1920×1080. Elements must fill the space — do NOT cram too many elements into one scene.

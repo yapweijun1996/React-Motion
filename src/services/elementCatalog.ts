@@ -91,6 +91,18 @@ export const ELEMENT_CATALOG = [
     supported_countries: "China, USA, India, Japan, Germany, UK, France, Brazil, Canada, Australia, Russia, South Korea, Italy, Spain, Mexico, Indonesia, Turkey, Saudi Arabia, Switzerland, Netherlands, Sweden, Singapore, Malaysia, Thailand, Vietnam, Philippines, Nigeria, South Africa, Egypt, Argentina, Colombia, Chile, Peru, New Zealand, Ireland, Norway, Denmark, Finland, Poland, Taiwan, Hong Kong, UAE, Israel, Portugal, Greece, Belgium, Austria, Czech Republic",
     usage_tips: "Use for geographic data: market share by country, user distribution, supply chain origins, regional revenue. One map per scene. Use palette.chart colors for country highlights. Keep countries to 3-8 for readability. showLabels=true adds name+value tooltip on each highlighted country.",
   },
+  {
+    type: "progress",
+    props: "value (number), max (number, default 100), label (string), color (hex), variant ('circular'|'semicircle'|'linear'), suffix (string, default '%'), thickness (number 4-32, default 14), animation, stagger",
+    description: "Animated gauge/progress indicator. Circular ring fills with spring animation + count-up number. Great for completion rates, scores, targets, KPIs. More visual than plain metric — the arc fill is inherently cinematic.",
+    usage_tips: "Use 'circular' (default) for hero KPIs on dark backgrounds — very dramatic. Use 'semicircle' for dashboard style. Use 'linear' when showing multiple progress bars in a column. Pair with a text title above. One progress per scene for maximum impact, or up to 3 in 'row' layout.",
+  },
+  {
+    type: "timeline",
+    props: "items: [{ label, description?, color? }], activeIndex (number, -1=none), orientation ('horizontal'|'vertical'), lineColor (hex), animation, stagger",
+    description: "Milestone timeline with animated line draw + staggered node pop-in. Perfect for project phases, chronological events, process steps, roadmaps.",
+    usage_tips: "Use 'horizontal' for 3-5 milestones (best fit for 1920px width). Use 'vertical' for 4-7 items with longer descriptions. Set activeIndex to highlight current/key milestone. Great for storytelling scenes — shows progression, before/after, phase transitions. One timeline per scene.",
+  },
 ];
 
 export const STAGGER_SYSTEM = {
@@ -132,4 +144,6 @@ export const ELEMENT_TIPS = [
   "ANNOTATION: Use 'annotation' for educational/study videos — 'circle' to highlight key points, 'cross' for wrong answers, 'arrow' for flow. Hand-drawn style adds warmth. Don't overuse — 1-2 per video for emphasis.",
   "SVG: Use 'svg' element for custom diagrams (flowcharts, org charts, mind maps, timelines, Venn diagrams) that don't fit standard chart types. AI generates the SVG markup directly. Include viewBox. Use palette colors. One svg per scene.",
   "MAP: Use 'map' element for geographic data — country comparisons, regional revenue, user distribution, supply chains. Highlight 3-8 countries with palette.chart colors. One map per scene.",
+  "PROGRESS: Use 'progress' for KPIs that are percentages, scores, or completion rates. The circular arc fill is inherently cinematic — much more visual than plain metric numbers. Use variant 'circular' on dark backgrounds for maximum drama.",
+  "TIMELINE: Use 'timeline' for chronological storytelling — project phases, event sequences, roadmaps. The staggered node pop-in creates natural pacing. Set activeIndex to draw attention to the current/key milestone.",
 ];

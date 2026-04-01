@@ -17,6 +17,7 @@ import type { VideoScript, VideoScene, SceneElement, ThemeConfig } from "../type
 export const VALID_ELEMENT_TYPES = [
   "text", "metric", "bar-chart", "pie-chart", "line-chart",
   "sankey", "list", "divider", "callout", "kawaii", "lottie", "icon", "annotation", "svg", "map",
+  "progress", "timeline",
 ] as const;
 
 export const VALID_LAYOUTS = ["column", "center", "row"] as const;

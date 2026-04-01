@@ -410,7 +410,7 @@ describe("validateSettings", () => {
 
 describe("Enum constants", () => {
   it("VALID_ELEMENT_TYPES has expected count", () => {
-    expect(VALID_ELEMENT_TYPES.length).toBe(15);
+    expect(VALID_ELEMENT_TYPES.length).toBe(17);
   });
 
   it("VALID_ANIMATIONS has expected count", () => {
