@@ -1,23 +1,11 @@
 import { loadSettings } from "./settingsStore";
 import { logWarn } from "./errors";
 import { trackEvent } from "./metrics";
+import { GEMINI_API_BASE, type BgmMood } from "./apiConfig";
 
-const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+export { BGM_MOODS, type BgmMood } from "./apiConfig";
+
 const DEFAULT_BGM_MODEL = "lyria-3-clip-preview";
-
-/** Predefined mood presets for AI to choose from */
-export const BGM_MOODS = [
-  "corporate",
-  "upbeat",
-  "calm",
-  "dramatic",
-  "inspirational",
-  "playful",
-  "cinematic",
-  "ambient",
-] as const;
-
-export type BgmMood = (typeof BGM_MOODS)[number];
 
 export type BgmResult = {
   blobUrl: string;

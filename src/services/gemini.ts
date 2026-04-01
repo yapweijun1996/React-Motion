@@ -1,8 +1,7 @@
 import { loadSettings } from "./settingsStore";
 import { ClassifiedError, classifyHttpStatus, logError } from "./errors";
 import { addLogEntry } from "./geminiLog";
-
-const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+import { GEMINI_API_BASE } from "./apiConfig";
 
 function getApiKey(): string {
   const { geminiApiKey } = loadSettings();

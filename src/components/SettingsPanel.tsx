@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { IconEye, IconEyeOff, IconPlay, IconStop, IconCheck } from "./Icons";
 import {
   loadSettings,
   saveSettings,
@@ -9,6 +10,7 @@ import {
 } from "../services/settingsStore";
 import { BGM_MOODS } from "../services/bgMusic";
 import { getAvailableTtsVoices, previewVoice } from "../services/tts";
+import { DEFAULT_MODEL, DEFAULT_TTS_VOICE, DEFAULT_BGM_MOOD } from "../services/apiConfig";
 import { clearCache } from "../services/cache";
 
 type Props = {
@@ -92,7 +94,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
               title={showKey ? "Hide" : "Show"}
               type="button"
             >
-              {showKey ? "🙈" : "👁"}
+              {showKey ? <IconEyeOff size={16} /> : <IconEye size={16} />}
             </button>
           </div>
           {settings.geminiApiKey && !showKey && (
@@ -129,7 +131,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
             >
               {getAvailableTtsVoices().map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.id} ({v.desc}){v.id === "Kore" ? " — Default" : ""}
+                  {v.id} ({v.desc}){v.id === DEFAULT_TTS_VOICE ? " — Default" : ""}
                 </option>
               ))}
             </select>
@@ -140,7 +142,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
               title={previewState === "playing" ? "Stop" : "Preview voice"}
               type="button"
             >
-              {previewState === "loading" ? "..." : previewState === "playing" ? "\u23F9" : "\u25B6"}
+              {previewState === "loading" ? "..." : previewState === "playing" ? <IconStop size={14} /> : <IconPlay size={14} />}
               {" "}Preview
             </button>
           </div>
@@ -269,7 +271,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
               onClick={() => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
                 clearSettings(); clearCache();
-                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsVoice: "Kore", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient", agentMode: "single" });
+                setSettings({ geminiApiKey: "", geminiModel: DEFAULT_MODEL, ttsVoice: DEFAULT_TTS_VOICE, ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: DEFAULT_BGM_MOOD, agentMode: "single" });
                 alert("All local data cleared.");
               }}>Clear All Data</button>
           </div>
@@ -279,7 +281,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
         {/* Save */}
         <div className="rm-settings-footer">
           <button className="rm-btn rm-btn-primary" onClick={handleSave}>
-            {saved ? "Saved ✓" : "Save"}
+            {saved ? <><IconCheck size={14} /> Saved</> : "Save"}
           </button>
           <button className="rm-btn rm-btn-secondary" onClick={onClose}>
             Cancel

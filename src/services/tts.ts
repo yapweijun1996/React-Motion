@@ -2,10 +2,9 @@ import { loadSettings } from "./settingsStore";
 import { logWarn } from "./errors";
 import { trackEvent } from "./metrics";
 import type { VideoScene } from "../types";
+import { GEMINI_API_BASE, DEFAULT_TTS_VOICE } from "./apiConfig";
 
-const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_TTS_MODEL = "gemini-2.5-flash-preview-tts";
-const DEFAULT_VOICE = "Kore";
 const SAMPLE_RATE = 24000;
 const BYTES_PER_SAMPLE = 2; // 16-bit PCM
 
@@ -223,7 +222,7 @@ async function callGeminiTTS(
       responseModalities: ["AUDIO"],
       speechConfig: {
         voiceConfig: {
-          prebuiltVoiceConfig: { voiceName: voiceName ?? DEFAULT_VOICE },
+          prebuiltVoiceConfig: { voiceName: voiceName ?? DEFAULT_TTS_VOICE },
         },
       },
     },

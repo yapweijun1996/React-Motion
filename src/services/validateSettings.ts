@@ -3,6 +3,7 @@
  */
 
 import type { ValidationResult } from "./validateEnums";
+import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_TTS_VOICE, BGM_MOODS, DEFAULT_BGM_MOOD, type BgmMood } from "./apiConfig";
 
 // ============================================================
 // Type guard helpers (duplicated from validate.ts — tiny 1-liners)
@@ -26,7 +27,7 @@ function isNum(v: unknown): v is number {
 
 export type ExportQuality = "draft" | "standard" | "high";
 
-export type BgmMood = "corporate" | "upbeat" | "calm" | "dramatic" | "inspirational" | "playful" | "cinematic" | "ambient";
+export type { BgmMood } from "./apiConfig";
 
 export type AgentMode = "single" | "multi";
 
@@ -42,13 +43,7 @@ export type AppSettings = {
   agentMode: AgentMode;
 };
 
-const VALID_MODEL_IDS = [
-  "gemini-2.0-flash",
-  "gemini-2.5-flash-preview-05-20",
-  "gemini-3-flash-preview",
-  "gemini-2.5-pro-preview-05-06",
-  "gemini-3-pro-preview",
-] as const;
+const VALID_MODEL_IDS: readonly string[] = AVAILABLE_MODELS.map((m) => m.id);
 
 // ============================================================
 // Settings validation
@@ -64,18 +59,18 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
   const geminiApiKey = isStr(input.geminiApiKey) ? input.geminiApiKey.trim() : "";
   let geminiModel = isStr(input.geminiModel) ? input.geminiModel.trim() : "";
 
-  if (geminiModel && !(VALID_MODEL_IDS as readonly string[]).includes(geminiModel)) {
+  if (geminiModel && !VALID_MODEL_IDS.includes(geminiModel)) {
     warnings.push(`Unknown model "${geminiModel}", falling back to default`);
-    geminiModel = "gemini-2.0-flash";
+    geminiModel = DEFAULT_MODEL;
   }
 
   if (!geminiModel) {
-    geminiModel = "gemini-2.0-flash";
+    geminiModel = DEFAULT_MODEL;
   }
 
-  // TTS voice — lazy import avoided; just validate as non-empty string, default "Kore"
-  let ttsVoice = isStr(input.ttsVoice) ? input.ttsVoice.trim() : "Kore";
-  if (!ttsVoice) ttsVoice = "Kore";
+  // TTS voice — lazy import avoided; just validate as non-empty string
+  let ttsVoice = isStr(input.ttsVoice) ? input.ttsVoice.trim() : DEFAULT_TTS_VOICE;
+  if (!ttsVoice) ttsVoice = DEFAULT_TTS_VOICE;
 
   let ttsConcurrency = isNum(input.ttsConcurrency) ? input.ttsConcurrency : 2;
   if (ttsConcurrency < 1 || ttsConcurrency > 5) {
@@ -92,10 +87,9 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
 
   const bgMusicEnabled = typeof input.bgMusicEnabled === "boolean" ? input.bgMusicEnabled : false;
 
-  const VALID_BGM_MOODS: BgmMood[] = ["corporate", "upbeat", "calm", "dramatic", "inspirational", "playful", "cinematic", "ambient"];
-  const bgMusicMood: BgmMood = isStr(input.bgMusicMood) && VALID_BGM_MOODS.includes(input.bgMusicMood as BgmMood)
+  const bgMusicMood: BgmMood = isStr(input.bgMusicMood) && (BGM_MOODS as readonly string[]).includes(input.bgMusicMood)
     ? (input.bgMusicMood as BgmMood)
-    : "ambient";
+    : DEFAULT_BGM_MOOD;
 
   const VALID_AGENT_MODES: AgentMode[] = ["single", "multi"];
   const agentMode: AgentMode = isStr(input.agentMode) && VALID_AGENT_MODES.includes(input.agentMode as AgentMode)

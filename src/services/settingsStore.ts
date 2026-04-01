@@ -1,16 +1,9 @@
 import { validateSettings, type AppSettings, type ExportQuality, type BgmMood, type AgentMode } from "./validate";
+import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_TTS_VOICE, DEFAULT_BGM_MOOD } from "./apiConfig";
 
 export type { AppSettings, ExportQuality, BgmMood, AgentMode } from "./validate";
 
 const STORAGE_KEY = "react-motion-settings";
-
-const AVAILABLE_MODELS = [
-  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { id: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
-  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (Preview)" },
-  { id: "gemini-2.5-pro-preview-05-06", label: "Gemini 2.5 Pro" },
-  { id: "gemini-3-pro-preview", label: "Gemini 3 Pro (Preview)" },
-] as const;
 
 export function getAvailableModels() {
   return AVAILABLE_MODELS;
@@ -39,13 +32,13 @@ export function loadSettings(): AppSettings {
         stored.geminiModel ||
         import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
         import.meta.env.VITE_GEMINI_MODEL ||
-        "gemini-2.0-flash",
-      ttsVoice: stored.ttsVoice ?? "Kore",
+        DEFAULT_MODEL,
+      ttsVoice: stored.ttsVoice ?? DEFAULT_TTS_VOICE,
       ttsConcurrency: stored.ttsConcurrency ?? 1,
       exportQuality: stored.exportQuality ?? "standard",
       canvasEffects: stored.canvasEffects ?? false,
       bgMusicEnabled: stored.bgMusicEnabled ?? false,
-      bgMusicMood: stored.bgMusicMood ?? "ambient",
+      bgMusicMood: stored.bgMusicMood ?? DEFAULT_BGM_MOOD,
       agentMode: stored.agentMode ?? "single",
     };
 
@@ -130,13 +123,13 @@ function getDefaults(): AppSettings {
     geminiModel:
       import.meta.env.DEVELOPMENT_GEMINI_MODEL ||
       import.meta.env.VITE_GEMINI_MODEL ||
-      "gemini-2.0-flash",
-    ttsVoice: "Kore",
+      DEFAULT_MODEL,
+    ttsVoice: DEFAULT_TTS_VOICE,
     ttsConcurrency: 1,
     exportQuality: "standard",
     canvasEffects: false,
     bgMusicEnabled: false,
-    bgMusicMood: "ambient",
+    bgMusicMood: DEFAULT_BGM_MOOD,
     agentMode: "single",
   };
 }
