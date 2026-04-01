@@ -125,7 +125,7 @@
 |-------|---------|--------|
 | Phase 3.1 | 8 new CSS transitions (12 total) | ✅ Done (RM-135) |
 | Phase 3.2 | 2 WebGL transitions (dissolve + pixelate, 14 total) | ✅ Done (RM-136) |
-| Phase 3.3 | Agentic loop refactor — Claude Code patterns (hooks, stop validation, storyboard enforcement) | To Do (RM-143) |
+| Phase 3.3 | Agentic loop refactor — Claude Code patterns (hooks, stop validation, storyboard enforcement) | ✅ Done (RM-143) |
 | Phase 4 | Three.js 3D elements (3D charts, globe, 3D text) | Future |
 
 **Cinematic Enhancement Layer: ✅ ALL DONE (RM-144~150)**
@@ -142,17 +142,17 @@ Total: 18 atomic elements, 11 entrance animations (incl. typewriter), 12+ transi
 | RM-149 | `glow` / `shadow` text props | Neon glow + drop shadow on titles |
 | RM-150 | Tone adaptation | Formal vs conversational auto-detection |
 
-**To Do — RM-143: Agentic Loop Refactor (Claude Code Patterns)**
+**Done — RM-143: Agentic Loop Refactor (Claude Code Patterns)**
 
 Goal: Refactor agentLoop.ts to follow Claude Code / Claude Agent SDK patterns. Improve storytelling output quality.
 
 | Key | Type | Summary | Priority | Status | Notes |
 |-----|------|---------|----------|--------|-------|
-| RM-143a | Task | PostToolUse hook — after produce_script, check if draft_storyboard was called. If not, send feedback to AI: "You skipped storyboard planning. The output may lack narrative arc. Consider calling draft_storyboard first." AI decides whether to redo. | High | To Do | Not hard-blocking, but strong AI-first guidance. |
-| RM-143b | Task | Stop hook — before returning final script, run quick deterministic checks (has hook? has action close? >3 element types used?). If fails, send result + issues back to AI for one more iteration. | High | To Do | Replaces non-blocking evaluate for critical checks. |
-| RM-143c | Task | is_error flag — tool errors return `{ error: msg, is_error: true }` instead of `{ error: msg }`. Clearer signal for AI. | Medium | To Do | Aligns with Anthropic SDK pattern. |
-| RM-143d | Task | Smart text-only handling — when AI responds with text only, check if it's thinking/planning (allow) vs stuck (nudge). Current approach always nudges. | Medium | To Do | Claude Code allows AI to "think out loud" between tool calls. |
-| RM-143e | Task | Budget tracking — log token usage per iteration, warn at threshold, abort at hard limit. | Low | To Do | Prevents runaway API costs on complex prompts. |
+| RM-143a | Task | PostToolUse hook — after produce_script, check if draft_storyboard was called. If not, send feedback to AI. AI decides whether to redo. | High | ✅ Done | `calledTools` Set tracks tool history. Advisory sent once, AI can revise or proceed. |
+| RM-143b | Task | Stop hook — 5 deterministic quality checks before accepting script. One retry on failure. | High | ✅ Done | New `agentHooks.ts` (pure functions). Checks: hook, action close, element diversity, transition diversity, visual personality. 12 tests. |
+| RM-143c | Task | is_error flag — tool errors return `{ error: msg, is_error: true }`. | Medium | ✅ Done | Aligns with Anthropic SDK pattern. 2-line change. |
+| RM-143d | Task | Smart text-only handling — streak counter, first text-only allowed (AI thinking), second+ gently guided. | Medium | ✅ Done | Replaces forced "Please use tools" with `textOnlyStreak` logic. |
+| RM-143e | Task | Budget tracking — cumulative char count, warn at 200K chars (~50K tokens). | Low | ✅ Done | Information-only, no abort. Reports via `onProgress`. |
 
 **Maintenance**
 

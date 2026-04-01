@@ -41,7 +41,7 @@ export const AudioTrack: React.FC<AudioTrackProps> = ({
 
     if (playing) {
       // Only play if paused to avoid redundant play() calls
-      if (el.paused) el.play().catch(() => {});
+      if (el.paused) el.play().catch((err) => console.warn("[AudioTrack] play failed:", err.message));
     } else {
       if (!el.paused) el.pause();
     }

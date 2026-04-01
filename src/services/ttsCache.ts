@@ -1,18 +1,19 @@
 /**
- * TTS audio blob cache — persists WAV audio in IndexedDB.
+ * TTS & BGM audio blob cache — persists audio in IndexedDB.
  *
  * Blob URLs (blob:http://...) are memory-only and lost on page reload.
- * This module stores the actual WAV Blob binary so audio survives
+ * This module stores the actual Blob binary so audio survives
  * page refreshes and cache/history restores.
  *
- * Key format: "{prefix}:{sceneId}" where prefix is:
+ * Key format: "{prefix}:{sceneId}" for TTS, "{prefix}:bgm" for BGM.
+ * Prefix is:
  *   - "cache"        — for quick-restore cache (single last script)
  *   - "history-{id}" — for history entries
  */
 
 import { openDB, STORE_TTS_AUDIO } from "./db";
 import { logWarn } from "./errors";
-import type { VideoScene } from "../types";
+import type { VideoScene, VideoScript } from "../types";
 
 // --- Types ---
 
@@ -188,6 +189,75 @@ export async function clearTTSAudio(prefix: string): Promise<void> {
     db.close();
   } catch (err) {
     logWarn("TTSCache", "UNKNOWN", `Failed to clear TTS audio (${prefix})`, { error: err });
+  }
+}
+
+// --- BGM Audio Persistence ---
+
+/**
+ * Save BGM audio blob to IndexedDB.
+ * Key: "{prefix}:bgm" — single entry per script.
+ */
+export async function saveBGMAudio(
+  prefix: string,
+  script: VideoScript,
+): Promise<boolean> {
+  if (!script.bgMusicUrl) return false;
+
+  try {
+    const res = await fetch(script.bgMusicUrl);
+    const blob = await res.blob();
+
+    const db = await openDBWithTTSStore();
+    const tx = db.transaction(STORE_TTS_AUDIO, "readwrite");
+    tx.objectStore(STORE_TTS_AUDIO).put(
+      { blob, durationMs: script.bgMusicDurationMs ?? 0 },
+      `${prefix}:bgm`,
+    );
+    await idbTx(tx);
+    db.close();
+    console.log(`[BGMCache] Saved BGM audio (${prefix})`);
+    return true;
+  } catch (err) {
+    logWarn("BGMCache", "CACHE_SAVE_FAILED", `Failed to save BGM audio (${prefix})`,
+      { error: err instanceof Error ? err.message : err });
+    return false;
+  }
+}
+
+/**
+ * Restore BGM audio from IndexedDB into a script object.
+ * Creates a fresh blob URL from the stored Blob.
+ */
+export async function restoreBGMAudio(
+  prefix: string,
+  script: VideoScript,
+): Promise<VideoScript> {
+  try {
+    const db = await openDBWithTTSStore();
+    const tx = db.transaction(STORE_TTS_AUDIO, "readonly");
+    const store = tx.objectStore(STORE_TTS_AUDIO);
+    const req = store.get(`${prefix}:bgm`) as IDBRequest<TTSAudioEntry | undefined>;
+
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+
+    const entry = req.result;
+    if (!entry?.blob) return script;
+
+    console.log(`[BGMCache] Restored BGM audio (${prefix})`);
+    return {
+      ...script,
+      bgMusicUrl: URL.createObjectURL(entry.blob),
+      bgMusicDurationMs: entry.durationMs,
+    };
+  } catch (err) {
+    logWarn("BGMCache", "CACHE_LOAD_FAILED", `Failed to restore BGM audio (${prefix})`,
+      { error: err instanceof Error ? err.message : err });
+    return script;
   }
 }
 

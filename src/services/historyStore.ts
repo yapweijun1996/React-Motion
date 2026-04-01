@@ -12,7 +12,7 @@
 
 import { openDB, STORE_HISTORY } from "./db";
 import { logWarn } from "./errors";
-import { saveTTSAudio, restoreTTSAudio, clearTTSAudio } from "./ttsCache";
+import { saveTTSAudio, restoreTTSAudio, clearTTSAudio, saveBGMAudio, restoreBGMAudio } from "./ttsCache";
 import type { VideoScript, VideoScene } from "../types";
 
 const MAX_ENTRIES = 50;
@@ -57,13 +57,14 @@ export async function saveToHistory(
     await idbTx(tx);
     db.close();
 
-    // Persist TTS audio blobs
+    // Persist audio blobs
     const audioSaved = await saveTTSAudio(`history-${id}`, script.scenes);
+    const bgmSaved = await saveBGMAudio(`history-${id}`, script);
 
     // Evict oldest if over limit
     await evictOldest();
 
-    console.log(`[History] Saved entry #${id}${audioSaved ? " + TTS audio" : ""}`);
+    console.log(`[History] Saved entry #${id}${audioSaved ? " + TTS" : ""}${bgmSaved ? " + BGM" : ""}`);
     return id;
   } catch (err) {
     logWarn("History", "CACHE_SAVE_FAILED", "Failed to save history entry", { error: err });
@@ -101,8 +102,9 @@ export async function loadHistoryEntry(id: number): Promise<HistoryEntry | null>
     db.close();
     if (!entry) return null;
 
-    // Restore TTS audio blobs from IndexedDB
+    // Restore audio blobs from IndexedDB
     entry.script.scenes = await restoreTTSAudio(`history-${id}`, entry.script.scenes);
+    entry.script = await restoreBGMAudio(`history-${id}`, entry.script);
     return entry;
   } catch (err) {
     logWarn("History", "CACHE_LOAD_FAILED", `Failed to load history #${id}`, { error: err });
@@ -145,10 +147,11 @@ export async function clearHistory(): Promise<void> {
 function stripBlobUrls(script: VideoScript): VideoScript {
   return {
     ...script,
+    bgMusicUrl: undefined, // blob URLs can't be serialized; persisted separately
     scenes: script.scenes.map((s) => ({
       ...s,
       ttsAudioUrl: undefined,
-      // Keep ttsAudioDurationMs — used for scene timing on restore
+      // Keep ttsAudioDurationMs + bgMusicDurationMs — used for timing on restore
     })),
   };
 }

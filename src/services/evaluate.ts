@@ -47,12 +47,12 @@ Your job: verify the script is correct, effective, and visually fits the viewpor
    - Metric scenes: max 3 metrics in a row layout, max 2 in a column layout
 
 7. STORYTELLING QUALITY (CRITICAL — this is what makes the video useful, not boring):
-   a. **Hook test**: Does scene 1 open with a QUESTION or SURPRISING number? If it opens with a plain title like "Q1 Report" or "Data Overview", FAIL. Fix by rewriting scene 1 narration as a provocative question or dramatic stat.
+   a. **Hook test**: Does scene 1 open with a KEY FINDING, SURPRISING NUMBER, or COMPELLING QUESTION? If it opens with a generic title like "Q1 Report" or "Data Overview" with no data insight, FAIL. Fix by rewriting scene 1 narration to lead with the most important data point or insight.
    b. **Audience awareness**: Does narration speak TO the audience? Look for "you", "we", "our", "your team". If all narration is impersonal ("The data shows..."), FAIL. Fix by rewriting key narration lines to address the audience directly.
    c. **So What test**: For each scene with a chart or metric, does the narration INTERPRET what it means (not just read numbers)? If narration says "Revenue was $4.8M" without context like "exceeding target by 6.7%", FAIL.
-   d. **Visual metaphor**: Does the video use at least ONE of: kawaii character, annotation, icon with metric, SVG illustration, or map? If it's ALL text + charts with no visual personality, flag as "visually monotonous".
+   d. **Visual variety**: Does the video use at least ONE of: annotation, icon with metric, progress gauge, comparison card, SVG illustration, map, or kawaii character? If it's ALL plain text + charts with no visual variety, flag as "visually monotonous". Note: kawaii is optional — formal business presentations should use professional elements (annotation, icon, progress, comparison) instead.
    e. **Action close**: Does the last or second-to-last scene contain a RECOMMENDATION or CALL-TO-ACTION? If the video ends with just a data summary or "thank you", FAIL. Fix by adding a resolution scene with actionable next steps.
-   f. **Emotional arc**: Do scenes vary in tone? There should be at least one moment of tension/surprise AND one moment of resolution/hope. If all scenes have the same neutral tone, flag it.
+   f. **Narrative arc**: Do scenes vary in focus? There should be at least one challenge/problem identification AND one resolution/recommendation. A monotone "here's data, here's data, here's data" with no narrative progression should be flagged. Note: for formal business content, "tension" means identifying a business challenge, not dramatic emotion.
 
 ## Output JSON
 
@@ -82,7 +82,9 @@ export async function evaluateScript(
       role: "user",
       parts: [
         {
-          text: `## Original user prompt\n${userPrompt}\n\n## Generated VideoScript\n${JSON.stringify(script, null, 2)}`,
+          // Compact JSON — evaluator risk is low (parseVideoScript validates after),
+          // saves ~41% payload vs pretty-print.
+          text: `## Original user prompt\n${userPrompt}\n\n## Generated VideoScript\n${JSON.stringify(script)}`,
         },
       ],
     },

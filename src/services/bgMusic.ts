@@ -187,7 +187,7 @@ function getAudioDuration(blobUrl: string): Promise<number> {
 
     audio.onloadedmetadata = () => {
       const ms = Math.ceil(audio.duration * 1000);
-      URL.revokeObjectURL(audio.src); // cleanup temp listener
+      audio.src = ""; // release media decoder without revoking the blob URL
       resolve(ms);
     };
     audio.onerror = () => {
