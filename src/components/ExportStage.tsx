@@ -2,14 +2,20 @@ import { VideoSurface } from "../video/VideoSurface";
 import { ReportComposition } from "../video/ReportComposition";
 import type { PlayerHandle } from "../video/PlayerHandle";
 import type { VideoScript } from "../types";
+import type { ExportProgress } from "../services/exportVideo";
 
 // --- Export overlay (modal dialog during export) ---
 
 type ExportOverlayProps = {
-  message: string;
+  progress: ExportProgress;
 };
 
-export function ExportOverlay({ message }: ExportOverlayProps) {
+function formatEta(eta: number): string {
+  if (eta >= 60) return `~${Math.floor(eta / 60)}m ${eta % 60}s remaining`;
+  return `~${eta}s remaining`;
+}
+
+export function ExportOverlay({ progress }: ExportOverlayProps) {
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="export-modal-title" className="rm-export-overlay">
       <div className="rm-export-modal">
@@ -18,7 +24,15 @@ export function ExportOverlay({ message }: ExportOverlayProps) {
           Keep this tab open and active until the MP4 export finishes.
           Switching tabs or minimizing the browser may interrupt capture.
         </p>
-        <div className="rm-export-status">{message}</div>
+        <div className="rm-export-status">{progress.message}</div>
+        {progress.eta != null && progress.eta > 0 && (
+          <div className="rm-export-eta">{formatEta(progress.eta)}</div>
+        )}
+        {progress.stage !== "error" && (
+          <div className="rm-progress-track" style={{ marginTop: 12 }}>
+            <div className="rm-progress-fill" style={{ width: `${progress.percent}%` }} />
+          </div>
+        )}
       </div>
     </div>
   );
