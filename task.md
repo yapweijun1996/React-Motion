@@ -133,6 +133,7 @@
 | RM-169 | UX | Palette 背景色现代化 — palette.ts bgDark desaturate 1.5→0.5 (保留主色调色相，不再出脏灰)。prompt.ts 强制 bgColor 只用 palette.background.dark/light，禁止随机 hex。 | Done |
 | RM-170 | Bug | 场景高度溢出修复 — PieChartElement SVG maxHeight 从 100% 改为 60vh (防止 1:1 viewBox 按宽度膨胀到 912px)。GenericScene Ken Burns 内层容器增加 overflow:hidden 兜底。根因：row-wrap 布局下 pie-chart + callout 总高度 1158px 超出 1008px 可用高度。 | Done |
 | RM-171 | Feature | `search_reference` 工具 — OODAE Orient 阶段搜索规划工具。AI 调用时传入 topic/industry/region/focus，Executor 生成 3-5 个精准搜索查询 + 参考角度，AI 下一轮用 Google Search grounding 执行。参数容错 (subject→topic, vertical→industry 等别名)。4 种 focus 模式 (benchmark/case_study/trend/comparison)，未指定时默认 3 种。prompt.ts OODAE 步骤更新。24 个单元测试。 | Done |
+| RM-172 | Feature | `refine_scene` 工具 — OODAE Act 阶段精修工具。质量检查失败后 AI 可精修单个场景而非重写整个脚本。共享状态 `lastProducedScript` (produce_script 写入, refine_scene 读写)。参数: scene_index + updated_scene + reason + is_final。is_final=true 触发终止+质量门。agentLoop 终止检测扩展、质量反馈消息引导、budget 最小工具集纳入。prompt.ts OODAE step 8 + Refinement Strategy 段落。11 个单元测试。 | Done |
 
 ### In Progress / Testing
 

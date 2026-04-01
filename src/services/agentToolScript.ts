@@ -2,7 +2,7 @@
  * Tool: produce_script — OODAE phase: Act (TERMINATES the loop)
  */
 
-import { register, getLastPalette } from "./agentToolRegistry";
+import { register, getLastPalette, setLastScript } from "./agentToolRegistry";
 
 // ============================================================
 // Tool: produce_script
@@ -59,6 +59,7 @@ register(
       }
     }
 
+    setLastScript(script);
     return { result: { script, terminal: true } };
   },
 );

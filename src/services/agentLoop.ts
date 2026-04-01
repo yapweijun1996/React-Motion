@@ -11,6 +11,7 @@ import {
   getToolDeclarations,
   getToolExecutor,
   resetPaletteState,
+  resetScriptState,
   type ToolContext,
 } from "./agentTools";
 import { runStopChecks } from "./agentHooks";
@@ -38,6 +39,7 @@ export async function runAgentLoop(
   onProgress?: (p: AgentProgress) => void,
 ): Promise<AgentLoopResult> {
   resetPaletteState();
+  resetScriptState();
 
   const messages: GeminiMessage[] = [
     { role: "user", parts: [{ text: userMessage }] },
@@ -51,7 +53,7 @@ export async function runAgentLoop(
   // Budget pressure: restrict to terminal tools only
   const toolsMinimal: GeminiTool[] = [{
     function_declarations: getToolDeclarations().filter(
-      (d) => d.name === "produce_script" || d.name === "draft_storyboard",
+      (d) => d.name === "produce_script" || d.name === "draft_storyboard" || d.name === "refine_scene",
     ),
   }];
 
@@ -155,7 +157,7 @@ export async function runAgentLoop(
         calledTools.add(name);
 
         // Capture terminal result — don't return yet (hooks run after inner loop)
-        if (name === "produce_script" && toolResult.result.terminal) {
+        if ((name === "produce_script" || name === "refine_scene") && toolResult.result.terminal) {
           terminalScript = toolResult.result.script as Record<string, unknown>;
         }
 
@@ -228,7 +230,7 @@ export async function runAgentLoop(
         report(i, "quality_gate", checks.issues.join("; "));
         const qualityMsg = "Quality check found issues with the script:\n" +
           checks.issues.map((s) => "- " + s).join("\n") +
-          "\nPlease fix these issues and call produce_script again.";
+          "\nPlease fix these issues. Use refine_scene to fix individual scenes, or call produce_script again with a full rewrite.";
         messages.push({ role: "user", parts: [{ text: qualityMsg }] });
         recordUserMessage(budget, qualityMsg);
         terminalScript = null;
@@ -245,7 +247,7 @@ export async function runAgentLoop(
             report(i, "evaluate_retry", evalResult.issues.join("; "));
             const evalMsg = "AI evaluation found issues with the script:\n" +
               evalResult.issues.map((s) => "- " + s).join("\n") +
-              "\nPlease fix these issues and call produce_script again.";
+              "\nPlease fix these issues. Use refine_scene to fix individual scenes, or call produce_script again with a full rewrite.";
             messages.push({ role: "user", parts: [{ text: evalMsg }] });
             recordUserMessage(budget, evalMsg);
             terminalScript = null;
