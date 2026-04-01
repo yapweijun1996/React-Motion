@@ -3,17 +3,27 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring } from "../animation";
 import { pie, arc } from "d3-shape";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
-import { chartColor, formatPercent } from "../../services/chartHelpers";
+import { chartColor, formatPercent, extractValue, extractLabel } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
 
 type SliceItem = { label: string; value: number; color?: string };
+
+function normalizeSlices(el: SceneElement): SliceItem[] {
+  const raw = (el.slices as Record<string, unknown>[]) ?? [];
+  return raw.map((d) => ({
+    label: extractLabel(d),
+    value: extractValue(d),
+    color: typeof d.color === "string" ? d.color : undefined,
+  }));
+}
 
 type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const slices = (el.slices as SliceItem[]) ?? [];
+  const slices = normalizeSlices(el);
+  if (slices.length === 0) return null;
   const donut = (el.donut as boolean) ?? false;
   const highlightIndex = (el.highlightIndex as number) ?? -1;
   const showPercentage = (el.showPercentage as boolean) ?? true;

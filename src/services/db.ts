@@ -17,58 +17,69 @@ export const STORE_TTS_AUDIO = "ttsAudio";
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    // Open without version first — avoids VersionError when ttsCache
+    // self-healing has bumped the DB version beyond DB_VERSION.
+    const probe = indexedDB.open(DB_NAME);
 
-    req.onupgradeneeded = (event) => {
-      const db = req.result;
-      const oldVersion = event.oldVersion;
+    probe.onsuccess = () => {
+      const db = probe.result;
+      const currentVersion = db.version;
 
-      if (oldVersion < 1) {
-        db.createObjectStore(STORE_SCRIPTS);
+      // DB already at or above our schema version — use as-is if all stores exist
+      if (currentVersion >= DB_VERSION && hasAllStores(db)) {
+        db.onversionchange = () => { db.close(); };
+        resolve(db);
+        return;
       }
-      if (oldVersion < 2) {
-        const hs = db.createObjectStore(STORE_HISTORY, { keyPath: "id", autoIncrement: true });
-        hs.createIndex("createdAt", "createdAt", { unique: false });
-        const es = db.createObjectStore(STORE_EXPORTS, { keyPath: "id", autoIncrement: true });
-        es.createIndex("exportedAt", "exportedAt", { unique: false });
-      }
-      if (oldVersion < 3) {
-        const ms = db.createObjectStore(STORE_METRICS, { keyPath: "id", autoIncrement: true });
-        ms.createIndex("timestamp", "timestamp", { unique: false });
-        ms.createIndex("type", "type", { unique: false });
-      }
-      // Defensive: always ensure ttsAudio exists (handles blocked upgrade edge cases)
-      if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
-        db.createObjectStore(STORE_TTS_AUDIO);
-      }
+
+      // Need upgrade — close probe and reopen with target version
+      db.close();
+      const targetVersion = Math.max(DB_VERSION, currentVersion + 1);
+      const req = indexedDB.open(DB_NAME, targetVersion);
+
+      req.onupgradeneeded = (event) => {
+        const udb = req.result;
+        const oldVersion = event.oldVersion;
+
+        if (oldVersion < 1 && !udb.objectStoreNames.contains(STORE_SCRIPTS)) {
+          udb.createObjectStore(STORE_SCRIPTS);
+        }
+        if (oldVersion < 2) {
+          if (!udb.objectStoreNames.contains(STORE_HISTORY)) {
+            const hs = udb.createObjectStore(STORE_HISTORY, { keyPath: "id", autoIncrement: true });
+            hs.createIndex("createdAt", "createdAt", { unique: false });
+          }
+          if (!udb.objectStoreNames.contains(STORE_EXPORTS)) {
+            const es = udb.createObjectStore(STORE_EXPORTS, { keyPath: "id", autoIncrement: true });
+            es.createIndex("exportedAt", "exportedAt", { unique: false });
+          }
+        }
+        if (oldVersion < 3 && !udb.objectStoreNames.contains(STORE_METRICS)) {
+          const ms = udb.createObjectStore(STORE_METRICS, { keyPath: "id", autoIncrement: true });
+          ms.createIndex("timestamp", "timestamp", { unique: false });
+          ms.createIndex("type", "type", { unique: false });
+        }
+        if (!udb.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+          udb.createObjectStore(STORE_TTS_AUDIO);
+        }
+      };
+
+      req.onblocked = () => console.warn("[DB] Upgrade blocked");
+      req.onsuccess = () => {
+        const udb = req.result;
+        udb.onversionchange = () => { udb.close(); };
+        resolve(udb);
+      };
+      req.onerror = () => reject(req.error);
     };
 
-    req.onblocked = () => console.warn("[DB] Upgrade blocked");
-
-    req.onsuccess = () => {
-      const db = req.result;
-      db.onversionchange = () => { db.close(); };
-      resolve(db);
-    };
-
-    req.onerror = () => {
-      const err = req.error;
-      // VersionError: DB was upgraded beyond DB_VERSION by ttsCache self-healing.
-      // Retry without version constraint to open at current version.
-      if (err?.name === "VersionError") {
-        console.log("[DB] VersionError — reopening at current version");
-        const retry = indexedDB.open(DB_NAME);
-        retry.onsuccess = () => {
-          const db = retry.result;
-          db.onversionchange = () => { db.close(); };
-          resolve(db);
-        };
-        retry.onerror = () => reject(retry.error);
-      } else {
-        reject(err);
-      }
-    };
+    probe.onerror = () => reject(probe.error);
   });
+}
+
+const ALL_STORES = [STORE_SCRIPTS, STORE_HISTORY, STORE_EXPORTS, STORE_METRICS, STORE_TTS_AUDIO];
+function hasAllStores(db: IDBDatabase): boolean {
+  return ALL_STORES.every((s) => db.objectStoreNames.contains(s));
 }
 
 /** Delete the entire IndexedDB database. */

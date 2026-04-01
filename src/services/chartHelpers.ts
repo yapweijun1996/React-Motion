@@ -65,3 +65,38 @@ export function formatValuePrecise(v: number): string {
 export function formatPercent(v: number): string {
   return `${fmtPct1(v)}%`;
 }
+
+// ============================================================
+// AI data coercion — resilient extraction from AI-generated data
+// ============================================================
+
+/**
+ * Extract a numeric value from an AI-generated data point.
+ * Handles: { value: 53 }, { value: "53 qubits" }, { y: 53 }, { count: 53 }, etc.
+ */
+export function extractValue(d: Record<string, unknown>): number {
+  const v = d.value ?? d.y ?? d.count ?? d.amount;
+  if (typeof v === "number" && isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = parseFloat(v.replace(/,/g, ""));
+    if (isFinite(n)) return n;
+  }
+  // Fallback: grab the first numeric value from any key (skip label/name/color)
+  for (const [k, val] of Object.entries(d)) {
+    if (k === "label" || k === "name" || k === "color" || k === "x") continue;
+    if (typeof val === "number" && isFinite(val)) return val;
+    if (typeof val === "string") {
+      const n = parseFloat(val.replace(/,/g, ""));
+      if (isFinite(n)) return n;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Extract a label string from an AI-generated data point.
+ * Handles: { label: "X" }, { name: "X" }, { x: "X" }.
+ */
+export function extractLabel(d: Record<string, unknown>): string {
+  return String(d.label ?? d.name ?? d.x ?? "");
+}

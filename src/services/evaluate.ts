@@ -1,75 +1,192 @@
 import { callGemini, type GeminiMessage } from "./gemini";
-import { parseVideoScript } from "./parseScript";
 import { logWarn } from "./errors";
-import type { VideoScript } from "../types";
+import type { VideoScript, VideoScene, SceneElement } from "../types";
 
 const EVALUATE_SYSTEM = `You are a quality checker for AI-generated video scripts.
 
 You receive:
 1. The user's original prompt (contains the source data)
-2. A VideoScript JSON that was generated from that prompt
+2. A scene-level summary of the generated script (rendering fields like colors, animations, and stagger are stripped — focus on data accuracy and structure)
 
-Your job: verify the script is correct, effective, and visually fits the viewport.
+Your job: diagnose issues. Do NOT return a corrected script — only list problems found.
 
 ## Check these:
 
 1. DATA ACCURACY: Every number in the script must come from the user's prompt. Flag any invented data.
 2. DATA COMPLETENESS: If the user's prompt contains data that the script ignores, flag it.
 3. SCENE INTEGRITY: Scenes must not overlap (startFrame math must be correct).
-4. VISUAL VARIETY: Are scenes visually distinct? Or do they all look the same?
+4. VISUAL VARIETY: Are scenes visually distinct? Check element types, layouts, and transitions across scenes.
 5. NARRATION-VISUAL SYNC: For each scene, check that narration and elements tell the same story:
-   - If narration mentions a number/percentage/trend, it MUST appear in a visual element (metric, chart, callout) in that scene.
+   - If narration mentions a number/percentage/trend, it MUST appear in a visual element in that scene.
    - If a scene has a chart or metric, the narration MUST reference what it shows.
-   - Fix orphan narration by adding the missing visual element (metric or callout).
-   - Fix silent visuals by adding the data point to narration.
-6. LAYOUT FIT (CRITICAL): Estimate whether each scene's elements fit within the 1920×1080 viewport.
-   The viewport has padding (default ~36px top/bottom, ~48px left/right), so the usable area is approximately **1824 × 1008 pixels**.
-   Use these height estimates per element type:
-   - text (title, fontSize 96-128): ~140px
-   - text (subtitle, fontSize 64-80): ~100px
-   - text (body, fontSize 48-64): ~80px
-   - metric: ~220px (value + label)
-   - bar-chart: ~80px per bar + 40px padding
-   - pie-chart: ~500px (chart + legend side by side)
-   - line-chart: ~450px
-   - sankey: ~500px
-   - list: ~80px per item
-   - callout: ~120px
-   - divider: ~30px
-   - icon / kawaii / lottie: ~160px
-   - gap between elements: ~20px each
-
-   For each scene, sum the estimated heights. If total > 1008px:
-   - FAIL the check
-   - Fix by: (a) splitting the scene into two scenes, OR (b) removing the least important element, OR (c) reducing font sizes (but never below 48px)
-   - Max 3-4 elements per scene. If a scene has 5+ elements, it almost certainly overflows.
-   - Chart scenes should have at most: 1 title + 1 chart (+ optionally 1 callout if space allows)
-   - Metric scenes: max 3 metrics in a row layout, max 2 in a column layout
-
-7. STORYTELLING QUALITY (CRITICAL — this is what makes the video useful, not boring):
-   a. **Hook test**: Does scene 1 open with a KEY FINDING, SURPRISING NUMBER, or COMPELLING QUESTION? If it opens with a generic title like "Q1 Report" or "Data Overview" with no data insight, FAIL. Fix by rewriting scene 1 narration to lead with the most important data point or insight.
-   b. **Audience awareness**: Does narration speak TO the audience? Look for "you", "we", "our", "your team". If all narration is impersonal ("The data shows..."), FAIL. Fix by rewriting key narration lines to address the audience directly.
-   c. **So What test**: For each scene with a chart or metric, does the narration INTERPRET what it means (not just read numbers)? If narration says "Revenue was $4.8M" without context like "exceeding target by 6.7%", FAIL.
-   d. **Visual variety**: Does the video use at least ONE of: annotation, icon with metric, progress gauge, comparison card, SVG illustration, map, or kawaii character? If it's ALL plain text + charts with no visual variety, flag as "visually monotonous". Note: kawaii is optional — formal business presentations should use professional elements (annotation, icon, progress, comparison) instead.
-   e. **Action close**: Does the last or second-to-last scene contain a RECOMMENDATION or CALL-TO-ACTION? If the video ends with just a data summary or "thank you", FAIL. Fix by adding a resolution scene with actionable next steps.
-   f. **Narrative arc**: Do scenes vary in focus? There should be at least one challenge/problem identification AND one resolution/recommendation. A monotone "here's data, here's data, here's data" with no narrative progression should be flagged. Note: for formal business content, "tension" means identifying a business challenge, not dramatic emotion.
+   - Flag orphan narration (data mentioned but not shown) and silent visuals (data shown but not narrated).
+6. LAYOUT FIT: Estimate whether each scene's elements fit within 1920×1080 (usable ~1824×1008px).
+   Height estimates: text title ~140px, subtitle ~100px, body ~80px, metric ~220px, bar-chart ~80px/bar+40px, pie/sankey ~500px, line-chart ~450px, list ~80px/item, callout ~120px, divider ~30px, icon/kawaii/lottie ~160px, gap ~20px.
+   Flag any scene where estimated total > 1008px or element count > 4.
+7. STORYTELLING QUALITY:
+   a. **Hook test**: Does scene 1 lead with a key finding or question? Flag generic openers like "Q1 Report".
+   b. **Audience awareness**: Does narration use "you/we/our"? Flag impersonal-only narration.
+   c. **So What test**: Do chart/metric scenes interpret the data, not just read numbers?
+   d. **Visual variety**: At least ONE of: annotation, icon, progress, comparison, SVG, map, or kawaii?
+   e. **Action close**: Does the last scene have a recommendation or call-to-action?
+   f. **Narrative arc**: Is there at least one challenge AND one resolution across scenes?
 
 ## Output JSON
 
 {
   "pass": boolean,
-  "issues": ["string", ...],
-  "fixes": { ...partial VideoScript patch to apply, or null if pass is true }
+  "issues": ["string", ...]
 }
 
-If pass is true, return { "pass": true, "issues": [], "fixes": null }.
-If pass is false, return the issues found AND a corrected full VideoScript in "fixes".`;
+If pass is true, return { "pass": true, "issues": [] }.
+If pass is false, return specific, actionable issue strings, e.g.:
+- "Scene 3: narration mentions 45% but no visual element shows this number"
+- "Scene 5: estimated height ~1200px (5 elements), exceeds 1008px viewport"
+- "Scene 1: opens with generic title, no hook or surprising data point"
+
+Do NOT return a corrected script. Only diagnose.`;
 
 type EvalResult = {
   pass: boolean;
   issues: string[];
-  fixes: VideoScript | null;
 };
+
+// ---------------------------------------------------------------------------
+// Scene-level summary builder — strips rendering-only fields to reduce payload.
+// Evaluator checks need: data values, narration, element types, layout, timing.
+// Evaluator does NOT need: colors, animation, stagger, fontWeight, align, etc.
+// ---------------------------------------------------------------------------
+
+function buildEvalSummary(script: VideoScript): Record<string, unknown> {
+  return {
+    title: script.title,
+    sceneCount: script.scenes.length,
+    scenes: script.scenes.map(summarizeScene),
+  };
+}
+
+function summarizeScene(scene: VideoScene): Record<string, unknown> {
+  return {
+    id: scene.id,
+    startFrame: scene.startFrame,
+    durationInFrames: scene.durationInFrames,
+    layout: scene.layout,
+    transition: scene.transition,
+    narration: scene.narration,
+    elements: scene.elements.map(summarizeElement),
+  };
+}
+
+function summarizeElement(el: SceneElement): Record<string, unknown> {
+  const base: Record<string, unknown> = { type: el.type };
+
+  switch (el.type) {
+    case "text":
+      base.content = el.content;
+      base.fontSize = el.fontSize;
+      break;
+
+    case "metric":
+      base.items = Array.isArray(el.items)
+        ? (el.items as Record<string, unknown>[]).map((it) => ({ value: it.value, label: it.label }))
+        : [];
+      break;
+
+    case "bar-chart":
+      base.bars = Array.isArray(el.bars)
+        ? (el.bars as Record<string, unknown>[]).map((b) => ({ label: b.label, value: b.value }))
+        : [];
+      break;
+
+    case "pie-chart":
+      base.slices = Array.isArray(el.slices)
+        ? (el.slices as Record<string, unknown>[]).map((s) => ({ label: s.label, value: s.value }))
+        : [];
+      break;
+
+    case "line-chart":
+      base.series = Array.isArray(el.series)
+        ? (el.series as Record<string, unknown>[]).map((s) => ({
+            name: s.name,
+            data: Array.isArray(s.data)
+              ? (s.data as Record<string, unknown>[]).map((d) => ({ label: d.label, value: d.value }))
+              : [],
+          }))
+        : [];
+      break;
+
+    case "sankey":
+      base.nodes = Array.isArray(el.nodes)
+        ? (el.nodes as Record<string, unknown>[]).map((n) => ({ name: n.name }))
+        : [];
+      base.links = Array.isArray(el.links)
+        ? (el.links as Record<string, unknown>[]).map((l) => ({ source: l.source, target: l.target, value: l.value }))
+        : [];
+      break;
+
+    case "list":
+      base.items = el.items;
+      base.icon = el.icon;
+      break;
+
+    case "callout":
+      base.title = el.title;
+      base.content = el.content;
+      break;
+
+    case "progress":
+      base.value = el.value;
+      base.max = el.max;
+      base.label = el.label;
+      break;
+
+    case "timeline":
+      base.items = Array.isArray(el.items)
+        ? (el.items as Record<string, unknown>[]).map((it) => ({ label: it.label, description: it.description }))
+        : [];
+      break;
+
+    case "comparison": {
+      const pickSide = (side: unknown) => {
+        if (!side || typeof side !== "object") return null;
+        const s = side as Record<string, unknown>;
+        return { title: s.title, value: s.value, items: s.items };
+      };
+      base.left = pickSide(el.left);
+      base.right = pickSide(el.right);
+      break;
+    }
+
+    case "kawaii":
+      base.character = el.character;
+      base.mood = el.mood;
+      break;
+
+    case "icon":
+      base.name = el.name;
+      base.label = el.label;
+      break;
+
+    case "annotation":
+      base.shape = el.shape;
+      base.label = el.label;
+      break;
+
+    case "lottie":
+      base.preset = el.preset;
+      break;
+
+    case "map":
+      base.countries = Array.isArray(el.countries)
+        ? (el.countries as Record<string, unknown>[]).map((c) => ({ name: c.name, value: c.value }))
+        : [];
+      break;
+
+    // svg, divider, unknown: type only
+  }
+
+  return base;
+}
 
 export async function evaluateScript(
   userPrompt: string,
@@ -77,20 +194,20 @@ export async function evaluateScript(
 ): Promise<EvalResult> {
   console.group("[ReactMotion] evaluate");
 
+  const summary = buildEvalSummary(script);
+  const summaryJson = JSON.stringify(summary);
+  console.log("[Eval] Summary:", summaryJson.length, "chars (full script was", JSON.stringify(script).length, "chars)");
+
   const messages: GeminiMessage[] = [
     {
       role: "user",
       parts: [
         {
-          // Compact JSON — evaluator risk is low (parseVideoScript validates after),
-          // saves ~41% payload vs pretty-print.
-          text: `## Original user prompt\n${userPrompt}\n\n## Generated VideoScript\n${JSON.stringify(script)}`,
+          text: `## Original user prompt\n${userPrompt}\n\n## Scene summary\n${summaryJson}`,
         },
       ],
     },
   ];
-
-  console.log("[Eval] Sending script for review...");
 
   const raw = await callGemini(EVALUATE_SYSTEM, messages);
   console.log("[Eval] Response length:", raw.length, "chars");
@@ -109,23 +226,11 @@ export async function evaluateScript(
       console.log("[Eval] Passed — no issues");
     }
 
-    // If fixes contains a full corrected script, validate it properly
-    let fixes: VideoScript | null = null;
-    if (!pass && result.fixes && typeof result.fixes === "object") {
-      try {
-        fixes = parseVideoScript(JSON.stringify(result.fixes));
-        console.log("[Eval] Corrected script validated OK");
-      } catch (fixErr) {
-        console.warn("[Eval] Corrected script failed validation, ignoring:", fixErr);
-        fixes = null;
-      }
-    }
-
     console.groupEnd();
-    return { pass, issues, fixes };
+    return { pass, issues };
   } catch (parseErr) {
     logWarn("Eval", "EVAL_PARSE_FAILED", "Eval response was not valid JSON — skipping evaluation (non-fatal)", { error: parseErr });
     console.groupEnd();
-    return { pass: false, issues: ["Evaluation skipped: AI returned invalid JSON"], fixes: null };
+    return { pass: false, issues: ["Evaluation skipped: AI returned invalid JSON"] };
   }
 }

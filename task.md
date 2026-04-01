@@ -111,6 +111,10 @@
 | RM-149 | Task | Text glow/shadow — `glow` (neon text-shadow) + `shadow` (drop shadow) boolean props on TextElement. Works in standard + typewriter modes. 5 tests. | Done |
 | RM-150 | Task | Tone adaptation — formal/conversational auto-detection based on audience. Business data defaults to formal (no kawaii, no rhetorical questions, benchmark comparisons). Prompt + evaluator updated. | Done |
 | RM-151 | Refactor | Legacy prompt 合并 — 提取 AGENT/LEGACY prompt 共享部分至 `promptBlocks.ts` (8 const)，消除 4 处重复区块。AGENT 获得 Available Elements 目录，LEGACY 获得 Transitions/Stagger/Animations。prompt.ts 417→245 行，新 promptBlocks.ts 173 行，均 ≤300 行。11 tests pass。 | Done |
+| RM-152 | Perf | Agent payload pressure — 3 轮优化，累计节省 ~34,500 chars ≈ 8,625 tokens/次生成 (约 28%)。参考 Claude Code 源码 agent loop 模式。 | Done |
+| RM-152a | Perf | agentTools.ts 精简 — 4 个 tool response 减重：analyze_data 不回声 data (-2.1KB)、get_element_catalog 只返 type 列表 (-15KB)、draft_storyboard 移除 reminders、generate_palette 移除 usage_guide。移除 ELEMENT_TIPS import + extractInlineData helper。 | Done |
+| RM-152b | Perf | Compact/Hybrid JSON — buildUserMessage 用 hybrid serializer (rows 一行一条，其余 compact，省 27%)。evaluate.ts 用 compact JSON (省 41%)。 | Done |
+| RM-152c | Perf | Evaluate issues-only summary mode — 去掉不可靠 fixes 机制 (Gemini 重建完整 script 常 JSON 出错)。新增 buildEvalSummary() 按 element type strip 渲染字段 (colors/animation/stagger)，只保留 evaluator 7 项检查所需的数据值 + 结构。EVALUATE_SYSTEM prompt 精简 (4KB→3.2KB)。EvalResult 去掉 fixes 字段。generateScript.ts 消费端简化。Input -2.5KB, prompt -0.8KB, output -7KB (不再生成 corrected script)。 | Done |
 
 ### In Progress / Testing
 
@@ -127,11 +131,12 @@
 | Phase 3.1 | 8 new CSS transitions (12 total) | ✅ Done (RM-135) |
 | Phase 3.2 | 2 WebGL transitions (dissolve + pixelate, 14 total) | ✅ Done (RM-136) |
 | Phase 3.3 | Agentic loop refactor — Claude Code patterns (hooks, stop validation, storyboard enforcement) | ✅ Done (RM-143) |
+| Phase 3.4 | Agent payload optimization — tool response 精简 + compact JSON + evaluate summary mode | ✅ Done (RM-152) |
 | Phase 4 | Three.js 3D elements (3D charts, globe, 3D text) | Future |
 
 **Cinematic Enhancement Layer: ✅ ALL DONE (RM-144~150)**
 
-Total: 18 atomic elements, 11 entrance animations (incl. typewriter), 12+ transitions, gradient backgrounds, text glow/shadow.
+Total: 18 atomic elements, 11 entrance animations (incl. typewriter), 14 transitions (12 CSS + 2 WebGL), gradient backgrounds, text glow/shadow.
 
 | Key | Element/Feature | Visual Impact |
 |-----|----------------|---------------|
@@ -424,7 +429,7 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 | RM-58 | Task | Multi-speaker TTS — different voices for different scenes | Low | Partially addressed by RM-123 (voice selection). Full multi-speaker = different voice per scene role. |
 | RM-83 | Task | Migrate IndexedDB cache layer to `idb` promise wrapper | Low | 当前 db.ts 手写 IDB 正常工作。简化语法但不解决实际问题。 |
 | RM-84 | Task | Evaluate `vite-plugin-pwa` to replace hand-managed manifest/service worker wiring | Low | 当前 SW 正常运行，迁移风险 > 收益。 |
-| RM-85 | Task | ~~Evaluate MediaBunny/WebCodecs-era browser media pipeline for future export simplification~~ | ~~Low~~ | ✅ Done — Deep analysis completed. Superseded by RM-EPIC-08 (WebCodecs migration plan). See Phase 5 section. |
+| RM-85 | Task | ~~Evaluate MediaBunny/WebCodecs-era browser media pipeline~~ | ~~Low~~ | ✅ Done — Analysis completed, adopted as RM-EPIC-08. RM-133 (WebCodecs Phase 1) shipped. |
 
 ### Milestone Status
 
@@ -440,10 +445,10 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 **Remove Remotion (RM-EPIC-04) — 11/11 COMPLETE ✅**
 
 **Phase 4 Roadmap:**
-- 🟡 Phase 4A: Video Quality (RM-121~124) — RM-121 ✅, RM-122 ✅, RM-123 ⬜, RM-124 ✅
+- 🟡 Phase 4A: Video Quality (RM-121~124) — RM-121 ✅, RM-122 ✅, RM-123 ⬜, RM-124 ✅ (3/4)
 - ⬜ Phase 4B: User Experience (RM-125~128) — scene editor, images, templates, subtitles
 - ⬜ Phase 4C: Enterprise Scale (RM-129~132) — API gateway, PPTX, batch, brand kit
-- 🟡 Phase 5: Export Performance (RM-133~137) — RM-133 ✅ (WebCodecs HW, 2.7x faster), RM-134~137 ⬜
+- 🟡 Phase 5: Export Performance (RM-133~137) — RM-133 ✅ (WebCodecs HW, 2.7x faster), RM-134~137 ⬜ (1/5)
 
 ### JIRA Backlog Format
 
@@ -577,14 +582,9 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 
 - Type: Spike
 - Priority: Low
-- Status: To Do
+- Status: Superseded by RM-EPIC-08
 - Goal: Assess whether future browser media tooling can simplify export without violating the single live export path rule.
-- Scope:
-  - Evaluate MediaBunny/WebCodecs-era tooling as research only.
-  - Compare with current FFmpeg.wasm path on complexity, compatibility, and correctness.
-- Acceptance Criteria:
-  - Output is a written recommendation.
-  - No second production export path is merged.
+- Note: Research completed and adopted. WebCodecs implemented as RM-133 (Phase 1). See RM-EPIC-08 for full plan.
 
 **Spike: RM-102 SVG Morph and Asset Optimization Research**
 
@@ -609,8 +609,8 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 | RM-old-30 | Task | Template library | Superseded — AI controls theme via elements |
 | RM-old-35 | Task | MP4 via MediaRecorder | Superseded — frame-by-frame html-to-image + FFmpeg.wasm |
 | RM-old-38 | Task | FFmpeg progress to UI (standalone) | Merged into RM-40 |
-| RM-old-39 | Task | WebCodecs GPU encoder (Chrome only) | Rejected — user wants single encoder path for all browsers |
-| RM-old-dual | Arch | Dual-track export (WebCodecs + FFmpeg) | Rejected — unnecessary complexity, FFmpeg.wasm-mt sufficient |
+| RM-old-39 | Task | ~~WebCodecs GPU encoder (Chrome only)~~ | Originally rejected (2026-03). Revisited and adopted as RM-EPIC-08 (2026-04) with FFmpeg fallback for Firefox. See RM-133. |
+| RM-old-dual | Arch | ~~Dual-track export (WebCodecs + FFmpeg)~~ | Originally rejected (2026-03). Adopted as primary+fallback architecture in RM-EPIC-08. WebCodecs primary (Chrome/Edge/Safari), FFmpeg fallback (Firefox). |
 | RM-50 | Task | Element self-description schema | Superseded — agent tool `get_element_catalog` replaces this (RM-65) |
 | RM-51 | Task | Multi-stage OODAE agent loop (5 turns) | Superseded — OODAE Agent Loop implemented as RM-64 (max 12 iterations) |
 | RM-45 | Task | CFML integration test — embed widget in sample .cfm page | Removed — CFML host integration no longer required |
@@ -682,60 +682,72 @@ Browser support: Chrome/Edge 94+ (full HW accel), Safari 17+ (partial), Firefox 
 ## OODAE Agent Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│              OODAE Agent Loop                │
-│              (max 10 iterations)             │
-│                                              │
-│  ┌─ Observe ─┐  ┌─ Orient ──┐               │
-│  │analyze_data│  │Google     │               │
-│  │            │  │Search     │               │
-│  └────────────┘  └───────────┘               │
-│                                              │
-│  ┌─ Decide ──────────────────┐               │
-│  │draft_storyboard           │               │
-│  │get_element_catalog        │               │
-│  │generate_palette           │               │
-│  └───────────────────────────┘               │
-│                                              │
-│  ┌─ Act ─────────────────────┐               │
-│  │produce_script → TERMINATES│               │
-│  └───────────────────────────┘               │
-│                                              │
-│  AI decides tool order + iteration count.    │
-│  No hardcoded sequence.                      │
-└──────────────┬───────────────────────────────┘
-               │ VideoScript JSON
-┌──────────────▼───────────────────────────────┐
-│           Evaluate (1+1 self-check)          │
-└──────────────┬───────────────────────────────┘
-               │
-┌──────────────▼───────────────────────────────┐
-│         Harness (React/Custom Engine)        │
-│                                              │
-│  Renders: GenericScene + 15 atomic elements  │
-│  (text, metric, bar-chart, pie-chart,        │
-│   line-chart, sankey, list, divider,         │
-│   callout, kawaii, lottie, icon,             │
-│   annotation, svg, map)                      │
-│                                              │
-│  Audio: Gemini TTS → AudioTrack              │
-│  Export: html-to-image → FFmpeg.wasm         │
-│  Validates: parseScript + retry              │
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│              OODAE Agent Loop                    │
+│              (max 12 iterations, 80K token budget)│
+│                                                  │
+│  ┌─ Observe ─┐  ┌─ Orient ──┐                   │
+│  │analyze_data│  │Google     │                   │
+│  │(no echo)   │  │Search     │                   │
+│  └────────────┘  └───────────┘                   │
+│                                                  │
+│  ┌─ Decide ──────────────────┐                   │
+│  │draft_storyboard (no reminders)│               │
+│  │get_element_catalog (type index only)│         │
+│  │generate_palette (data only)   │               │
+│  └───────────────────────────────┘               │
+│                                                  │
+│  ┌─ Act ─────────────────────┐                   │
+│  │produce_script             │                   │
+│  │  ├─ postToolUse hook:     │  ← RM-143a       │
+│  │  │  storyboard check      │                   │
+│  │  ├─ stopChecks (5 gates): │  ← RM-143b       │
+│  │  │  hook, action close,   │                   │
+│  │  │  element diversity,    │                   │
+│  │  │  transition variety,   │                   │
+│  │  │  visual personality    │                   │
+│  │  └─ pass → TERMINATES     │                   │
+│  │     fail → 1 retry        │                   │
+│  └───────────────────────────┘                   │
+│                                                  │
+│  Budget: warn@70%, force@90% (RM-143e)           │
+│  Payload: tool responses stripped (RM-152a)       │
+│  AI decides tool order. No hardcoded sequence.    │
+└──────────────────┬───────────────────────────────┘
+                   │ VideoScript JSON
+┌──────────────────▼───────────────────────────────┐
+│       Evaluate (issues-only, summary mode)       │
+│       Scene summary (no colors/animation/stagger)│
+│       Returns { pass, issues } — no fixes        │
+└──────────────────┬───────────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────────┐
+│           Harness (React/Custom Engine)           │
+│                                                  │
+│  Renders: GenericScene + 18 atomic elements      │
+│  (text, metric, bar-chart, pie-chart, line-chart,│
+│   sankey, list, divider, callout, kawaii, lottie, │
+│   icon, annotation, svg, map, progress,          │
+│   timeline, comparison)                          │
+│                                                  │
+│  Audio: Gemini TTS → AudioTrack + BGM (Lyria)   │
+│  Export: WebCodecs HW (primary) / FFmpeg (fallback)│
+│  Validates: parseScript + retry                  │
+└──────────────────────────────────────────────────┘
 ```
 
 **Principle: AI decides. Harness executes. JSON is the contract.**
 
 ### Agent Tools
 
-| Tool | OODAE Phase | Purpose |
-|------|-------------|---------|
-| `analyze_data` | Observe | Compute stats, rankings, percentages, trends from user data |
-| Google Search | Orient | Search web for industry context, company info, benchmarks |
-| `draft_storyboard` | Decide | Write story arc, scene plan, color mood, pacing notes |
-| `get_element_catalog` | Decide | Discover available visual elements and their schemas |
-| `generate_palette` | Decide | Generate harmonious color palette from hex or mood keyword |
-| `produce_script` | Act | Output final VideoScript JSON — terminates the loop |
+| Tool | OODAE Phase | Purpose | Payload note (RM-152a) |
+|------|-------------|---------|------------------------|
+| `analyze_data` | Observe | Compute stats, rankings, percentages, trends from user data | Returns instruction only — data already in user message, no echo |
+| Google Search | Orient | Search web for industry context, company info, benchmarks | — |
+| `draft_storyboard` | Decide | Write story arc, scene plan, color mood, pacing notes | No reminders in response — rules in system prompt |
+| `get_element_catalog` | Decide | Returns lightweight type index (15 names) | Full schemas in system prompt — response is ~290 chars vs old ~12KB |
+| `generate_palette` | Decide | Generate harmonious color palette from hex or mood keyword | Returns palette data only — no usage_guide |
+| `produce_script` | Act | Output final VideoScript JSON → hooks → terminates | Passes through postToolUse + stopChecks (RM-143) |
 
 ### Fallback Strategy
 
@@ -743,30 +755,44 @@ If agent loop fails (tool errors, API issues), system falls back to legacy singl
 
 ---
 
-## Export Architecture (FFmpeg.wasm Multi-Thread)
+## Export Architecture (WebCodecs primary, FFmpeg.wasm fallback)
 
 ```
-html-to-image (frame capture, every 3rd frame)
+Primary path (Chrome/Edge 94+): WebCodecs HW encoding (RM-133)
+─────────────────────────────────────────────────────────
+html-to-image toCanvas (frame capture, full-frame)
         ↓
-PNG data URLs → FFmpeg.wasm writeFile
+Canvas → ImageBitmap → VideoFrame → HW VideoEncoder (GPU)
+        ↓  streaming: encode while capturing, zero memory accumulation
+mp4-muxer (~15KB) → H.264 MP4 container
+        ↓
+FFmpeg.wasm -c:v copy (audio mux only, 75x speed)
+        ↓
+MP4 file (H.264 + AAC audio) → download
+
+Fallback path (Firefox, WebCodecs unavailable): FFmpeg.wasm
+─────────────────────────────────────────────────────────
+html-to-image toCanvas (frame capture, full-frame)
+        ↓
+Canvas data → FFmpeg.wasm writeFile
         ↓
 @ffmpeg/core-mt (multi-thread, SharedArrayBuffer)
-  libx264 -preset ultrafast -threads auto
+  libx264 -preset per quality profile -threads auto
         ↓
 MP4 file (H.264 + AAC audio) → download
 ```
 
-| | Single-thread (fallback) | Multi-thread (primary) |
-|--|---|---|
-| Package | `@ffmpeg/core` (ESM from node_modules) | `@ffmpeg/core-mt` (UMD from `public/ffmpeg-mt/`) |
-| CPU cores | 1 (`-threads 1`) | `Math.min(hardwareConcurrency, 4)` |
-| Speed (30s video) | ~13 min | ~3-5 min (est. 2-4x faster) |
-| Headers | None | COOP/COEP (Vite dev: configured; CFML host: must set) |
-| Browser | All | Chrome 92+, Firefox 79+, Edge 92+ |
-| Detection | — | `SharedArrayBuffer` + `crossOriginIsolated` |
-| Fallback | — | Auto: if MT load fails → single-thread (user invisible) |
+| | WebCodecs (primary) | FFmpeg MT (fallback) | FFmpeg ST (last resort) |
+|--|---|---|---|
+| Encoder | Browser HW VideoEncoder (GPU) | libx264 WASM (CPU, multi-thread) | libx264 WASM (CPU, single) |
+| Package | `mp4-muxer` (~15KB) | `@ffmpeg/core-mt` (UMD from `public/`) | `@ffmpeg/core` (ESM) |
+| Speed (30s video) | **~3 min** (2.7x faster) | ~5-8 min | ~13 min |
+| Bottleneck | 100% DOM capture (~60ms/frame) | CPU encoding (~3fps) | CPU encoding (~1fps) |
+| Browser | Chrome/Edge 94+, Safari 17+ | Chrome 92+, Firefox 79+, Edge 92+ | All |
+| Detection | `canUseWebCodecs()` | `SharedArrayBuffer` + `crossOriginIsolated` | — |
+| Fallback | Auto → FFmpeg MT/ST | Auto → FFmpeg ST | — |
 
-**Why UMD from public/?** Vite dev server transforms JS files through its ESM pipeline, adding static `import` statements. Emscripten's pthread workers are classic workers — they can't use `import`. UMD build uses `importScripts()` (classic worker native). Files in `public/` are served as-is without Vite transformation.
+**Quality profiles** (RM-122): draft (CRF 28/ultrafast), standard (CRF 24/fast), high (CRF 20/medium). WebCodecs uses VBR bitrate mapping (no CRF mode in WebCodecs API).
 
 ---
 

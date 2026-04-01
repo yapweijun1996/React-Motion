@@ -167,6 +167,7 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
   })();
 
   if (CHART_TYPES.has(el.type)) {
+    if (!inner) return null;
     return <div style={chartWrapStyle}>{inner}</div>;
   }
   return inner;

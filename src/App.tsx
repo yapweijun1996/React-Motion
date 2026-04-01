@@ -8,12 +8,14 @@ import { hasApiKey } from "./services/settingsStore";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { PromptTemplates } from "./components/PromptTemplates";
 import { ExportStage, ExportOverlay } from "./components/ExportStage";
+import { GenerationProgressBar } from "./components/GenerationProgressBar";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { useGenerate, useExport } from "./hooks/useVideoActions";
 import { exportToPptx } from "./services/exportPptx";
 import { generateSceneTTS } from "./services/tts";
 import { adjustSceneTimings } from "./services/adjustTiming";
 import { logWarn } from "./services/errors";
+import type { GenerationProgress } from "./services/generateScript";
 import type { MountConfig, VideoScript } from "./types";
 import type { TTSMetadata } from "./services/historyStore";
 import "./styles.css";
@@ -26,7 +28,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
   const [prompt, setPrompt] = useState("");
   const [script, setScript] = useState<VideoScript | null>(null);
   const [loading, setLoading] = useState(false);
-  const [generationStatus, setGenerationStatus] = useState("");
+  const [generationStatus, setGenerationStatus] = useState<GenerationProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
   const [showExportStage, setShowExportStage] = useState(false);
@@ -128,18 +130,26 @@ export const App: React.FC<AppProps> = ({ config }) => {
 
     // Regenerate TTS in background if there is narration
     if (ttsMetadata.length > 0) {
-      setGenerationStatus("Regenerating narration audio...");
+      const ttsStart = performance.now();
+      const ttsProg = (done: number, total: number): GenerationProgress => ({
+        stage: "tts", stageIndex: 2, stageCount: 4, stageLabel: "Narration",
+        message: `Regenerating narration (${done}/${total})...`,
+        percent: total > 0 ? (done / total) * 100 : 0,
+        elapsedMs: Math.round(performance.now() - ttsStart),
+        eta: done > 0 ? Math.round(((performance.now() - ttsStart) / done) * (total - done) / 1000) : undefined,
+      });
+      setGenerationStatus(ttsProg(0, ttsMetadata.length));
       generateSceneTTS(restoredScript.scenes, (prog) => {
-        setGenerationStatus(`Regenerating narration (${prog.scenesProcessed}/${prog.totalScenes})...`);
+        setGenerationStatus(ttsProg(prog.scenesProcessed, prog.totalScenes));
       })
         .then((scenesWithTTS) => {
           const adjusted = adjustSceneTimings({ ...restoredScript, scenes: scenesWithTTS });
           setScript(adjusted);
-          setGenerationStatus("");
+          setGenerationStatus(null);
         })
         .catch((err) => {
           logWarn("App", "TTS_PARTIAL_FAILURE", "TTS regeneration failed", { error: err });
-          setGenerationStatus("");
+          setGenerationStatus(null);
         });
     }
   }, [script]);
@@ -235,7 +245,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
 
       {/* Generation / TTS progress */}
       {generationStatus && (
-        <div className="rm-alert rm-alert-info">{generationStatus}</div>
+        <GenerationProgressBar progress={generationStatus} />
       )}
 
       {/* Error display */}

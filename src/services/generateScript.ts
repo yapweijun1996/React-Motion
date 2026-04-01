@@ -12,9 +12,91 @@ import { trackEvent } from "./metrics";
 
 export type GenerationProgress = {
   stage: "agent" | "evaluate" | "tts" | "bgm" | "done";
+  stageIndex: number;
+  stageCount: number;
+  stageLabel: string;
   message: string;
+  percent: number;
+  elapsedMs: number;
+  eta?: number;
+  completedTools?: string[];
   agentDetail?: AgentProgress;
 };
+
+// --- Stage weights based on real timing data ---
+const STAGE_WEIGHTS = [27, 5, 55, 13]; // agent, evaluate, tts, bgm → sums to 100
+const STAGE_LABELS = ["AI Scripting", "Quality Check", "Narration", "Background Music"];
+
+/** Lightweight progress tracker — computes percent, elapsed, ETA */
+function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
+  const t0 = performance.now();
+  let stageIdx = 0;
+  const completedTools: string[] = [];
+
+  function basePercent(idx: number): number {
+    return STAGE_WEIGHTS.slice(0, idx).reduce((a, b) => a + b, 0);
+  }
+
+  function emit(overrides: Partial<GenerationProgress>) {
+    if (!onProgress) return;
+    onProgress({
+      stage: (["agent", "evaluate", "tts", "bgm"] as const)[stageIdx],
+      stageIndex: stageIdx,
+      stageCount: 4,
+      stageLabel: STAGE_LABELS[stageIdx],
+      message: "",
+      percent: basePercent(stageIdx),
+      elapsedMs: Math.round(performance.now() - t0),
+      completedTools: stageIdx === 0 ? [...completedTools] : undefined,
+      ...overrides,
+    });
+  }
+
+  return {
+    setStage(idx: number, message: string) {
+      stageIdx = idx;
+      emit({ message, percent: basePercent(idx) });
+    },
+
+    reportAgent(p: AgentProgress) {
+      // Track completed tools
+      if (p.action.startsWith("tool:")) {
+        const toolName = p.action.slice(5);
+        if (!completedTools.includes(toolName)) completedTools.push(toolName);
+      }
+      const msg = formatAgentMessage(p, completedTools);
+      // Intra-stage: estimate ~6 iterations typical
+      const intra = Math.min(p.iteration / 6, 0.95);
+      emit({
+        message: msg,
+        percent: basePercent(0) + STAGE_WEIGHTS[0] * intra,
+        completedTools: [...completedTools],
+        agentDetail: p,
+      });
+    },
+
+    reportTTS(scenesProcessed: number, totalScenes: number, ttsStartMs: number) {
+      const intra = totalScenes > 0 ? scenesProcessed / totalScenes : 0;
+      const elapsed = performance.now() - ttsStartMs;
+      const avgPerScene = scenesProcessed > 0 ? elapsed / scenesProcessed : 0;
+      const remaining = (totalScenes - scenesProcessed) * avgPerScene;
+      const eta = scenesProcessed > 0 ? Math.round(remaining / 1000) : undefined;
+      emit({
+        message: `Generating narration (${scenesProcessed}/${totalScenes})...`,
+        percent: basePercent(2) + STAGE_WEIGHTS[2] * intra,
+        eta,
+      });
+    },
+
+    reportSimple(message: string) {
+      emit({ message });
+    },
+
+    done() {
+      emit({ stage: "done", stageIndex: 4, stageLabel: "Done", message: "Done", percent: 100 });
+    },
+  };
+}
 
 const MAX_PARSE_RETRIES = 2;
 
@@ -24,10 +106,10 @@ export async function generateScript(
   onProgress?: (p: GenerationProgress) => void,
 ): Promise<VideoScript> {
   console.group("[ReactMotion] generateScript (OODAE Agent)");
-  const t0 = performance.now();
+  const tracker = createProgressTracker(onProgress);
 
-  // --- Phase 1: Agent Loop (Observe → Orient → Decide → Act) ---
-  onProgress?.({ stage: "agent", message: "Agent starting..." });
+  // --- Phase 1: Agent Loop ---
+  tracker.setStage(0, "Agent starting...");
 
   const systemPrompt = buildAgentSystemPrompt();
   const userMessage = buildUserMessage(userPrompt, data);
@@ -40,48 +122,40 @@ export async function generateScript(
       systemPrompt,
       userMessage,
       { userPrompt, data },
-      (agentProgress) => {
-        onProgress?.({
-          stage: "agent",
-          message: formatAgentMessage(agentProgress),
-          agentDetail: agentProgress,
-        });
-      },
+      (agentProgress) => tracker.reportAgent(agentProgress),
     );
     scriptJson = result.scriptJson;
     iterations = result.iterations;
-    console.log(`[Agent] Completed in ${iterations} iterations`);
+    const bs = result.budgetSummary;
+    console.log(`[Agent] Completed in ${iterations} iterations | Budget: ${bs.pctOfBudget}% (${bs.totalEstimatedTokens} tokens) [sys:${bs.breakdown.system} usr:${bs.breakdown.user} model:${bs.breakdown.model} tool:${bs.breakdown.toolResults}]`);
   } catch (err) {
-    // Fallback: if agent loop fails, try legacy single-shot
     console.warn("[Agent] Loop failed, falling back to legacy single-shot:", err);
-    onProgress?.({ stage: "agent", message: "Falling back to direct generation..." });
+    tracker.reportSimple("Falling back to direct generation...");
     scriptJson = await legacyGenerate(userPrompt, data);
     iterations = 0;
   }
 
-  // --- Parse the script JSON ---
+  // --- Parse ---
   let script: VideoScript;
   try {
     script = parseVideoScript(JSON.stringify(scriptJson));
     console.log("[Parse] OK. Scenes:", script.scenes.length);
   } catch (parseErr) {
-    // If parse fails, try one retry with legacy approach
     console.warn("[Parse] Agent output failed validation:", parseErr);
-    onProgress?.({ stage: "agent", message: "Fixing script format..." });
+    tracker.reportSimple("Fixing script format...");
     scriptJson = await legacyGenerate(userPrompt, data);
     script = parseVideoScript(JSON.stringify(scriptJson));
   }
 
   // --- Phase 2: Evaluate ---
-  onProgress?.({ stage: "evaluate", message: "Evaluating quality..." });
+  tracker.setStage(1, "Evaluating quality...");
   console.log("[Evaluate] Starting...");
 
   try {
     const evalResult = await evaluateScript(userPrompt, script);
-    if (!evalResult.pass && evalResult.fixes) {
-      script = parseVideoScript(JSON.stringify(evalResult.fixes));
-      console.log("[Evaluate] Applied corrections");
-    } else if (evalResult.pass) {
+    if (!evalResult.pass) {
+      console.warn("[Evaluate] Issues:", evalResult.issues);
+    } else {
       console.log("[Evaluate] Passed");
     }
   } catch (err) {
@@ -89,15 +163,13 @@ export async function generateScript(
   }
 
   // --- Phase 3: TTS ---
-  onProgress?.({ stage: "tts", message: "Generating narration audio..." });
+  tracker.setStage(2, "Generating narration audio...");
   console.log("[TTS] Generating...");
+  const ttsStart = performance.now();
 
   try {
     const scenesWithTTS = await generateSceneTTS(script.scenes, (p) => {
-      onProgress?.({
-        stage: "tts",
-        message: `Generating narration (${p.scenesProcessed + 1}/${p.totalScenes})...`,
-      });
+      tracker.reportTTS(p.scenesProcessed, p.totalScenes, ttsStart);
     });
     script = adjustSceneTimings({ ...script, scenes: scenesWithTTS });
     console.log("[TTS] Done. Adjusted duration:", script.durationInFrames, "frames");
@@ -105,15 +177,15 @@ export async function generateScript(
     console.warn("[TTS] Failed (non-fatal):", err);
   }
 
-  // --- Phase 4: Background Music (if enabled) ---
+  // --- Phase 4: BGM ---
   const { bgMusicEnabled, bgMusicMood } = loadSettings();
   if (bgMusicEnabled) {
-    onProgress?.({ stage: "bgm", message: "Generating background music..." });
+    tracker.setStage(3, "Generating background music...");
     console.log(`[BGM] Generating (mood: ${bgMusicMood})...`);
 
     try {
       const bgm = await generateBgMusic(bgMusicMood, (status) => {
-        onProgress?.({ stage: "bgm", message: status });
+        tracker.reportSimple(status);
       });
       script = { ...script, bgMusicUrl: bgm.blobUrl, bgMusicDurationMs: bgm.durationMs };
       console.log(`[BGM] Done. Duration: ${bgm.durationMs}ms`);
@@ -122,9 +194,8 @@ export async function generateScript(
     }
   }
 
-  onProgress?.({ stage: "done", message: "Done" });
-  const durationMs = Math.round(performance.now() - t0);
-  trackEvent("generation", true, durationMs, {
+  tracker.done();
+  trackEvent("generation", true, 0, {
     scenes: script.scenes.length,
     iterations,
     durationFrames: script.durationInFrames,
@@ -162,21 +233,37 @@ async function legacyGenerate(
   throw new Error("Legacy generation failed after retries");
 }
 
-// --- Progress message formatting ---
+// --- Agent message formatting ---
 
-function formatAgentMessage(p: AgentProgress): string {
+function formatAgentMessage(p: AgentProgress, completedTools: string[]): string {
+  // Context-aware "thinking" labels
+  if (p.action === "thinking") {
+    if (completedTools.length === 0) return "Analyzing your data...";
+    if (!completedTools.includes("draft_storyboard")) return "Planning storyboard...";
+    if (!completedTools.includes("generate_palette")) return "Designing visual elements...";
+    if (!completedTools.includes("produce_script")) return "Writing final script...";
+    return "Refining script...";
+  }
+
   const LABELS: Record<string, string> = {
-    thinking: "Thinking...",
     "tool:analyze_data": "Analyzing data...",
     "tool:draft_storyboard": "Writing storyboard...",
     "tool:get_element_catalog": "Reviewing elements...",
+    "tool:generate_palette": "Generating color palette...",
     "tool:produce_script": "Producing video script...",
+    quality_gate: "Checking script quality...",
+    advisory: "Reviewing narrative structure...",
+    budget_warn: "Optimizing token usage...",
+    budget_force_finish: "Wrapping up...",
     text_only: "Processing...",
     fallback_json: "Parsing output...",
     max_reached: "Finalizing...",
     force_output: "Generating final script...",
+    produce_script: "Script produced",
   };
 
-  const label = LABELS[p.action] ?? `Agent: ${p.action}`;
-  return `[${p.iteration}/${p.maxIterations}] ${label}`;
+  // Handle tool_error:* pattern
+  if (p.action.startsWith("tool_error:")) return "Retrying...";
+
+  return LABELS[p.action] ?? `${p.action}`;
 }

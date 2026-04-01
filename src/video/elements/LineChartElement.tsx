@@ -4,7 +4,7 @@ import { spring } from "../animation";
 import { line, curveMonotoneX } from "d3-shape";
 import { scaleLinear, scalePoint } from "d3-scale";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
-import { chartColor, formatValue } from "../../services/chartHelpers";
+import { chartColor, formatValue, extractValue, extractLabel } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
 
 type DataPoint = { label: string; value: number };
@@ -144,9 +144,17 @@ const AnimatedPath: React.FC<{ d: string; color: string; progress: number }> = (
 };
 
 function normalizeSeries(el: SceneElement): LineSeries[] {
-  if (Array.isArray(el.series)) return el.series as LineSeries[];
+  const coerce = (pts: DataPoint[]): DataPoint[] =>
+    pts.map((d) => {
+      const raw = d as unknown as Record<string, unknown>;
+      return { label: extractLabel(raw), value: extractValue(raw) };
+    });
+
+  if (Array.isArray(el.series)) {
+    return (el.series as LineSeries[]).map((s) => ({ ...s, data: coerce(s.data) }));
+  }
   if (Array.isArray(el.data)) {
-    return [{ name: "default", data: el.data as DataPoint[], color: el.color as string | undefined }];
+    return [{ name: "default", data: coerce(el.data as DataPoint[]), color: el.color as string | undefined }];
   }
   return [];
 }

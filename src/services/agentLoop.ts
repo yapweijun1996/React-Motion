@@ -25,9 +25,17 @@ import {
 } from "./agentTools";
 import { runStopChecks } from "./agentHooks";
 import { ClassifiedError, logError } from "./errors";
+import {
+  createBudgetTracker,
+  recordModelOutput,
+  recordToolResults,
+  recordUserMessage,
+  checkBudget,
+  getBudgetSummary,
+  type BudgetSummary,
+} from "./budgetTracker";
 
 const MAX_ITERATIONS = 12;
-const BUDGET_WARN_CHARS = 200_000; // ~50K tokens
 
 export type AgentProgress = {
   iteration: number;
@@ -43,6 +51,8 @@ export type AgentLoopResult = {
   conversationLog: AgentProgress[];
   /** How many iterations the agent used */
   iterations: number;
+  /** Token budget summary for observability */
+  budgetSummary: BudgetSummary;
 };
 
 export async function runAgentLoop(
@@ -60,6 +70,13 @@ export async function runAgentLoop(
     { google_search: {} },
   ];
 
+  // Budget pressure: restrict to terminal tools only
+  const toolsMinimal: GeminiTool[] = [{
+    function_declarations: getToolDeclarations().filter(
+      (d) => d.name === "produce_script" || d.name === "draft_storyboard",
+    ),
+  }];
+
   const log: AgentProgress[] = [];
 
   // --- Hook state ---
@@ -67,7 +84,7 @@ export async function runAgentLoop(
   let textOnlyStreak = 0;
   let stopRetried = false;
   let storyboardAdvisoryGiven = false;
-  let totalChars = systemPrompt.length + userMessage.length;
+  const budget = createBudgetTracker(systemPrompt.length, userMessage.length);
 
   function report(iteration: number, action: string, detail?: string) {
     const p: AgentProgress = { iteration, maxIterations: MAX_ITERATIONS, action, detail };
@@ -79,20 +96,16 @@ export async function runAgentLoop(
   for (let i = 1; i <= MAX_ITERATIONS; i++) {
     report(i, "thinking", "Calling Gemini with tools...");
 
+    // RM-143e: Budget-driven temperature + tool selection
+    const isUnderPressure = budget.warnCount > 0 || budget.forceCount > 0;
     const result: GeminiCallResult = await callGeminiRaw(
       systemPrompt,
       messages,
-      { tools, temperature: 0.8 },
+      { tools: isUnderPressure ? toolsMinimal : tools, temperature: isUnderPressure ? 0.5 : 0.8 },
     );
 
-    // RM-143e: Budget tracking
-    const responseChars = result.parts.reduce(
-      (s, p) => s + (p.text?.length ?? JSON.stringify(p).length), 0,
-    );
-    totalChars += responseChars;
-    if (totalChars > BUDGET_WARN_CHARS) {
-      report(i, "budget_warning", `~${Math.round(totalChars / 4000)}K tokens`);
-    }
+    // RM-143e: Record model output tokens
+    recordModelOutput(budget, i, result.parts);
 
     const functionCalls = result.parts.filter((p) => p.functionCall);
     const textParts = result.parts.filter((p) => p.text);
@@ -108,7 +121,7 @@ export async function runAgentLoop(
         try {
           const parsed = JSON.parse(text);
           report(i, "fallback_json", "Parsed text as VideoScript JSON");
-          return { scriptJson: parsed, conversationLog: log, iterations: i };
+          return { scriptJson: parsed, conversationLog: log, iterations: i, budgetSummary: getBudgetSummary(budget) };
         } catch { /* not valid JSON, continue */ }
       }
 
@@ -117,10 +130,9 @@ export async function runAgentLoop(
 
       // First text-only: allow AI to think. Second+: gentle guidance.
       if (textOnlyStreak >= 2) {
-        messages.push({
-          role: "user",
-          parts: [{ text: "When you're ready, please use the available tools to proceed. Start with draft_storyboard if you haven't yet." }],
-        });
+        const nudge = "When you're ready, please use the available tools to proceed. Start with draft_storyboard if you haven't yet.";
+        messages.push({ role: "user", parts: [{ text: nudge }] });
+        recordUserMessage(budget, nudge);
       }
       continue;
     }
@@ -182,7 +194,22 @@ export async function runAgentLoop(
 
     // Send tool results back to AI
     messages.push({ role: "user", parts: responseParts });
-    totalChars += responseParts.reduce((s, p) => s + JSON.stringify(p).length, 0);
+    recordToolResults(budget, responseParts as Array<{ functionResponse?: { name: string; response: Record<string, unknown> } }>);
+
+    // --- Budget decision ---
+    const budgetDecision = checkBudget(budget);
+    if (budgetDecision.action !== "continue") {
+      report(i, "budget_" + budgetDecision.action,
+        `${budgetDecision.pctUsed}% — ${budgetDecision.message}`);
+    }
+    if (budgetDecision.action === "force_finish" && !terminalScript) {
+      messages.push({
+        role: "user",
+        parts: [{ text: budgetDecision.message + " Do not call any other tools." }],
+      });
+      recordUserMessage(budget, budgetDecision.message);
+      continue;
+    }
 
     // --- Post-tool hooks: only when produce_script returned terminal ---
     if (terminalScript) {
@@ -190,15 +217,12 @@ export async function runAgentLoop(
       if (!calledTools.has("draft_storyboard") && !storyboardAdvisoryGiven) {
         storyboardAdvisoryGiven = true;
         report(i, "advisory", "No storyboard drafted before produce_script");
-        messages.push({
-          role: "user",
-          parts: [{
-            text: "Note: You produced a script without drafting a storyboard. " +
-              "Scripts without narrative planning typically lack: " +
-              "a compelling hook (scene 1), emotional arc (tension → climax), and action close. " +
-              "Consider calling draft_storyboard first and then produce_script again with an improved narrative.",
-          }],
-        });
+        const advisory = "Note: You produced a script without drafting a storyboard. " +
+          "Scripts without narrative planning typically lack: " +
+          "a compelling hook (scene 1), emotional arc (tension → climax), and action close. " +
+          "Consider calling draft_storyboard first and then produce_script again with an improved narrative.";
+        messages.push({ role: "user", parts: [{ text: advisory }] });
+        recordUserMessage(budget, advisory);
         terminalScript = null;
         continue; // AI gets a chance to revise
       }
@@ -208,14 +232,11 @@ export async function runAgentLoop(
       if (!checks.pass && !stopRetried) {
         stopRetried = true;
         report(i, "quality_gate", checks.issues.join("; "));
-        messages.push({
-          role: "user",
-          parts: [{
-            text: "Quality check found issues with the script:\n" +
-              checks.issues.map((s) => "- " + s).join("\n") +
-              "\nPlease fix these issues and call produce_script again.",
-          }],
-        });
+        const qualityMsg = "Quality check found issues with the script:\n" +
+          checks.issues.map((s) => "- " + s).join("\n") +
+          "\nPlease fix these issues and call produce_script again.";
+        messages.push({ role: "user", parts: [{ text: qualityMsg }] });
+        recordUserMessage(budget, qualityMsg);
         terminalScript = null;
         continue; // one retry
       }
@@ -224,19 +245,16 @@ export async function runAgentLoop(
       const sceneCount = (terminalScript.scenes as unknown[])?.length ?? "?";
       report(i, "produce_script", `Script produced — ${sceneCount} scenes`);
       console.log("[Agent] Final script:", JSON.stringify(terminalScript).slice(0, 500) + "...");
-      return { scriptJson: terminalScript, conversationLog: log, iterations: i };
+      return { scriptJson: terminalScript, conversationLog: log, iterations: i, budgetSummary: getBudgetSummary(budget) };
     }
   }
 
   // Max iterations reached — force JSON output
   report(MAX_ITERATIONS, "max_reached", "Requesting final output...");
 
-  messages.push({
-    role: "user",
-    parts: [{
-      text: "You have reached the maximum number of iterations. Please output the final VideoScript JSON now. Return ONLY the JSON object.",
-    }],
-  });
+  const forceMsg = "You have reached the maximum number of iterations. Please output the final VideoScript JSON now. Return ONLY the JSON object.";
+  messages.push({ role: "user", parts: [{ text: forceMsg }] });
+  recordUserMessage(budget, forceMsg);
 
   const finalResult = await callGeminiRaw(systemPrompt, messages, {
     temperature: 0.5,
@@ -254,7 +272,7 @@ export async function runAgentLoop(
   try {
     const parsed = JSON.parse(finalText);
     report(MAX_ITERATIONS, "force_output", "Parsed forced JSON output");
-    return { scriptJson: parsed, conversationLog: log, iterations: MAX_ITERATIONS };
+    return { scriptJson: parsed, conversationLog: log, iterations: MAX_ITERATIONS, budgetSummary: getBudgetSummary(budget) };
   } catch (parseErr) {
     logError("Agent", "AGENT_MAX_ITERATIONS", parseErr, {
       responseLength: finalText.length,

@@ -3,11 +3,28 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring, interpolate } from "../animation";
 import { sankey, sankeyLinkHorizontal, sankeyCenter } from "d3-sankey";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
-import { chartColor } from "../../services/chartHelpers";
+import { chartColor, extractValue } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
 
 type NodeInput = { name: string; color?: string };
 type LinkInput = { source: number; target: number; value: number };
+
+function normalizeNodes(el: SceneElement): NodeInput[] {
+  const raw = (el.nodes as Record<string, unknown>[]) ?? [];
+  return raw.map((d) => ({
+    name: String(d.name ?? d.label ?? ""),
+    color: typeof d.color === "string" ? d.color : undefined,
+  }));
+}
+
+function normalizeLinks(el: SceneElement): LinkInput[] {
+  const raw = (el.links as Record<string, unknown>[]) ?? [];
+  return raw.map((d) => ({
+    source: Number(d.source) || 0,
+    target: Number(d.target) || 0,
+    value: extractValue(d),
+  }));
+}
 
 const CHART_W = 1100;
 const CHART_H = 500;
@@ -19,8 +36,8 @@ type Props = { el: SceneElement; index: number; dark?: boolean };
 export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const inputNodes = (el.nodes as NodeInput[]) ?? [];
-  const inputLinks = (el.links as LinkInput[]) ?? [];
+  const inputNodes = normalizeNodes(el);
+  const inputLinks = normalizeLinks(el);
 
   if (inputNodes.length === 0 || inputLinks.length === 0) return null;
 

@@ -13,6 +13,11 @@ import { spring, interpolate, noise2D } from "./animation";
 
 const NOISE_SEED = "stagger";
 
+// Safety cap: delay should never exceed this so animations always fire within the scene.
+// 90 frames = 3 seconds at 30fps — generous enough for dramatic stagger, short enough to
+// guarantee visibility even in brief scenes.
+const MAX_DELAY_FRAMES = 90;
+
 // --- Stagger speed presets (AI picks one) ---
 // StaggerSpeed derived from canonical VALID_STAGGER_SPEEDS in validate.ts
 
@@ -109,7 +114,8 @@ export function useStagger(options: UseStaggerOptions): StaggerResult {
     itemDelay = itemIndex * staggerFrames + noisePerturbation;
   }
 
-  const delay = Math.max(0, Math.round(baseDelay + itemDelay));
+  const rawDelay = Math.max(0, Math.round(baseDelay + itemDelay));
+  const delay = Math.min(rawDelay, MAX_DELAY_FRAMES);
 
   // Spring config from type preset
   const preset: SpringPreset = TYPE_SPRING[elementType] ?? "data";
@@ -120,6 +126,16 @@ export function useStagger(options: UseStaggerOptions): StaggerResult {
     fps,
     config: springConfig,
   });
+
+  // Debug: log when animation is stuck at 0 past a reasonable threshold
+  if (progress === 0 && frame > 10) {
+    console.warn(
+      `[useStagger] progress=0 | type=${elementType} idx=${elementIndex}` +
+      ` item=${itemIndex ?? "-"} | frame=${frame} delay=${delay}` +
+      (rawDelay !== delay ? ` (raw=${rawDelay} CAPPED)` : "") +
+      ` | delayOverride=${delayOverride ?? "none"}`,
+    );
+  }
 
   // Slight Y offset variation via noise (±8px)
   const yNoise = noise2D(NOISE_SEED, elementIndex * 1.1, (itemIndex ?? 0) * 0.9) * 8;

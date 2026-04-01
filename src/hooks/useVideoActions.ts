@@ -20,7 +20,7 @@ type GenerateOptions = {
   data?: BusinessData;
   currentScript: VideoScript | null;
   onScript: (s: VideoScript) => void;
-  onStatus: (msg: string) => void;
+  onStatus: (p: GenerationProgress | null) => void;
   onError: (msg: string) => void;
   onLoadingChange: (v: boolean) => void;
 };
@@ -33,7 +33,7 @@ export function useGenerate(opts: GenerateOptions) {
     isRunning.current = true;
     opts.onLoadingChange(true);
     opts.onError("");
-    opts.onStatus("Generating video script...");
+    opts.onStatus(null);
 
     try {
       // Revoke old blob URLs
@@ -42,7 +42,7 @@ export function useGenerate(opts: GenerateOptions) {
       });
 
       const result = await generateScript(opts.prompt, opts.data, (p: GenerationProgress) => {
-        opts.onStatus(p.message);
+        opts.onStatus(p);
       });
       opts.onScript(result);
 
@@ -58,7 +58,7 @@ export function useGenerate(opts: GenerateOptions) {
     } finally {
       isRunning.current = false;
       opts.onLoadingChange(false);
-      opts.onStatus("");
+      opts.onStatus(null);
     }
   }, [opts]);
 }

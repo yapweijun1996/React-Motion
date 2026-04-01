@@ -1,17 +1,27 @@
 import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring, interpolate } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
-import { chartColor, formatValue, formatPercent } from "../../services/chartHelpers";
+import { chartColor, formatValue, formatPercent, extractValue, extractLabel } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
 
 type BarItem = { label: string; value: number; color?: string };
+
+function normalizeBars(el: SceneElement): BarItem[] {
+  const raw = (el.bars as Record<string, unknown>[]) ?? [];
+  return raw.map((d) => ({
+    label: extractLabel(d),
+    value: extractValue(d),
+    color: typeof d.color === "string" ? d.color : undefined,
+  }));
+}
 
 type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const BarChartElement: React.FC<Props> = ({ el, index, dark }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const bars = (el.bars as BarItem[]) ?? [];
+  const bars = normalizeBars(el);
+  if (bars.length === 0) return null;
   const highlightIndex = (el.highlightIndex as number) ?? 0;
   const showPct = (el.showPercentage as boolean) ?? false;
   const stagger = parseStagger(el);
