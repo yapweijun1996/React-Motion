@@ -145,7 +145,8 @@ async function callLyria(
   );
 
   if (!audioPart?.inlineData?.data) {
-    throw new Error("BGM returned empty audio data");
+    const partTypes = parts.map((p: Record<string, unknown>) => Object.keys(p).join(",")).join(" | ");
+    throw new Error(`BGM returned empty audio data (parts: [${partTypes}])`);
   }
 
   const { data: audioData, mimeType: mime } = audioPart.inlineData;
@@ -167,7 +168,10 @@ async function callLyriaWithRetry(
       return await callLyria(prompt);
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      const isRetryable = RETRYABLE_CODES.some((c) => lastError!.message.includes(c));
+      const msg = lastError!.message;
+      const isRetryable =
+        RETRYABLE_CODES.some((c) => msg.includes(c)) ||
+        msg.includes("empty audio data");  // Lyria intermittently returns no audio
       if (!isRetryable || attempt >= MAX_RETRIES) throw lastError;
 
       const delayMs = RETRY_BASE_MS * Math.pow(2, attempt);

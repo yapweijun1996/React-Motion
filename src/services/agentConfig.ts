@@ -128,10 +128,16 @@ export const TTS_MAX_RETRIES = 3;
 export const TTS_RETRY_BASE_MS = 2000;
 
 /** Background music max retry attempts. Range: 1–3. */
-export const BGM_MAX_RETRIES = 2;
+export const BGM_MAX_RETRIES = 3;
 
 /** Background music base delay before first retry (ms). */
 export const BGM_RETRY_BASE_MS = 2000;
+
+/** Image generation max retry attempts. Range: 1–3. */
+export const IMAGE_GEN_MAX_RETRIES = 2;
+
+/** Image generation base delay before first retry (ms). */
+export const IMAGE_GEN_RETRY_BASE_MS = 2000;
 
 /** JSON parse retry attempts in legacy generateScript fallback. Range: 1–3. */
 export const JSON_PARSE_MAX_RETRIES = 2;
