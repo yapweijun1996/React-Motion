@@ -14,6 +14,7 @@ import {
 } from "react-kawaii";
 import { useStagger, parseStagger } from "../useStagger";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 // Character registry
 const CHARACTERS: Record<string, FunctionComponent<KawaiiProps>> = {
@@ -35,15 +36,15 @@ const CHARACTERS: Record<string, FunctionComponent<KawaiiProps>> = {
   "speech-bubble": SpeechBubble,
 };
 
-type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors };
 
-export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
+export const KawaiiElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors }) => {
   const character = (el.character as string) ?? "ghost";
   const mood = (el.mood as KawaiiProps["mood"]) ?? "blissful";
   const size = (el.size as number) ?? 180;
   const color = (el.color as string) ?? primaryColor ?? "#FFD882";
   const caption = el.caption as string | undefined;
-  const captionColor = (el.captionColor as string) ?? (dark ? "#e2e8f0" : "#374151");
+  const captionColor = (el.captionColor as string) ?? colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
 
   const { progress, opacity } = useStagger({
     elementIndex: index,

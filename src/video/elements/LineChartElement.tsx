@@ -7,6 +7,7 @@ import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "
 import { chartColor, formatValue, extractValue, extractLabel } from "../../services/chartHelpers";
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type DataPoint = { label: string; value: number };
 type LineSeries = { name: string; data: DataPoint[]; color?: string };
@@ -33,9 +34,9 @@ function normalizeSeries(el: SceneElement): LineSeries[] {
   return [];
 }
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
-export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
+export const LineChartElement: React.FC<Props> = ({ el, index, dark, colors }) => {
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -82,7 +83,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
             key={tick}
             x1={0} x2={INNER_W}
             y1={yScale(tick)} y2={yScale(tick)}
-            stroke={dark ? "#374151" : "#e5e7eb"} strokeWidth={1}
+            stroke={colors?.gridLine ?? (dark ? "#374151" : "#e5e7eb")} strokeWidth={1}
           />
         ))}
 
@@ -91,7 +92,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
             key={`yl-${tick}`}
             x={-10} y={yScale(tick)}
             textAnchor="end" dominantBaseline="middle"
-            fontSize={36} fill={dark ? "#cbd5e1" : "#9ca3af"}
+            fontSize={36} fill={colors?.label ?? (dark ? "#cbd5e1" : "#6b7280")}
           >
             {formatValue(tick)}
           </text>
@@ -103,7 +104,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
             x={xScale(label)!}
             y={INNER_H + 30}
             textAnchor="middle"
-            fontSize={36} fill={dark ? "#cbd5e1" : "#9ca3af"}
+            fontSize={36} fill={colors?.label ?? (dark ? "#cbd5e1" : "#6b7280")}
           >
             {label}
           </text>

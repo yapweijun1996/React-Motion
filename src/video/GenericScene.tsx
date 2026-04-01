@@ -21,6 +21,7 @@ import { ComparisonElement } from "./elements/ComparisonElement";
 import { ParticleBg } from "./ParticleBg";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { getLayoutTokens, type LayoutTokens } from "./sceneLayout";
+import { getSceneColors, type SceneColors } from "./sceneColors";
 import { loadSettings } from "../services/settingsStore";
 import type { VideoScene, SceneElement } from "../types";
 
@@ -132,6 +133,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
   const { durationInFrames } = useVideoConfig();
   const layout = scene.layout ?? "column";
   const dark = isSceneDark(scene);
+  const colors = getSceneColors(dark);
   const canvasEffects = loadSettings().canvasEffects;
   const tokens = getLayoutTokens(scene.elements);
 
@@ -183,6 +185,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
             primaryColor={primaryColor}
             dark={dark}
             tokens={tokens}
+            colors={colors}
           />
         </ErrorBoundary>
       ))}
@@ -197,6 +200,7 @@ type ElementRendererProps = {
   primaryColor?: string;
   dark?: boolean;
   tokens: LayoutTokens;
+  colors: SceneColors;
 };
 
 const CHART_TYPES = new Set(["bar-chart", "pie-chart", "line-chart", "sankey", "svg", "map"]);
@@ -218,6 +222,7 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
   primaryColor,
   dark,
   tokens,
+  colors,
 }) => {
   const fs = tokens.fontScale;
   const inner = (() => {
@@ -225,39 +230,39 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
       case "text":
         return <TextElement el={el} index={index} dark={dark} fontScale={fs} />;
       case "metric":
-        return <MetricElement el={el} index={index} primaryColor={primaryColor} dark={dark} fontScale={fs} />;
+        return <MetricElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
       case "bar-chart":
-        return <BarChartElement el={el} index={index} dark={dark} />;
+        return <BarChartElement el={el} index={index} dark={dark} colors={colors} />;
       case "pie-chart":
-        return <PieChartElement el={el} index={index} dark={dark} fontScale={fs} />;
+        return <PieChartElement el={el} index={index} dark={dark} colors={colors} fontScale={fs} />;
       case "line-chart":
-        return <LineChartElement el={el} index={index} dark={dark} />;
+        return <LineChartElement el={el} index={index} dark={dark} colors={colors} />;
       case "sankey":
-        return <SankeyElement el={el} index={index} dark={dark} />;
+        return <SankeyElement el={el} index={index} dark={dark} colors={colors} />;
       case "list":
-        return <ListElement el={el} index={index} primaryColor={primaryColor} dark={dark} fontScale={fs} />;
+        return <ListElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
       case "divider":
         return <DividerElement el={el} index={index} primaryColor={primaryColor} />;
       case "callout":
-        return <CalloutElement el={el} index={index} primaryColor={primaryColor} dark={dark} fontScale={fs} />;
+        return <CalloutElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
       case "kawaii":
-        return <KawaiiElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
+        return <KawaiiElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} />;
       case "lottie":
         return <LottieElement el={el} index={index} />;
       case "icon":
-        return <IconElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
+        return <IconElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} />;
       case "annotation":
-        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} dark={dark} fontScale={fs} />;
+        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} dark={dark} colors={colors} fontScale={fs} />;
       case "svg":
         return <SvgElement el={el} index={index} />;
       case "map":
         return <MapElement el={el} index={index} />;
       case "progress":
-        return <ProgressElement el={el} index={index} dark={dark} />;
+        return <ProgressElement el={el} index={index} dark={dark} colors={colors} />;
       case "timeline":
-        return <TimelineElement el={el} index={index} dark={dark} fontScale={fs} />;
+        return <TimelineElement el={el} index={index} dark={dark} colors={colors} fontScale={fs} />;
       case "comparison":
-        return <ComparisonElement el={el} index={index} dark={dark} fontScale={fs} />;
+        return <ComparisonElement el={el} index={index} dark={dark} colors={colors} fontScale={fs} />;
       default:
         console.warn(`[GenericScene] Unknown element type: "${el.type}"`);
         return null;

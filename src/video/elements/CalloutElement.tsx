@@ -1,10 +1,11 @@
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { readableColor } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
-type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; fontScale?: number };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
-export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark, fontScale = 1 }) => {
+export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors, fontScale = 1 }) => {
   const borderColor = (el.borderColor as string) ?? primaryColor ?? "#2563eb";
   const animation = parseAnimation(el);
 
@@ -33,7 +34,7 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark,
         <div
           style={{
             fontSize: Math.round(44 * fontScale),
-            color: dark ? "#cbd5e1" : "#6b7280",
+            color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"),
             marginBottom: 12,
             fontWeight: 600,
             textTransform: "uppercase",

@@ -4,6 +4,7 @@ import { useStagger, parseStagger } from "../useStagger";
 import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring } from "../animation";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 // --- Shape registry ---
 
@@ -109,9 +110,9 @@ function generatePaths(
 
 // --- Component ---
 
-type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; fontScale?: number };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
-export const AnnotationElement: React.FC<Props> = ({ el, index, primaryColor, dark, fontScale = 1 }) => {
+export const AnnotationElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors, fontScale = 1 }) => {
   const shape = (VALID_ANNOTATION_SHAPES.includes(el.shape as AnnotationShape)
     ? el.shape : "circle") as AnnotationShape;
   const color = (el.color as string) ?? primaryColor ?? "#ef4444";
@@ -120,7 +121,7 @@ export const AnnotationElement: React.FC<Props> = ({ el, index, primaryColor, da
   const roughness = Math.max(0.5, Math.min(3, (el.roughness as number) ?? 1.5));
   const size = Math.round(((el.size as number) ?? 120) * fontScale);
   const label = el.label as string | undefined;
-  const labelColor = (el.labelColor as string) ?? (dark ? "#e2e8f0" : "#374151");
+  const labelColor = (el.labelColor as string) ?? colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
   const labelSize = Math.round(((el.labelSize as number) ?? 18) * fontScale);
 
   const frame = useCurrentFrame();

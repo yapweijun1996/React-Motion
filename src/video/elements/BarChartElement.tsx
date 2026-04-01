@@ -4,6 +4,7 @@ import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "
 import { chartColor, formatValue, formatPercent, extractValue, extractLabel } from "../../services/chartHelpers";
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type BarItem = { label: string; value: number; color?: string };
 
@@ -130,9 +131,9 @@ const BarItemRow: React.FC<BarItemRowProps> = ({
   );
 };
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
-export const BarChartElement: React.FC<Props> = ({ el, index, dark }) => {
+export const BarChartElement: React.FC<Props> = ({ el, index, dark, colors }) => {
   const bars = normalizeBars(el);
   if (bars.length === 0) return null;
 
@@ -154,8 +155,8 @@ export const BarChartElement: React.FC<Props> = ({ el, index, dark }) => {
 
   const { barHeight, fontSize } = computeBarLayout(bars.length);
   const labelWidth = computeLabelWidth(bars, fontSize);
-  const textCol = dark ? "#e2e8f0" : "#374151";
-  const mutedCol = dark ? "#94a3b8" : "#9ca3af";
+  const textCol = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
+  const mutedCol = colors?.muted ?? (dark ? "#94a3b8" : "#6b7280");
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: GAP, width: "100%", opacity: entrance.opacity, transform: entrance.transform }}>

@@ -6,6 +6,7 @@ import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "
 import { chartColor, extractValue } from "../../services/chartHelpers";
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type NodeInput = { name: string; color?: string };
 type LinkInput = { source: number; target: number; value: number };
@@ -32,9 +33,9 @@ const CHART_H = 500;
 const NODE_W = 22;
 const NODE_PAD = 20;
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
-export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
+export const SankeyElement: React.FC<Props> = ({ el, index, dark, colors }) => {
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -125,7 +126,7 @@ export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
               textAnchor={x0 < CHART_W / 2 ? "start" : "end"}
               dominantBaseline="middle"
               fontSize={38}
-              fill={dark ? "#e2e8f0" : "#374151"}
+              fill={colors?.text ?? (dark ? "#e2e8f0" : "#1e293b")}
               fontWeight={500}
             >
               {node.name}

@@ -9,15 +9,16 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors };
 
 type Variant = "circular" | "semicircle" | "linear";
 
 const SIZE = 320;        // SVG viewport for circular/semicircle
 const STROKE_DEFAULT = 14;
 
-export const ProgressElement: React.FC<Props> = ({ el, index, dark }) => {
+export const ProgressElement: React.FC<Props> = ({ el, index, dark, colors }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -57,7 +58,7 @@ export const ProgressElement: React.FC<Props> = ({ el, index, dark }) => {
     ? Math.round(animatedValue).toLocaleString()
     : animatedValue.toFixed(1);
 
-  const textColor = dark ? "#e2e8f0" : "#1e293b";
+  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
   const trackColor = dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)";
 
   return (
@@ -87,7 +88,7 @@ export const ProgressElement: React.FC<Props> = ({ el, index, dark }) => {
         />
       )}
       {label && (
-        <div style={{ fontSize: 56, color: dark ? "#cbd5e1" : "#64748b", fontWeight: 500, textAlign: "center" }}>
+        <div style={{ fontSize: 56, color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"), fontWeight: 500, textAlign: "center" }}>
           {label}
         </div>
       )}

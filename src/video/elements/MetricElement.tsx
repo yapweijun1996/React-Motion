@@ -2,6 +2,7 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle, type EntranceAnimation } from "../useStagger";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type MetricItem = {
   value: string;
@@ -27,11 +28,12 @@ type MetricItemCardProps = {
   animation: EntranceAnimation;
   primaryColor?: string;
   dark?: boolean;
+  colors?: SceneColors;
   sizes: ReturnType<typeof metricSizes>;
 };
 
 const MetricItemCard: React.FC<MetricItemCardProps> = ({
-  item, i, index, stagger, delayOverride, animation, primaryColor, dark, sizes,
+  item, i, index, stagger, delayOverride, animation, primaryColor, dark, colors, sizes,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -85,11 +87,11 @@ const MetricItemCard: React.FC<MetricItemCardProps> = ({
         {formatted}
         {suffix && <span style={{ fontSize: sizes.suffix, marginLeft: 8 }}>{suffix}</span>}
       </div>
-      <div style={{ fontSize: sizes.label, color: dark ? "#cbd5e1" : "#64748b", marginTop: 16, fontWeight: 500 }}>
+      <div style={{ fontSize: sizes.label, color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"), marginTop: 16, fontWeight: 500 }}>
         {item.label}
       </div>
       {item.subtext && (
-        <div style={{ fontSize: sizes.subtext, color: dark ? "#94a3b8" : "#64748b", marginTop: 8 }}>
+        <div style={{ fontSize: sizes.subtext, color: colors?.muted ?? (dark ? "#94a3b8" : "#6b7280"), marginTop: 8 }}>
           {item.subtext}
         </div>
       )}
@@ -97,9 +99,9 @@ const MetricItemCard: React.FC<MetricItemCardProps> = ({
   );
 };
 
-type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; fontScale?: number };
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
-export const MetricElement: React.FC<Props> = ({ el, index, primaryColor, dark, fontScale = 1 }) => {
+export const MetricElement: React.FC<Props> = ({ el, index, primaryColor, dark, colors, fontScale = 1 }) => {
   const items = (el.items as MetricItem[]) ?? [];
   const stagger = parseStagger(el);
   const animation = parseAnimation(el);
@@ -129,7 +131,7 @@ export const MetricElement: React.FC<Props> = ({ el, index, primaryColor, dark, 
           key={i}
           item={item} i={i} index={index} stagger={stagger}
           delayOverride={el.delay} animation={animation}
-          primaryColor={primaryColor} dark={dark} sizes={scaled}
+          primaryColor={primaryColor} dark={dark} colors={colors} sizes={scaled}
         />
       ))}
     </div>

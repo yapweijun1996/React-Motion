@@ -6,6 +6,7 @@ import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "
 import { chartColor, formatPercent, extractValue, extractLabel } from "../../services/chartHelpers";
 import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type SliceItem = { label: string; value: number; color?: string };
 
@@ -20,9 +21,9 @@ function normalizeSlices(el: SceneElement): SliceItem[] {
 
 const MAX_LEGEND = 8;
 
-type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
-export const PieChartElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
+export const PieChartElement: React.FC<Props> = ({ el, index, dark, colors, fontScale = 1 }) => {
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -109,12 +110,12 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, fontScale = 
                 backgroundColor: color, flexShrink: 0,
               }} />
               <span style={{
-                fontSize: legendFontSize, color: dark ? "#e2e8f0" : "#374151",
+                fontSize: legendFontSize, color: colors?.text ?? (dark ? "#e2e8f0" : "#1e293b"),
                 fontWeight: isHl ? 700 : 400,
               }}>
                 {s.label}
                 {showPercentage && (
-                  <span style={{ color: dark ? "#94a3b8" : "#9ca3af", marginLeft: 12, fontSize: legendFontSize - 6 }}>
+                  <span style={{ color: colors?.muted ?? (dark ? "#94a3b8" : "#6b7280"), marginLeft: 12, fontSize: legendFontSize - 6 }}>
                     {pct}
                   </span>
                 )}
@@ -123,7 +124,7 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark, fontScale = 
           );
         })}
         {truncated > 0 && (
-          <div style={{ fontSize: legendFontSize - 4, color: dark ? "#64748b" : "#9ca3af", paddingLeft: 48 }}>
+          <div style={{ fontSize: legendFontSize - 4, color: colors?.label ?? (dark ? "#cbd5e1" : "#6b7280"), paddingLeft: 48 }}>
             +{truncated} more
           </div>
         )}

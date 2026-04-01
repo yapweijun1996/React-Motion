@@ -9,6 +9,7 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring, interpolate } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type ComparisonSide = {
   title: string;
@@ -18,9 +19,9 @@ type ComparisonSide = {
   items?: string[];
 };
 
-type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
-export const ComparisonElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
+export const ComparisonElement: React.FC<Props> = ({ el, index, dark, colors, fontScale = 1 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -61,8 +62,8 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark, fontScale 
   const leftX = interpolate(leftProgress, [0, 1], [-60, 0]);
   const rightX = interpolate(rightProgress, [0, 1], [60, 0]);
 
-  const textColor = dark ? "#e2e8f0" : "#1e293b";
-  const subColor = dark ? "#94a3b8" : "#6b7280";
+  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
+  const subColor = colors?.muted ?? (dark ? "#94a3b8" : "#6b7280");
   const cardBg = dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.03)";
 
   const leftColor = left.color ?? "#3b82f6";
@@ -81,7 +82,6 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark, fontScale 
         cardBg={cardBg}
         textColor={textColor}
         subColor={subColor}
-        dark={dark}
         progress={leftProgress}
         translateX={leftX}
         fontScale={fontScale}
@@ -95,7 +95,7 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark, fontScale 
         transform: `scale(${interpolate(vsProgress, [0, 1], [0.5, 1])})`,
       }}>
         <div style={{
-          fontSize: Math.round(56 * fontScale), fontWeight: 800, color: dark ? "#94a3b8" : "#9ca3af",
+          fontSize: Math.round(56 * fontScale), fontWeight: 800, color: colors?.muted ?? (dark ? "#94a3b8" : "#6b7280"),
           letterSpacing: 4, textTransform: "uppercase",
         }}>
           {vsLabel}
@@ -109,7 +109,6 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark, fontScale 
         cardBg={cardBg}
         textColor={textColor}
         subColor={subColor}
-        dark={dark}
         progress={rightProgress}
         translateX={rightX}
         fontScale={fontScale}
@@ -128,14 +127,13 @@ type CardProps = {
   cardBg: string;
   textColor: string;
   subColor: string;
-  dark?: boolean;
   progress: number;
   translateX: number;
   fontScale: number;
 };
 
 const Card: React.FC<CardProps> = ({
-  side, color, cardBg, textColor, subColor, dark, progress, translateX, fontScale,
+  side, color, cardBg, textColor, subColor, progress, translateX, fontScale,
 }) => {
   return (
     <div style={{
@@ -181,7 +179,7 @@ const Card: React.FC<CardProps> = ({
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
           {side.items.map((item, i) => (
             <div key={i} style={{
-              fontSize: Math.round(40 * fontScale), color: dark ? "#cbd5e1" : "#374151",
+              fontSize: Math.round(40 * fontScale), color: textColor,
               display: "flex", alignItems: "baseline", gap: 12,
             }}>
               <span style={{ color, fontSize: Math.round(28 * fontScale), lineHeight: 1 }}>●</span>

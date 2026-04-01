@@ -371,7 +371,16 @@ The template-based scene system has been replaced by an atomic element system. A
 
 ### Text contrast auto-detection
 
-`GenericScene.tsx` computes background luminance and passes a `dark` prop to all elements. Elements automatically switch between light text (`#e2e8f0`) and dark text (`#374151`) based on scene background color.
+`GenericScene.tsx` computes background luminance and passes a `dark` boolean plus a unified `colors: SceneColors` token object to all elements. Color tokens are defined in `src/video/sceneColors.ts`:
+
+| Token | Dark mode | Light mode | Usage |
+|-------|-----------|------------|-------|
+| `text` | `#e2e8f0` | `#1e293b` | Primary body text |
+| `muted` | `#94a3b8` | `#6b7280` | Secondary / subdued text |
+| `label` | `#cbd5e1` | `#6b7280` | Chart axis labels, captions |
+| `gridLine` | `#374151` | `#e5e7eb` | Chart grid lines, dividers |
+
+Elements receive `colors` via props and use `colors.text`, `colors.muted`, etc. instead of hardcoded hex values. To change the global palette, edit `sceneColors.ts` only — all 13 element files inherit automatically.
 
 ### Mandatory color palette
 

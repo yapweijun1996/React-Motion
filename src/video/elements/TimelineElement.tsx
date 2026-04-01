@@ -10,7 +10,9 @@ import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor } from "../../services/chartHelpers";
 import { usePaletteColors } from "../PaletteContext";
+import { IconCheck } from "../../components/Icons";
 import type { SceneElement } from "../../types";
+import type { SceneColors } from "../sceneColors";
 
 type TimelineItem = {
   label: string;
@@ -18,12 +20,12 @@ type TimelineItem = {
   color?: string;
 };
 
-type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
+type Props = { el: SceneElement; index: number; dark?: boolean; colors?: SceneColors; fontScale?: number };
 
 const NODE_R = 16;
 const NODE_ACTIVE_R = 20;
 
-export const TimelineElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
+export const TimelineElement: React.FC<Props> = ({ el, index, dark, colors, fontScale = 1 }) => {
   const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -51,8 +53,8 @@ export const TimelineElement: React.FC<Props> = ({ el, index, dark, fontScale = 
     config: { damping: 16, mass: 0.7 },
   });
 
-  const textColor = dark ? "#e2e8f0" : "#1e293b";
-  const subColor = dark ? "#94a3b8" : "#6b7280";
+  const textColor = colors?.text ?? (dark ? "#e2e8f0" : "#1e293b");
+  const subColor = colors?.muted ?? (dark ? "#94a3b8" : "#6b7280");
 
   if (items.length === 0) return null;
 
@@ -155,10 +157,13 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
               />
               {/* Checkmark inside completed nodes */}
               {i <= activeIndex && activeIndex >= 0 && (
-                <text x={cx} y={36} textAnchor="middle" fontSize={18}
-                  fill="#fff" fontWeight={700} opacity={nodeProgress}>
-                  ✓
-                </text>
+                <g opacity={nodeProgress}>
+                  <polyline
+                    points={`${cx - 6},${30} ${cx - 1},${36} ${cx + 7},${24}`}
+                    fill="none" stroke="#fff" strokeWidth={3}
+                    strokeLinecap="round" strokeLinejoin="round"
+                  />
+                </g>
               )}
             </g>
           );
@@ -249,7 +254,7 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
                 fontSize: 16, color: "#fff", fontWeight: 700,
                 flexShrink: 0,
               }}>
-                {i <= activeIndex && activeIndex >= 0 ? "✓" : ""}
+                {i <= activeIndex && activeIndex >= 0 ? <IconCheck size={16} color="#fff" /> : ""}
               </div>
               {/* Connecting line */}
               {!isLast && (
