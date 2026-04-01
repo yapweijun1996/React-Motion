@@ -143,6 +143,7 @@
 | RM-173 | Arch | 多 Agent 协作架构 — 编剧/导演/审核三角色分离 | Done | 零架构风险 Phase 1: 拆分 prompt 为 3 个角色 (Storyboard + Visual Director + Quality Reviewer), StoryboardPlan 中间类型通信, agentPhase 通用执行器, feature flag 切换 (默认 single), 三层降级保护. 新增 7 文件, 修改 6 文件. |
 | RM-174 | Feature | 增强生成进度指示器 + Gemini API Log Modal | Done | 进度条新增: Turn X/Y iteration 显示, action 图标+详情, 动作历史(最近5条). Log 系统: geminiLog.ts 环形缓冲区(50条)拦截所有 API 调用, LogModal 可展开查看完整 request/response JSON, Copy All 一键复制调试. Header 新增 📋 Log 按钮. |
 | RM-175 | Refactor | 集中管理 API 端点 & 模型名 — 消除硬编码重复 | Done | 新建 apiConfig.ts 作为唯一真相源 (Single Source of Truth): GEMINI_API_BASE (3处→1处)、AVAILABLE_MODELS (2处→1处)、DEFAULT_MODEL/DEFAULT_TTS_VOICE/DEFAULT_BGM_MOOD (散落5+处→1处)、BGM_MOODS+BgmMood type (2处→1处). 零循环依赖 (纯叶子模块). 修改 6 文件, 新增 1 文件. |
+| RM-176 | Refactor | SVG icon 统一化 — 消除全部 emoji/unicode 硬编码 | Done | 新建 Icons.tsx (18 个 SVG icon 组件, inline SVG, 零外部依赖). 替换 5 个文件 20+ 处硬编码: GenerationProgressBar (🧠🔍🔧💬📝🎬✅🛠⚠▶), SettingsPanel (🙈👁⏹✓), App (↻📋⚙✕), PlayerControls (⏸▶⊡⛶), TimelineElement (✓×2). 所有 icon 统一管理, size/color prop 可控. |
 
 ### To Do — Remaining
 

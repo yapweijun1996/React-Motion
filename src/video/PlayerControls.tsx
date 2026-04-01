@@ -3,6 +3,7 @@
  */
 
 import { useCallback } from "react";
+import { IconPlay, IconPause, IconMaximize, IconMinimize } from "../components/Icons";
 import {
   controlsBarStyle,
   btnStyle,
@@ -56,7 +57,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         style={btnStyle}
         aria-label={playing ? "Pause" : "Play"}
       >
-        {playing ? "⏸" : "▶"}
+        {playing ? <IconPause size={16} /> : <IconPlay size={16} />}
       </button>
 
       {/* Progress bar */}
@@ -87,7 +88,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
         style={btnStyle}
         aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
       >
-        {fullscreen ? "⊡" : "⛶"}
+        {fullscreen ? <IconMinimize size={16} /> : <IconMaximize size={16} />}
       </button>
     </div>
   );

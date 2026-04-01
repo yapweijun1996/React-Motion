@@ -8,6 +8,7 @@ import { ExportStage, ExportOverlay } from "./components/ExportStage";
 import { GenerationProgressBar } from "./components/GenerationProgressBar";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { LogModal } from "./components/LogModal";
+import { IconHistory, IconClipboard, IconSettings, IconX } from "./components/Icons";
 import { useAppState } from "./hooks/useAppState";
 import type { MountConfig } from "./types";
 import "./styles.css";
@@ -64,7 +65,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
             title="History"
             aria-label="Open history"
           >
-            ↻
+            <IconHistory size={18} />
           </button>
           <button
             className="rm-btn-gear"
@@ -72,7 +73,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
             title="API Log"
             aria-label="Open API log"
           >
-            &#x1F4CB;
+            <IconClipboard size={18} />
           </button>
           <button
             className="rm-btn-gear"
@@ -80,7 +81,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
             title="Settings"
             aria-label="Open settings"
           >
-            ⚙
+            <IconSettings size={18} />
           </button>
         </div>
       </header>
@@ -158,7 +159,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
               onClick={() => setExportProgress(null)}
               aria-label="Dismiss error"
             >
-              ✕
+              <IconX size={16} />
             </button>
           )}
           {exportProgress.stage !== "error" && (

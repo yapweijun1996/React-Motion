@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import type { GenerationProgress } from "../services/generateScript";
+import {
+  IconBrain, IconSearch, IconWrench, IconMessage,
+  IconFileText, IconClapperboard, IconCheckCircle,
+  IconTool, IconAlertTriangle, IconPlay,
+} from "./Icons";
 
 const TOOL_LABELS: Record<string, string> = {
   analyze_data: "Data",
@@ -12,15 +17,17 @@ const TOOL_LABELS: Record<string, string> = {
   search_reference: "Research",
 };
 
-const ACTION_ICONS: Record<string, string> = {
-  thinking: "\u{1F9E0}",
-  quality_gate: "\u{1F50D}",
-  evaluate: "\u{1F50D}",
-  evaluate_retry: "\u{1F527}",
-  advisory: "\u{1F4AC}",
-  phase1_start: "\u{1F4DD}",
-  phase2_start: "\u{1F3AC}",
-  phase3_start: "\u{2705}",
+const ICON_SIZE = 14;
+
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  thinking: <IconBrain size={ICON_SIZE} />,
+  quality_gate: <IconSearch size={ICON_SIZE} />,
+  evaluate: <IconSearch size={ICON_SIZE} />,
+  evaluate_retry: <IconWrench size={ICON_SIZE} />,
+  advisory: <IconMessage size={ICON_SIZE} />,
+  phase1_start: <IconFileText size={ICON_SIZE} />,
+  phase2_start: <IconClapperboard size={ICON_SIZE} />,
+  phase3_start: <IconCheckCircle size={ICON_SIZE} />,
 };
 
 function formatElapsed(ms: number): string {
@@ -34,12 +41,12 @@ function formatEta(seconds: number): string {
   return `~${Math.floor(seconds / 60)}m ${seconds % 60}s remaining`;
 }
 
-function getActionIcon(action: string): string {
-  if (action.startsWith("tool:")) return "\u{1F6E0}";
-  if (action.startsWith("tool_error:")) return "\u{26A0}";
-  if (action.includes(":tool:")) return "\u{1F6E0}";
-  if (action.includes(":thinking")) return "\u{1F9E0}";
-  return ACTION_ICONS[action] ?? "\u{25B6}";
+function getActionIcon(action: string): React.ReactNode {
+  if (action.startsWith("tool:")) return <IconTool size={ICON_SIZE} />;
+  if (action.startsWith("tool_error:")) return <IconAlertTriangle size={ICON_SIZE} />;
+  if (action.includes(":tool:")) return <IconTool size={ICON_SIZE} />;
+  if (action.includes(":thinking")) return <IconBrain size={ICON_SIZE} />;
+  return ACTION_ICONS[action] ?? <IconPlay size={ICON_SIZE} />;
 }
 
 function formatAction(action: string): string {
