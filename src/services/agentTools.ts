@@ -243,12 +243,21 @@ register(
   },
   async (args) => {
     const scenes = (args.scenes as Array<Record<string, unknown>>) ?? [];
-    const richCount = scenes.filter((s) =>
-      RICH_VISUAL_TYPES.has(String(s.primary_element)),
-    ).length;
+
+    // AI sometimes sends free-text visual_direction instead of structured scenes array
+    const textDirection = args.visual_direction as string | undefined;
+    const richSceneIds = (args.rich_visual_scenes as number[]) ?? [];
+
+    const directedCount = scenes.length > 0
+      ? scenes.length
+      : textDirection ? (textDirection.match(/\[Scene \d+\]/gi)?.length ?? 0) : 0;
+
+    const richCount = scenes.length > 0
+      ? scenes.filter((s) => RICH_VISUAL_TYPES.has(String(s.primary_element))).length
+      : richSceneIds.length;
 
     console.log(
-      `[Tool:direct_visuals] ${scenes.length} scenes directed | ${richCount} rich visuals`,
+      `[Tool:direct_visuals] ${directedCount} scenes directed | ${richCount} rich visuals`,
     );
 
     const guidance = richCount < 2
@@ -257,7 +266,7 @@ register(
 
     return {
       result: {
-        visual_plan: scenes,
+        visual_plan: scenes.length > 0 ? scenes : textDirection ?? [],
         richVisualCount: richCount,
         guidance,
       },
