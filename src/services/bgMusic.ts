@@ -26,16 +26,28 @@ export type BgmResult = {
   mood: string;
 };
 
+/** Suffix appended to all mood prompts — ensures loopable, no vocals, stays behind narration */
+const PROMPT_SUFFIX =
+  ", seamless loop, soft background level, instrumental only, no vocals, no singing, no human voice";
+
 /** Mood → prompt mapping for Lyria */
 const MOOD_PROMPTS: Record<BgmMood, string> = {
-  corporate: "Professional corporate background music, clean and modern, suitable for business presentation",
-  upbeat: "Upbeat positive background music, energetic and optimistic, suitable for product showcase",
-  calm: "Calm relaxing background music, gentle and soothing, suitable for data storytelling",
-  dramatic: "Dramatic cinematic background music, building tension, suitable for impactful reveal",
-  inspirational: "Inspirational uplifting background music, motivating and hopeful, suitable for success story",
-  playful: "Playful fun background music, light and cheerful, suitable for casual presentation",
-  cinematic: "Cinematic orchestral background music, epic and grand, suitable for keynote",
-  ambient: "Minimal ambient background music, subtle atmospheric texture, unobtrusive",
+  corporate:
+    "Professional corporate background music, clean piano and soft synth pads, steady 100-110 BPM, modern and polished" + PROMPT_SUFFIX,
+  upbeat:
+    "Upbeat positive background music, light acoustic guitar and claps, bright 120-130 BPM, energetic and optimistic" + PROMPT_SUFFIX,
+  calm:
+    "Calm relaxing background music, gentle piano and ambient strings, slow 70-80 BPM, soothing and warm" + PROMPT_SUFFIX,
+  dramatic:
+    "Dramatic cinematic background music, deep cello and timpani hits, building tension at 90-100 BPM, intense and powerful" + PROMPT_SUFFIX,
+  inspirational:
+    "Inspirational uplifting background music, soaring strings and soft piano, hopeful 100-115 BPM, motivating and emotional" + PROMPT_SUFFIX,
+  playful:
+    "Playful fun background music, marimba and pizzicato strings, bouncy 115-125 BPM, light and cheerful" + PROMPT_SUFFIX,
+  cinematic:
+    "Cinematic orchestral background music, full orchestra with French horn, epic and grand at 85-95 BPM, sweeping and majestic" + PROMPT_SUFFIX,
+  ambient:
+    "Minimal ambient background music, subtle synth textures and soft pads, slow 60-70 BPM, atmospheric and unobtrusive" + PROMPT_SUFFIX,
 };
 
 // --- Public API ---
@@ -51,8 +63,9 @@ export async function generateBgMusic(
   moodOrPrompt: BgmMood | string,
   onProgress?: (status: string) => void,
 ): Promise<BgmResult> {
-  const prompt =
-    (MOOD_PROMPTS as Record<string, string>)[moodOrPrompt] ?? moodOrPrompt;
+  const preset = (MOOD_PROMPTS as Record<string, string>)[moodOrPrompt];
+  // Preset already includes PROMPT_SUFFIX; for custom prompts, append it
+  const prompt = preset ?? (moodOrPrompt + PROMPT_SUFFIX);
 
   console.log(`[BGM] Generating music, mood/prompt: "${moodOrPrompt}"`);
   onProgress?.("Generating background music...");
