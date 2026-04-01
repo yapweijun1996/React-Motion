@@ -13,6 +13,7 @@
 import { openDB, STORE_HISTORY } from "./db";
 import { logWarn } from "./errors";
 import { saveTTSAudio, restoreTTSAudio, clearTTSAudio, saveBGMAudio, restoreBGMAudio } from "./ttsCache";
+import { saveImageBlobs, restoreImageBlobs, clearImageBlobs } from "./imageCache";
 import type { VideoScript, VideoScene } from "../types";
 
 const MAX_ENTRIES = 50;
@@ -57,14 +58,15 @@ export async function saveToHistory(
     await idbTx(tx);
     db.close();
 
-    // Persist audio blobs
+    // Persist blobs
     const audioSaved = await saveTTSAudio(`history-${id}`, script.scenes);
     const bgmSaved = await saveBGMAudio(`history-${id}`, script);
+    const imgSaved = await saveImageBlobs(`history-${id}`, script.scenes);
 
     // Evict oldest if over limit
     await evictOldest();
 
-    console.log(`[History] Saved entry #${id}${audioSaved ? " + TTS" : ""}${bgmSaved ? " + BGM" : ""}`);
+    console.log(`[History] Saved entry #${id}${audioSaved ? " + TTS" : ""}${bgmSaved ? " + BGM" : ""}${imgSaved ? " + IMG" : ""}`);
     return id;
   } catch (err) {
     logWarn("History", "CACHE_SAVE_FAILED", "Failed to save history entry", { error: err });
@@ -102,9 +104,10 @@ export async function loadHistoryEntry(id: number): Promise<HistoryEntry | null>
     db.close();
     if (!entry) return null;
 
-    // Restore audio blobs from IndexedDB
+    // Restore blobs from IndexedDB
     entry.script.scenes = await restoreTTSAudio(`history-${id}`, entry.script.scenes);
     entry.script = await restoreBGMAudio(`history-${id}`, entry.script);
+    entry.script.scenes = await restoreImageBlobs(`history-${id}`, entry.script.scenes);
     return entry;
   } catch (err) {
     logWarn("History", "CACHE_LOAD_FAILED", `Failed to load history #${id}`, { error: err });
@@ -121,7 +124,8 @@ export async function deleteHistoryEntry(id: number): Promise<void> {
     await idbTx(tx);
     db.close();
     await clearTTSAudio(`history-${id}`);
-    console.log(`[History] Deleted entry #${id} + TTS audio`);
+    await clearImageBlobs(`history-${id}`);
+    console.log(`[History] Deleted entry #${id} + TTS audio + images`);
   } catch (err) {
     logWarn("History", "UNKNOWN", `Failed to delete history #${id}`, { error: err });
   }
@@ -151,6 +155,7 @@ function stripBlobUrls(script: VideoScript): VideoScript {
     scenes: script.scenes.map((s) => ({
       ...s,
       ttsAudioUrl: undefined,
+      imageUrl: undefined,
       // Keep ttsAudioDurationMs + bgMusicDurationMs — used for timing on restore
     })),
   };

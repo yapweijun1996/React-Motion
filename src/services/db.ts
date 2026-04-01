@@ -14,6 +14,7 @@ export const STORE_HISTORY = "history";
 export const STORE_EXPORTS = "exports";
 export const STORE_METRICS = "metrics";
 export const STORE_TTS_AUDIO = "ttsAudio";
+export const STORE_IMAGE_CACHE = "imageCache";
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -62,6 +63,9 @@ export function openDB(): Promise<IDBDatabase> {
         if (!udb.objectStoreNames.contains(STORE_TTS_AUDIO)) {
           udb.createObjectStore(STORE_TTS_AUDIO);
         }
+        if (!udb.objectStoreNames.contains(STORE_IMAGE_CACHE)) {
+          udb.createObjectStore(STORE_IMAGE_CACHE);
+        }
       };
 
       req.onblocked = () => console.warn("[DB] Upgrade blocked");
@@ -77,7 +81,7 @@ export function openDB(): Promise<IDBDatabase> {
   });
 }
 
-const ALL_STORES = [STORE_SCRIPTS, STORE_HISTORY, STORE_EXPORTS, STORE_METRICS, STORE_TTS_AUDIO];
+const ALL_STORES = [STORE_SCRIPTS, STORE_HISTORY, STORE_EXPORTS, STORE_METRICS, STORE_TTS_AUDIO, STORE_IMAGE_CACHE];
 function hasAllStores(db: IDBDatabase): boolean {
   return ALL_STORES.every((s) => db.objectStoreNames.contains(s));
 }

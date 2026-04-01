@@ -167,14 +167,16 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
             frame={frame}
             fps={fps}
           >
-            <ElementRenderer
-              el={el}
-              index={i}
-              primaryColor={primaryColor}
-              dark={dark}
-              tokens={tokens}
-              colors={colors}
-            />
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <ElementRenderer
+                el={el}
+                index={i}
+                primaryColor={primaryColor}
+                dark={dark}
+                tokens={tokens}
+                colors={colors}
+              />
+            </div>
           </SpotlightWrapper>
         </ErrorBoundary>
       ))}

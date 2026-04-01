@@ -11,6 +11,7 @@
 import { openDB, STORE_SCRIPTS } from "./db";
 import { logWarn } from "./errors";
 import { saveTTSAudio, restoreTTSAudio, clearTTSAudio, saveBGMAudio, restoreBGMAudio } from "./ttsCache";
+import { saveImageBlobs, restoreImageBlobs, clearImageBlobs } from "./imageCache";
 import type { VideoScript } from "../types";
 
 const LAST_SCRIPT_KEY = "last-script";
@@ -39,10 +40,11 @@ export async function saveScript(script: VideoScript, prompt: string): Promise<v
     await idbTx(tx);
     db.close();
 
-    // Persist audio blobs separately (blob URLs can't be serialized)
+    // Persist blobs separately (blob URLs can't be serialized)
     const audioSaved = await saveTTSAudio("cache", script.scenes);
     const bgmSaved = await saveBGMAudio("cache", script);
-    console.log(`[Cache] Saved last script${audioSaved ? " + TTS" : ""}${bgmSaved ? " + BGM" : ""}`);
+    const imgSaved = await saveImageBlobs("cache", script.scenes);
+    console.log(`[Cache] Saved last script${audioSaved ? " + TTS" : ""}${bgmSaved ? " + BGM" : ""}${imgSaved ? " + IMG" : ""}`);
   } catch (err) {
     logWarn("Cache", "CACHE_SAVE_FAILED", "Save failed", { error: err });
   }
@@ -71,13 +73,15 @@ export async function loadScript(): Promise<CachedEntry | null> {
     // Deep clone
     let script: VideoScript = JSON.parse(JSON.stringify(result.script));
 
-    // Restore audio blobs from IndexedDB
+    // Restore blobs from IndexedDB
     script = { ...script, scenes: await restoreTTSAudio("cache", script.scenes) };
     script = await restoreBGMAudio("cache", script);
+    script = { ...script, scenes: await restoreImageBlobs("cache", script.scenes) };
 
     const ageMin = (age / 60000).toFixed(0);
     const audioCount = script.scenes.filter((s) => s.ttsAudioUrl).length;
-    console.log(`[Cache] Loaded last script (${ageMin} min old, ${audioCount} TTS tracks${script.bgMusicUrl ? " + BGM" : ""})`);
+    const imgCount = script.scenes.filter((s) => s.imageUrl).length;
+    console.log(`[Cache] Loaded last script (${ageMin} min old, ${audioCount} TTS tracks${script.bgMusicUrl ? " + BGM" : ""}${imgCount ? ` + ${imgCount} IMG` : ""})`);
     return { script, prompt: result.prompt, savedAt: result.savedAt };
   } catch (err) {
     logWarn("Cache", "CACHE_LOAD_FAILED", "Load failed", { error: err });
@@ -94,6 +98,7 @@ export async function clearCache(): Promise<void> {
     await idbTx(tx);
     db.close();
     await clearTTSAudio("cache");
+    await clearImageBlobs("cache");
   } catch (err) {
     logWarn("Cache", "UNKNOWN", "Clear failed", { error: err });
   }
@@ -109,6 +114,7 @@ function stripBlobUrls(script: VideoScript): VideoScript {
     scenes: script.scenes.map((s) => ({
       ...s,
       ttsAudioUrl: undefined,
+      imageUrl: undefined,
       // Keep ttsAudioDurationMs + bgMusicDurationMs — used for timing on restore
     })),
   };
