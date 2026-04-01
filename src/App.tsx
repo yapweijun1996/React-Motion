@@ -245,6 +245,22 @@ export const App: React.FC<AppProps> = ({ config }) => {
       {exportProgress && exportProgress.stage !== "done" && (
         <div className={`rm-alert ${exportProgress.stage === "error" ? "rm-alert-error" : "rm-alert-info"}`}>
           {exportProgress.message}
+          {exportProgress.eta != null && exportProgress.eta > 0 && (
+            <span className="rm-eta">
+              {" "}— ~{exportProgress.eta >= 60
+                ? `${Math.floor(exportProgress.eta / 60)}m ${exportProgress.eta % 60}s`
+                : `${exportProgress.eta}s`} remaining
+            </span>
+          )}
+          {exportProgress.stage === "error" && (
+            <button
+              className="rm-alert-dismiss"
+              onClick={() => setExportProgress(null)}
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          )}
           {exportProgress.stage !== "error" && (
             <div className="rm-progress-track">
               <div className="rm-progress-fill" style={{ width: `${exportProgress.percent}%` }} />
@@ -254,8 +270,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
       )}
 
       {/* Export modal overlay */}
-      {isExporting && (
-        <ExportOverlay message={exportProgress?.message ?? "Preparing export..."} />
+      {isExporting && exportProgress && (
+        <ExportOverlay progress={exportProgress} />
       )}
 
       {/* Prompt templates — near input for easy access */}

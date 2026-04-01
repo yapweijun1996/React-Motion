@@ -82,12 +82,27 @@
 
 /* Alert / Error */
 .rm-alert {
+  position: relative;
   padding: 10px 14px;
   margin-bottom: 16px;
   border-radius: var(--rm-radius);
   font-size: 14px;
   line-height: 1.5;
 }
+.rm-alert-dismiss {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.rm-alert-dismiss:hover { opacity: 1; }
 .rm-alert-error {
   background: #fef2f2;
   color: var(--rm-danger);
@@ -111,6 +126,10 @@
   height: 100%;
   background: var(--rm-primary);
   transition: width 0.3s;
+}
+.rm-eta {
+  opacity: 0.75;
+  font-size: 0.9em;
 }
 
 /* Player area */

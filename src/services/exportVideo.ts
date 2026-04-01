@@ -7,6 +7,8 @@ import { muxAudioIntoVideo } from "./exportAudio";
 import { ClassifiedError, normalizeError, logError, logWarn } from "./errors";
 import { trackEvent } from "./metrics";
 import { loadSettings, type ExportQuality } from "./settingsStore";
+import { canUseWebCodecs, WEBCODECS_QUALITY } from "./webCodecsSupport";
+import { encodeVideoWithWebCodecs } from "./exportVideoWebCodecs";
 
 const QUALITY_PROFILES: Record<ExportQuality, { crf: string; preset: string }> = {
   draft:    { crf: "28", preset: "ultrafast" },
@@ -25,7 +27,8 @@ let ffmpeg: FFmpeg | null = null;
 let ffmpegIsMultiThread = false;
 let progressListener: ((event: { progress: number }) => void) | null = null;
 
-function canUseMultithreadCore(): boolean {
+/** Exported for testing only. */
+export function canUseMultithreadCore(): boolean {
   if (typeof SharedArrayBuffer === "undefined") {
     console.log("[Export] SharedArrayBuffer not available — single-thread");
     return false;
@@ -49,7 +52,8 @@ function initFFmpegListeners(
   });
 }
 
-async function getFFmpeg(
+/** Exported for testing only. */
+export async function getFFmpeg(
   onProgress: (progress: number) => void,
 ): Promise<FFmpeg> {
   if (ffmpeg && ffmpeg.loaded) {
@@ -126,6 +130,8 @@ export type ExportProgress = {
   stage: "capturing" | "writing" | "encoding" | "muxing" | "done" | "error";
   percent: number;
   message: string;
+  /** Estimated seconds remaining (undefined = unknown) */
+  eta?: number;
 };
 
 export async function exportToMp4(
@@ -137,6 +143,7 @@ export async function exportToMp4(
   fps: number,
   onProgress: (p: ExportProgress) => void,
   scenes?: VideoScene[],
+  bgMusicUrl?: string,
 ): Promise<Blob> {
   console.group("[Export] exportToMp4");
   console.log("[Export] Config:", { totalFrames, fps, width, height });
@@ -146,12 +153,19 @@ export async function exportToMp4(
   // --- Step 2: Load FFmpeg first (so we can stream frames directly) ---
   onProgress({ stage: "writing", percent: 0, message: "Loading FFmpeg..." });
 
+  const encodeEtaStart = performance.now();
   const ff = await getFFmpeg((p) => {
     const pct = Math.round(p * 100);
+    let eta: number | undefined;
+    if (p > 0.01) {
+      const encElapsed = (performance.now() - encodeEtaStart) / 1000;
+      eta = Math.round(encElapsed * (1 - p) / p);
+    }
     onProgress({
       stage: "encoding",
       percent: pct,
       message: `Encoding MP4 (${pct}%)...`,
+      eta,
     });
   });
 
@@ -177,6 +191,12 @@ export async function exportToMp4(
         canvasWidth: width,
         canvasHeight: height,
         skipFonts: true,
+        // Skip <audio>/<video> — they have blob: URLs that html-to-image
+        // tries to fetch during DOM clone, causing ERR_FILE_NOT_FOUND
+        filter: (node: HTMLElement) => {
+          const tag = node.tagName;
+          return tag !== "AUDIO" && tag !== "VIDEO";
+        },
       });
 
       // Stream: write to FFmpeg FS immediately, then discard data URL
@@ -191,10 +211,16 @@ export async function exportToMp4(
     }
 
     const pct = Math.round(((i + 1) / totalFrames) * 100);
+    const elapsed = (performance.now() - captureStart) / 1000;
+    const avgPerFrame = elapsed / (i + 1);
+    const remaining = totalFrames - (i + 1);
+    const etaSec = Math.round(avgPerFrame * remaining);
+
     onProgress({
       stage: "capturing",
       percent: pct,
       message: `Capturing frame ${capturedCount} / ${totalFrames}`,
+      eta: etaSec,
     });
 
     // Yield to main thread so the browser can repaint the progress bar
@@ -252,10 +278,11 @@ export async function exportToMp4(
   const encodeDuration = ((performance.now() - encodeStart) / 1000).toFixed(1);
   console.log(`[Export] Encoding completed in ${encodeDuration}s`);
 
-  // --- Step 5: Mux audio (if TTS audio exists) ---
-  if (scenes && scenes.some((s) => s.ttsAudioUrl)) {
+  // --- Step 5: Mux audio (TTS + optional BGM) ---
+  const hasAudio = (scenes && scenes.some((s) => s.ttsAudioUrl)) || bgMusicUrl;
+  if (hasAudio && scenes) {
     onProgress({ stage: "muxing", percent: 0, message: "Mixing audio..." });
-    await muxAudioIntoVideo(ff, scenes, fps);
+    await muxAudioIntoVideo(ff, scenes, fps, bgMusicUrl);
   }
 
   try {
@@ -286,6 +313,21 @@ export async function exportToMp4(
     await ff.deleteFile("output.mp4").catch(() => undefined);
     console.groupEnd();
   }
+}
+
+/** Reset module-level FFmpeg state between tests. */
+export function _resetFFmpegForTest(): void {
+  if (ffmpeg) {
+    try { ffmpeg.terminate(); } catch { /* ignore */ }
+  }
+  ffmpeg = null;
+  ffmpegIsMultiThread = false;
+  progressListener = null;
+}
+
+/** Expose ffmpegIsMultiThread for test assertions. */
+export function _isMultiThread(): boolean {
+  return ffmpegIsMultiThread;
 }
 
 function waitFrame(): Promise<void> {

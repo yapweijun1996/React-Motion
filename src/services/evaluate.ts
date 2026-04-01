@@ -9,7 +9,7 @@ You receive:
 1. The user's original prompt (contains the source data)
 2. A VideoScript JSON that was generated from that prompt
 
-Your job: verify the script is correct and effective.
+Your job: verify the script is correct, effective, and visually fits the viewport.
 
 ## Check these:
 
@@ -22,6 +22,29 @@ Your job: verify the script is correct and effective.
    - If a scene has a chart or metric, the narration MUST reference what it shows.
    - Fix orphan narration by adding the missing visual element (metric or callout).
    - Fix silent visuals by adding the data point to narration.
+6. LAYOUT FIT (CRITICAL): Estimate whether each scene's elements fit within the 1920×1080 viewport.
+   The viewport has padding (default ~36px top/bottom, ~48px left/right), so the usable area is approximately **1824 × 1008 pixels**.
+   Use these height estimates per element type:
+   - text (title, fontSize 96-128): ~140px
+   - text (subtitle, fontSize 64-80): ~100px
+   - text (body, fontSize 48-64): ~80px
+   - metric: ~220px (value + label)
+   - bar-chart: ~80px per bar + 40px padding
+   - pie-chart: ~500px (chart + legend side by side)
+   - line-chart: ~450px
+   - sankey: ~500px
+   - list: ~80px per item
+   - callout: ~120px
+   - divider: ~30px
+   - icon / kawaii / lottie: ~160px
+   - gap between elements: ~20px each
+
+   For each scene, sum the estimated heights. If total > 1008px:
+   - FAIL the check
+   - Fix by: (a) splitting the scene into two scenes, OR (b) removing the least important element, OR (c) reducing font sizes (but never below 48px)
+   - Max 3-4 elements per scene. If a scene has 5+ elements, it almost certainly overflows.
+   - Chart scenes should have at most: 1 title + 1 chart (+ optionally 1 callout if space allows)
+   - Metric scenes: max 3 metrics in a row layout, max 2 in a column layout
 
 ## Output JSON
 

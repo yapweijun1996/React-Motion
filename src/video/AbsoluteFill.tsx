@@ -12,6 +12,8 @@ const baseStyle: CSSProperties = {
   height: "100%",
   display: "flex",
   flexDirection: "column",
+  boxSizing: "border-box",
+  overflow: "hidden",
 };
 
 type Props = {

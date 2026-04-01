@@ -48,7 +48,7 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
 
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 48, width: "100%", height: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
-      <svg viewBox={vb} style={{ flex: 1, maxHeight: "100%", overflow: "visible" }}>
+      <svg viewBox={vb} style={{ flex: 1, maxWidth: "50%", maxHeight: "100%", overflow: "visible" }}>
         {arcs.map((a, i) => {
           const color = slices[i].color ?? chartColor(i);
           const isHl = i === highlightIndex;
