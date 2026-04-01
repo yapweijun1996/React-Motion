@@ -131,7 +131,7 @@ export const ELEMENT_TIPS = [
   "Use 'list' with different icons (check, arrow, star, warning) for variety.",
   "Use 'divider' sparingly to separate sections within a scene.",
   "Each scene supports layout: 'column' (default), 'center', or 'row'.",
-  "Scene bgColor should vary — don't make every scene white or dark.",
+  "Scene bgColor should vary — don't make every scene white or dark. Use bgGradient for cinematic scenes: 'linear-gradient(135deg, #0f172a, #1e3a5f)' for dramatic dark, 'linear-gradient(180deg, #fefce8, #fef3c7)' for warm light. Gradients add depth and mood — use on 2-3 key scenes (hook, climax, close).",
   "Every scene MUST have a 'narration' field for TTS.",
   "Set stagger: 'tight' for data-dense scenes, 'dramatic' for key reveals.",
   "Vary stagger speed across scenes — don't use 'normal' for everything.",

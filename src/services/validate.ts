@@ -244,6 +244,7 @@ function validateScene(input: unknown, index: number): ValidationResult<VideoSce
       CONSTRAINTS.MAX_SCENE_FRAMES,
     ),
     bgColor: isStr(s.bgColor) ? s.bgColor : undefined,
+    bgGradient: isStr(s.bgGradient) ? s.bgGradient : undefined,
     layout,
     padding: isStr(s.padding) ? s.padding : undefined,
     elements,

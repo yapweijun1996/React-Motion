@@ -23,16 +23,29 @@ import { loadSettings } from "../services/settingsStore";
 import type { VideoScene, SceneElement } from "../types";
 
 /** Detect if a hex color is dark (luminance < 0.4). */
-function isDarkBg(hex: string | undefined): boolean {
+export function isDarkBg(hex: string | undefined): boolean {
   if (!hex) return false;
   const c = hex.replace("#", "");
   if (c.length < 6) return false;
   const r = parseInt(c.slice(0, 2), 16) / 255;
   const g = parseInt(c.slice(2, 4), 16) / 255;
   const b = parseInt(c.slice(4, 6), 16) / 255;
-  // Relative luminance (sRGB)
   const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
   return lum < 0.4;
+}
+
+/** Extract the first hex color from a CSS gradient string. */
+function extractFirstColor(gradient: string): string | undefined {
+  const match = gradient.match(/#[0-9a-fA-F]{3,8}/);
+  return match?.[0];
+}
+
+/** Determine if scene background is dark — works with bgColor or bgGradient. */
+function isSceneDark(scene: { bgColor?: string; bgGradient?: string }): boolean {
+  if (scene.bgGradient) {
+    return isDarkBg(extractFirstColor(scene.bgGradient));
+  }
+  return isDarkBg(scene.bgColor);
 }
 
 type GenericSceneProps = {
@@ -45,7 +58,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
   primaryColor,
 }) => {
   const layout = scene.layout ?? "column";
-  const dark = isDarkBg(scene.bgColor);
+  const dark = isSceneDark(scene);
   const canvasEffects = loadSettings().canvasEffects;
 
   const flexProps: React.CSSProperties =
@@ -58,7 +71,8 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: scene.bgColor ?? "#ffffff",
+        backgroundColor: scene.bgGradient ? undefined : (scene.bgColor ?? "#ffffff"),
+        background: scene.bgGradient ?? undefined,
         padding: scene.padding ?? "36px 48px",
         fontFamily: "Arial, sans-serif",
         ...flexProps,

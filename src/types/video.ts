@@ -20,6 +20,7 @@ export type VideoScene = {
   startFrame: number;
   durationInFrames: number;
   bgColor?: string;
+  bgGradient?: string;  // CSS gradient string, e.g. "linear-gradient(135deg, #0f172a, #1e3a5f)"
   layout?: "column" | "center" | "row";
   padding?: string;
   elements: SceneElement[];
