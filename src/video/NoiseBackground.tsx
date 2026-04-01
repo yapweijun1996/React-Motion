@@ -1,5 +1,5 @@
-import { useCurrentFrame, useVideoConfig } from "remotion";
-import { noise3D } from "@remotion/noise";
+import { useCurrentFrame, useVideoConfig } from "./VideoContext";
+import { noise3D } from "./animation";
 
 const BLOB_COUNT = 3;
 const SEED = "react-motion-bg";

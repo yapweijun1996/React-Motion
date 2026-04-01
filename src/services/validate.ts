@@ -330,10 +330,13 @@ function validateTheme(input: unknown): ThemeConfig | null {
 // Settings validation
 // ============================================================
 
+export type ExportQuality = "draft" | "standard" | "high";
+
 export type AppSettings = {
   geminiApiKey: string;
   geminiModel: string;
   ttsConcurrency: number;
+  exportQuality: ExportQuality;
 };
 
 const VALID_MODEL_IDS = [
@@ -368,9 +371,14 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
     ttsConcurrency = Math.max(1, Math.min(5, Math.round(ttsConcurrency)));
   }
 
+  const VALID_EXPORT_QUALITIES: ExportQuality[] = ["draft", "standard", "high"];
+  let exportQuality: ExportQuality = isStr(input.exportQuality) && VALID_EXPORT_QUALITIES.includes(input.exportQuality as ExportQuality)
+    ? (input.exportQuality as ExportQuality)
+    : "standard";
+
   return {
     ok: true,
-    data: { geminiApiKey, geminiModel, ttsConcurrency },
+    data: { geminiApiKey, geminiModel, ttsConcurrency, exportQuality },
     warnings,
   };
 }

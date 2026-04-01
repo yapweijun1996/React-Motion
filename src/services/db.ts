@@ -7,12 +7,13 @@
  */
 
 const DB_NAME = "react-motion";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export const STORE_SCRIPTS = "scripts";
 export const STORE_HISTORY = "history";
 export const STORE_EXPORTS = "exports";
 export const STORE_METRICS = "metrics";
+export const STORE_TTS_AUDIO = "ttsAudio";
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -51,9 +52,29 @@ export function openDB(): Promise<IDBDatabase> {
         metricsStore.createIndex("timestamp", "timestamp", { unique: false });
         metricsStore.createIndex("type", "type", { unique: false });
       }
+
+      // v4: TTS audio blob store (key = "cache:scene-0" or "history-5:scene-0")
+      if (oldVersion < 4) {
+        db.createObjectStore(STORE_TTS_AUDIO);
+      }
     };
 
-    req.onsuccess = () => resolve(req.result);
+    // Handle blocked upgrade — another tab/connection holds the old version.
+    // Close stale connections so the version upgrade can proceed.
+    req.onblocked = () => {
+      console.warn("[DB] Upgrade blocked — closing stale connections");
+    };
+
+    req.onsuccess = () => {
+      const db = req.result;
+      // If another openDB() call triggers an upgrade later, close this connection
+      // so it doesn't block the upgrade.
+      db.onversionchange = () => {
+        db.close();
+        console.log("[DB] Closed connection due to version change");
+      };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
   });
 }

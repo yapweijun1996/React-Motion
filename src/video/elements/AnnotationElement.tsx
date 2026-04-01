@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import rough from "roughjs";
 import { useStagger, parseStagger } from "../useStagger";
-import { useCurrentFrame, useVideoConfig, spring } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "../VideoContext";
+import { spring } from "../animation";
 import type { SceneElement } from "../../types";
 
 // --- Shape registry ---

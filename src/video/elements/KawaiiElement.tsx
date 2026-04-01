@@ -6,7 +6,7 @@
  */
 
 import { type FunctionComponent } from "react";
-import { interpolate } from "remotion";
+import { interpolate } from "../animation";
 import {
   Astronaut, Backpack, Browser, Cat, Chocolate, CreditCard, Cyborg,
   File, Folder, Ghost, HumanCat, HumanDinosaur, IceCream, Mug, Planet,

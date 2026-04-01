@@ -6,6 +6,13 @@ import type { VideoScene } from "../types";
 import { muxAudioIntoVideo } from "./exportAudio";
 import { ClassifiedError, normalizeError, logError, logWarn } from "./errors";
 import { trackEvent } from "./metrics";
+import { loadSettings, type ExportQuality } from "./settingsStore";
+
+const QUALITY_PROFILES: Record<ExportQuality, { crf: string; preset: string }> = {
+  draft:    { crf: "28", preset: "ultrafast" },
+  standard: { crf: "24", preset: "fast" },
+  high:     { crf: "20", preset: "medium" },
+};
 import coreURL from "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.js?url";
 import coreWasmURL from "../../node_modules/@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url";
 
@@ -136,64 +143,7 @@ export async function exportToMp4(
   console.log("[Export] Browser:", navigator.userAgent);
   console.log("[Export] Capture target size:", captureTarget.offsetWidth, "x", captureTarget.offsetHeight);
 
-  // --- Step 2: Capture frames ---
-  onProgress({ stage: "capturing", percent: 0, message: "Capturing frames..." });
-  playerRef.pause();
-
-  const frameStep = 3;
-  const framesToCapture = Math.ceil(totalFrames / frameStep);
-  const pngDataUrls: string[] = [];
-
-  console.log("[Export] Frame plan:", { frameStep, framesToCapture, totalFrames });
-  const captureStart = performance.now();
-
-  for (let i = 0; i < totalFrames; i += frameStep) {
-    playerRef.seekTo(i);
-    await waitFrame();
-    await waitFrame();
-
-    try {
-      const dataUrl = await toPng(captureTarget, {
-        width,
-        height,
-        canvasWidth: width,
-        canvasHeight: height,
-        skipFonts: true,
-      });
-
-      pngDataUrls.push(dataUrl);
-    } catch (err) {
-      logWarn("Export", "EXPORT_TOO_MANY_FAILED", `Frame ${i} capture failed`, { error: err });
-      continue;
-    }
-
-    const pct = Math.round((pngDataUrls.length / framesToCapture) * 100);
-    onProgress({
-      stage: "capturing",
-      percent: pct,
-      message: `Capturing frame ${pngDataUrls.length} / ${framesToCapture}`,
-    });
-
-    // Yield to main thread so the browser can repaint the progress bar
-    // and keep the UI responsive instead of freezing during capture.
-    await new Promise<void>((r) => setTimeout(r, 0));
-  }
-
-  const captureDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
-  const avgFrameTime = ((performance.now() - captureStart) / pngDataUrls.length).toFixed(0);
-  console.log(`[Export] Captured ${pngDataUrls.length} frames in ${captureDuration}s (avg ${avgFrameTime}ms/frame)`);
-
-  const failedFrames = framesToCapture - pngDataUrls.length;
-  if (pngDataUrls.length === 0) {
-    console.groupEnd();
-    throw new ClassifiedError("EXPORT_NO_FRAMES", "No frames captured — html-to-image failed for all frames");
-  }
-  if (failedFrames > framesToCapture * 0.2) {
-    logWarn("Export", "EXPORT_TOO_MANY_FAILED", `${failedFrames}/${framesToCapture} frames failed (>${20}%) — continuing with available frames`);
-  }
-
-  // --- Step 3: Load FFmpeg + write frames ---
-  // Free memory — we no longer need the player
+  // --- Step 2: Load FFmpeg first (so we can stream frames directly) ---
   onProgress({ stage: "writing", percent: 0, message: "Loading FFmpeg..." });
 
   const ff = await getFFmpeg((p) => {
@@ -205,26 +155,69 @@ export async function exportToMp4(
     });
   });
 
-  const writeStart = performance.now();
+  // --- Step 3: Capture frames + stream write to FFmpeg FS ---
+  onProgress({ stage: "capturing", percent: 0, message: "Capturing frames..." });
+  playerRef.pause();
+
+  console.log("[Export] Frame plan:", { frameStep: 1, framesToCapture: totalFrames, totalFrames });
+  const captureStart = performance.now();
+
+  let capturedCount = 0;
+  let failedCount = 0;
   let totalBytes = 0;
 
-  for (let i = 0; i < pngDataUrls.length; i++) {
-    const pngData = await fetchFile(pngDataUrls[i]);
-    totalBytes += pngData.byteLength;
-    await ff.writeFile(`frame${String(i).padStart(5, "0")}.png`, pngData);
+  for (let i = 0; i < totalFrames; i++) {
+    playerRef.seekTo(i);
+    await waitFrame();
 
-    const pct = Math.round(((i + 1) / pngDataUrls.length) * 100);
+    try {
+      const dataUrl = await toPng(captureTarget, {
+        width,
+        height,
+        canvasWidth: width,
+        canvasHeight: height,
+        skipFonts: true,
+      });
+
+      // Stream: write to FFmpeg FS immediately, then discard data URL
+      const pngData = await fetchFile(dataUrl);
+      totalBytes += pngData.byteLength;
+      await ff.writeFile(`frame${String(capturedCount).padStart(5, "0")}.png`, pngData);
+      capturedCount++;
+    } catch (err) {
+      logWarn("Export", "EXPORT_TOO_MANY_FAILED", `Frame ${i} capture failed`, { error: err });
+      failedCount++;
+      continue;
+    }
+
+    const pct = Math.round(((i + 1) / totalFrames) * 100);
     onProgress({
-      stage: "writing",
+      stage: "capturing",
       percent: pct,
-      message: `Preparing frame ${i + 1} / ${pngDataUrls.length}`,
+      message: `Capturing frame ${capturedCount} / ${totalFrames}`,
     });
+
+    // Yield to main thread so the browser can repaint the progress bar
+    await new Promise<void>((r) => setTimeout(r, 0));
   }
 
-  console.log(`[Export] Wrote ${pngDataUrls.length} frames (${(totalBytes / 1024 / 1024).toFixed(1)}MB) in ${((performance.now() - writeStart) / 1000).toFixed(1)}s`);
+  const captureDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
+  const avgFrameTime = capturedCount > 0 ? ((performance.now() - captureStart) / capturedCount).toFixed(0) : "N/A";
+  console.log(`[Export] Captured ${capturedCount} frames in ${captureDuration}s (avg ${avgFrameTime}ms/frame)`);
+  console.log(`[Export] Streamed ${(totalBytes / 1024 / 1024).toFixed(1)}MB to FFmpeg FS`);
+
+  if (capturedCount === 0) {
+    console.groupEnd();
+    throw new ClassifiedError("EXPORT_NO_FRAMES", "No frames captured — html-to-image failed for all frames");
+  }
+  if (failedCount > totalFrames * 0.2) {
+    logWarn("Export", "EXPORT_TOO_MANY_FAILED", `${failedCount}/${totalFrames} frames failed (>${20}%) — continuing with available frames`);
+  }
 
   // --- Step 4: Encode MP4 ---
-  const inputFps = Math.max(Math.round(fps / frameStep), 5);
+  const inputFps = fps;
+  const quality = loadSettings().exportQuality;
+  const { crf, preset } = QUALITY_PROFILES[quality];
   const threadCount = ffmpegIsMultiThread
     ? Math.min(navigator.hardwareConcurrency || 4, 4)
     : 1;
@@ -232,8 +225,8 @@ export async function exportToMp4(
     "-framerate", String(inputFps),
     "-i", "frame%05d.png",
     "-c:v", "libx264",
-    "-preset", "ultrafast",
-    "-crf", "28",
+    "-preset", preset,
+    "-crf", crf,
     "-threads", String(threadCount),
     "-pix_fmt", "yuv420p",
     "-movflags", "+faststart",
@@ -242,6 +235,7 @@ export async function exportToMp4(
     "output.mp4",
   ];
 
+  console.log("[Export] Quality:", quality, `(CRF ${crf}, preset ${preset})`);
   console.log("[Export] FFmpeg args:", ffmpegArgs.join(" "));
   console.log("[Export] Input fps:", inputFps, "→ Output fps:", fps);
   console.log("[Export] Threads:", threadCount, ffmpegIsMultiThread ? "(multi-thread)" : "(single-thread)");
@@ -271,12 +265,12 @@ export async function exportToMp4(
 
     console.log("[Export] === DONE ===");
     console.log(`[Export] MP4 size: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`);
-    console.log(`[Export] Total time: ${totalDuration}s (capture: ${captureDuration}s, write: ${((performance.now() - writeStart) / 1000).toFixed(1)}s, encode: ${encodeDuration}s)`);
-    console.log(`[Export] Frames: ${pngDataUrls.length}, Input PNG: ${(totalBytes / 1024 / 1024).toFixed(1)}MB -> Output MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)}MB`);
+    console.log(`[Export] Total time: ${totalDuration}s (capture+write: ${captureDuration}s, encode: ${encodeDuration}s)`);
+    console.log(`[Export] Frames: ${capturedCount}, Input PNG: ${(totalBytes / 1024 / 1024).toFixed(1)}MB -> Output MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)}MB`);
 
     onProgress({ stage: "done", percent: 100, message: "Export complete!" });
     trackEvent("export", true, Math.round(performance.now() - captureStart), {
-      frames: pngDataUrls.length,
+      frames: capturedCount,
       totalFrames,
       multiThread: ffmpegIsMultiThread,
       sizeMB: +(mp4Blob.size / 1024 / 1024).toFixed(2),
@@ -285,7 +279,7 @@ export async function exportToMp4(
   } catch (error) {
     throw normalizeError(error);
   } finally {
-    for (let i = 0; i < pngDataUrls.length; i++) {
+    for (let i = 0; i < capturedCount; i++) {
       await ff.deleteFile(`frame${String(i).padStart(5, "0")}.png`).catch(() => undefined);
     }
 

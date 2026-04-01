@@ -1,6 +1,6 @@
 # Architecture Overview
 
-React-Motion is an AI-powered data-to-video report generator. Users paste business data and a natural language prompt; the AI agent analyzes the data, plans a story, and produces a structured video script. Remotion renders it as an animated presentation, and FFmpeg.wasm encodes the final MP4.
+React-Motion is an AI-powered data-to-video report generator. Users paste business data and a natural language prompt; the AI agent analyzes the data, plans a story, and produces a structured video script. A custom video engine renders it as an animated presentation, and FFmpeg.wasm encodes the final MP4.
 
 ## System Layers
 
@@ -30,9 +30,9 @@ React-Motion is an AI-powered data-to-video report generator. Users paste busine
 │  chroma-js LCH uniform palette generation   │
 │  Mandatory before produce_script            │
 ├─────────────────────────────────────────────┤
-│  Remotion Render (video/)                   │
+│  Custom Video Engine (video/)               │
 │  GenericScene + 15 atomic elements          │
-│  TransitionSeries + spring() animations     │
+│  SceneRenderer + spring() animations        │
 │  Dark/light text auto-contrast detection    │
 │  Font sizes scaled for 1080p readability    │
 ├─────────────────────────────────────────────┤
@@ -65,7 +65,7 @@ User prompt + optional BusinessData
     └─ Scene timings adjusted to fit audio
         │
         ▼
-  Remotion Player (browser preview)
+  VideoPlayer (browser preview)
         │
         ▼
   Export MP4: html-to-image → FFmpeg.wasm → MP4 + AAC audio
@@ -76,7 +76,7 @@ User prompt + optional BusinessData
 
 ### VideoScript (single source of truth)
 
-The `VideoScript` type is the contract between the AI agent and the Remotion render layer. Both preview and export consume the same object.
+The `VideoScript` type is the contract between the AI agent and the custom video engine. Both preview and export consume the same object.
 
 ```typescript
 type VideoScript = {
@@ -106,7 +106,7 @@ type VideoScript = {
 | `divider` | Visual separator |
 | `callout` | Bordered highlight box |
 | `kawaii` | Cute SVG mascot characters (react-kawaii) |
-| `lottie` | Animated icons (@remotion/lottie) |
+| `lottie` | Animated icons (lottie-web) |
 | `icon` | 45 curated SVG icons (lucide-react) |
 | `annotation` | Hand-drawn sketch marks (roughjs) |
 | `svg` | AI-generated inline SVG diagrams |
@@ -133,7 +133,7 @@ React-Motion is packaged as a single IIFE bundle (`dist/react-motion.js` + `dist
 
 ## Scene Transitions
 
-`ReportComposition.tsx` uses `@remotion/transitions` with `TransitionSeries` for scene-to-scene effects. AI controls transition type per scene via `scene.transition` field.
+`ReportComposition.tsx` uses `SceneRenderer` with CSS transitions for scene-to-scene effects. AI controls transition type per scene via `scene.transition` field.
 
 | Type | Effect |
 |------|--------|
@@ -142,7 +142,7 @@ React-Motion is packaged as a single IIFE bundle (`dist/react-motion.js` + `dist
 | `wipe` | Horizontal wipe |
 | `clock-wipe` | Radial sweep |
 
-All transitions use spring timing (damping=200, 20 frames).
+All transitions use easeOutCubic timing (20-frame overlap).
 
 ## Prompt Templates
 

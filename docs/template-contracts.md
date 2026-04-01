@@ -102,7 +102,7 @@ Values with numbers get count-up animation (e.g., "11.7M" animates from 0 to 11.
 | highlightIndex | number | 0 | Pulled-out slice |
 | showPercentage | boolean | false | |
 
-Rendered with D3.js `arc()` + Remotion spring animation.
+Rendered with D3.js `arc()` + custom spring() animation.
 
 ### line-chart
 

@@ -9,7 +9,7 @@ The product goal:
 - end users provide data, context, or topic material plus a natural language prompt
 - an AI agent uses OODAE loop thinking to analyze the input, decide the narrative, and structure the presentation
 - the runtime harness converts that narrative into a deterministic `VideoScript` contract
-- Remotion renders the script into a polished story, presentation, or explainer video with animated visuals, transitions, and narration
+- a custom video engine renders the script into a polished story, presentation, or explainer video with animated visuals, transitions, and narration
 - end users preview in-browser and export the result as a presentation-grade MP4
 - the entire tool is packaged as a JS bundle and can run as an embedded runtime inside host applications
 
@@ -20,11 +20,11 @@ It is an **AI runtime harness for story and presentation generation** — the ag
 
 ## Current phase
 
-**Phase 2 — Feature-complete MVP with TTS + multi-thread export.**
+**Phase 3 — Custom video engine, zero Remotion dependency.**
 
-Core pipeline is fully implemented: prompt → AI agent (OODAE loop with function calling) → `VideoScript` → Remotion render → TTS audio → FFmpeg.wasm MP4 export. UI includes settings panel, prompt templates, mobile responsive layout, and PWA support.
+Core pipeline is fully implemented: prompt → AI agent (OODAE loop with function calling) → `VideoScript` → custom engine render → TTS audio → FFmpeg.wasm MP4 export. UI includes settings panel, prompt templates, mobile responsive layout, and PWA support. All Remotion packages have been removed and replaced with a self-built video engine (~900 lines, 167 tests).
 
-Active work: FFmpeg.wasm multi-thread encoding for faster exports, visual enhancement layers.
+Active work: FFmpeg.wasm multi-thread encoding for faster exports.
 
 ---
 
@@ -37,11 +37,11 @@ React-Motion widget/runtime harness
   ↓ OODAE Agent Loop (function calling, max 10 iterations)
 Gemini API (with Google Search grounding)
   ↓ returns VideoScript JSON (story structure + scenes + atomic elements + narration text)
-Remotion composition (GenericScene + atomic element renderers)
+Custom video engine (SceneRenderer + GenericScene + atomic element renderers)
   ↓ renders presentation visuals, animated charts, text, transitions, and story beats
 Gemini TTS API (narration text → PCM audio per scene)
   ↓ syncs audio with scene timing (TTS-first duration)
-Browser preview (Remotion Player with <Audio>)
+Browser preview (VideoPlayer with AudioTrack)
   ↓ user approves
 Export MP4 (html-to-image frame capture + FFmpeg.wasm encoding + audio mux)
   ↓
@@ -66,9 +66,17 @@ End user watches, presents, studies, or shares the generated story/presentation
 - `src/services/cache.ts` — IndexedDB caching for generated scripts.
 - `src/services/palette.ts` — chroma-js smart color palette generator (LCH uniform, mood keywords, chart colors).
 - `src/services/historyStore.ts` — IndexedDB history (50-entry FIFO) with TTS metadata for restore + regenerate.
-- `src/video/ReportComposition.tsx` — Remotion composition with `@remotion/transitions` (fade/slide/wipe/clock-wipe) + spring timing + progress bar.
+- `src/video/animation.ts` — custom `spring()`, `interpolate()`, `noise2D/3D()` (drop-in replacements).
+- `src/video/VideoContext.tsx` — `useCurrentFrame()`, `useVideoConfig()`, `usePlaying()` via React Context. VideoProvider (top-level) + FrameProvider (scene-local frame remap).
+- `src/video/SceneRenderer.tsx` — scene sequencer with CSS transitions (fade/slide/wipe/clock-wipe). Overlap compression. Pure functions for testability.
+- `src/video/VideoPlayer.tsx` — rAF-driven player with play/pause/seek/progress bar/keyboard/responsive scaling.
+- `src/video/VideoSurface.tsx` — headless player for export frame capture (seekTo only, no UI).
+- `src/video/PlayerHandle.ts` — imperative ref type (pause/play/seekTo/getCurrentFrame/isPlaying).
+- `src/video/AudioTrack.tsx` — HTML5 `<audio>` synced to frame engine via `usePlaying()` + drift correction.
+- `src/video/AbsoluteFill.tsx` — `position:absolute; inset:0` flex container.
+- `src/video/ReportComposition.tsx` — top-level composition: SceneRenderer + GenericScene + AudioTrack + progress bar.
 - `src/video/GenericScene.tsx` — elements-based scene renderer with dark/light background auto-detection for text contrast.
-- `src/video/elements/*` — 15 atomic element renderers (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, map). All use `spring()` physics-based animation. D3 charts use d3-shape/d3-scale/d3-sankey for SVG path calculation. Font sizes scaled for 1080p readability (titles 96-128px, body 56-72px).
+- `src/video/elements/*` — 15 atomic element renderers (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, map). All use custom `spring()` physics-based animation. D3 charts use d3-shape/d3-scale/d3-sankey for SVG path calculation. Font sizes scaled for 1080p readability (titles 96-128px, body 56-72px).
 - `src/types/*` — TypeScript type definitions (MountConfig, BusinessData, VideoScript, VideoScene, SceneElement).
 - `public/ffmpeg-mt/` — FFmpeg.wasm multi-thread UMD core files (served as-is, bypasses Vite ESM transformation).
 
@@ -78,7 +86,7 @@ End user watches, presents, studies, or shares the generated story/presentation
 
 - `src/` — all source code lives here
 - `src/services/` — AI pipeline, export, TTS, caching
-- `src/video/` — Remotion compositions and element renderers
+- `src/video/` — custom video engine, compositions, and element renderers
 - `src/types/` — TypeScript type definitions
 - `public/` — static assets served as-is (FFmpeg.wasm multi-thread core files)
 - Root-level files (`package.json`, `vite.config.ts`, `index.html`, `task.md`, `AGENTS.md`)
@@ -104,7 +112,7 @@ End user watches, presents, studies, or shares the generated story/presentation
 - retry with error feedback (max 3 attempts)
 
 ### Preview pipeline (implemented)
-- `@remotion/player` consumes `VideoScript` directly
+- `VideoPlayer` consumes `VideoScript` directly via `VideoProvider` context
 - preview = export (same composition, same elements)
 
 ### Export pipeline (implemented — browser-only, dual-format)
@@ -117,11 +125,11 @@ End user watches, presents, studies, or shares the generated story/presentation
 - `src/services/tts.ts`: Gemini TTS → PCM → WAV per scene
 - TTS-first timing: audio duration drives scene durationInFrames
 
-### Composition layer (implemented — atomic elements)
-- `src/video/ReportComposition.tsx`: `@remotion/transitions` + spring timing + progress bar
+### Composition layer (implemented — custom video engine + atomic elements)
+- `src/video/ReportComposition.tsx`: SceneRenderer (CSS transitions) + AudioTrack + progress bar
 - `src/video/GenericScene.tsx`: elements-based scene renderer + dark/light background auto-detection
 - 15 atomic elements: text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, map
-- D3.js modular (d3-shape/d3-scale/d3-sankey/d3-geo) for SVG math; `spring()` for animation
+- D3.js modular (d3-shape/d3-scale/d3-sankey/d3-geo) for SVG math; custom `spring()` for animation
 - Font sizes scaled for 1080p readability (titles 96-128px, body 56-72px, minimum 48px)
 - Text color auto-adapts to scene background (dark bg → light text, light bg → dark text)
 
@@ -129,7 +137,7 @@ End user watches, presents, studies, or shares the generated story/presentation
 
 ## Canonical data contract rules
 
-The video script is the source of truth between AI and Remotion.
+The video script is the source of truth between AI and the render engine.
 
 The implemented data contracts (see `src/types/` for authoritative definitions):
 
@@ -233,7 +241,7 @@ Gemini API for data analysis, script generation, and TTS narration.
 - 1+1 Evaluate: synchronous self-check after generation (data accuracy, scene integrity, visual variety)
 
 ### What AI does NOT do
-- AI does not render video — Remotion does
+- AI does not render video — the custom video engine does
 - AI does not directly access the database — it receives pre-aggregated data
 - AI does not control the UI — it outputs a data contract that the UI consumes
 
@@ -244,20 +252,30 @@ Gemini API for data analysis, script generation, and TTS narration.
 
 ---
 
-## Remotion usage rules
+## Custom video engine
 
-Remotion is the video rendering engine.
+All Remotion dependencies have been removed (RM-EPIC-04). The project uses a self-built video engine:
 
-Use Remotion for:
+| Module | File | Purpose |
+|--------|------|---------|
+| `animation.ts` | `src/video/animation.ts` | `spring()`, `interpolate()`, `noise2D/3D()` — physics-based animation primitives |
+| `VideoContext` | `src/video/VideoContext.tsx` | React Context for `useCurrentFrame()`, `useVideoConfig()`, `usePlaying()` |
+| `SceneRenderer` | `src/video/SceneRenderer.tsx` | Scene sequencer with CSS transitions (fade/slide/wipe/clock-wipe) |
+| `VideoPlayer` | `src/video/VideoPlayer.tsx` | rAF-driven preview player with controls |
+| `VideoSurface` | `src/video/VideoSurface.tsx` | Headless export player (seekTo-only, no UI) |
+| `AudioTrack` | `src/video/AudioTrack.tsx` | HTML5 `<audio>` synced to frame engine |
+| `AbsoluteFill` | `src/video/AbsoluteFill.tsx` | `position:absolute; inset:0` flex container |
+
+Use the video engine modules for:
 
 - scene composition (chart animations, text overlays, transitions)
-- frame-based timing
-- browser video preview (Remotion Player)
-- final MP4 render/export
+- frame-based timing (`useCurrentFrame()` + `spring()`)
+- browser video preview (`VideoPlayer`)
+- export frame capture (`VideoSurface` + html-to-image)
 
-Do not use Remotion for:
+Do not use the video engine for:
 
-- UI interactions or editor chrome (use standard React / Motion for that)
+- UI interactions or editor chrome (use standard React for that)
 - data analysis (that is AI's job)
 - prompt handling or business logic
 
@@ -303,11 +321,11 @@ React-Motion is embedded as a widget in a CFML/Lucee host application.
 Current MVP includes:
 
 * prompt input → OODAE AI agent generates video script from business data
-* 9 atomic elements (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout)
-* D3.js SVG chart rendering (d3-shape, d3-scale, d3-sankey)
-* spring() physics-based animation on all elements
-* @remotion/transitions scene transitions (fade/slide/wipe/clock-wipe)
-* browser preview via Remotion Player
+* 15 atomic elements (text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, map)
+* D3.js SVG chart rendering (d3-shape, d3-scale, d3-sankey, d3-geo)
+* custom spring() physics-based animation on all elements (animation.ts)
+* CSS scene transitions via SceneRenderer (fade/slide/wipe/clock-wipe)
+* browser preview via VideoPlayer (rAF-driven, responsive scaling)
 * TTS narration via Gemini TTS API
 * export MP4 (html-to-image + FFmpeg.wasm in-browser)
 * embed as IIFE JS bundle in CFML page
@@ -345,7 +363,7 @@ The template-based scene system has been replaced by an atomic element system. A
 | `divider` | — | Animated line with spring width growth |
 | `callout` | — | Highlighted box with spring slide-up |
 | `kawaii` | react-kawaii | Cute SVG mascot characters (16 types, 7 moods) |
-| `lottie` | @remotion/lottie | Animated icons (6 presets: checkmark, arrows, pulse, star, thumbs-up) |
+| `lottie` | lottie-web | Animated icons (6 presets: checkmark, arrows, pulse, star, thumbs-up) |
 | `icon` | lucide-react | 45 curated SVG icons across 6 categories with bounce animation |
 | `annotation` | roughjs | Hand-drawn sketch annotations (7 shapes) with stroke-draw animation |
 | `svg` | — | AI-generated inline SVG diagrams (flowcharts, org charts, mind maps) |
@@ -369,19 +387,19 @@ AI must call `generate_palette` tool before producing the script. The palette pr
 
 ### Animation system
 
-All elements use Remotion's `spring()` for physics-based animation (not `interpolate()` linear). Spring config varies per element type for natural feel:
+All elements use the custom `spring()` from `animation.ts` for physics-based animation (not `interpolate()` linear). Spring config varies per element type for natural feel:
 - Light elements (list items): `{ damping: 13, mass: 0.5 }` — snappy
 - Medium elements (text, callout): `{ damping: 14, mass: 0.6 }` — balanced
 - Heavy elements (charts): `{ damping: 15-18, mass: 0.8 }` — weighty
 
-### Scene transitions (`@remotion/transitions`)
+### Scene transitions (SceneRenderer CSS)
 
-Scenes transition using `TransitionSeries` with spring timing:
-- `fade` — crossfade (default)
-- `slide` — push in/out
-- `wipe` — slide over
-- `clock-wipe` — circular reveal
-AI selects transition type per scene via `scene.transition` field.
+Scenes transition using `SceneRenderer` with easeOutCubic timing (20-frame overlap):
+- `fade` — opacity crossfade (default)
+- `slide` — translateX push in/out
+- `wipe` — clip-path inset reveal
+- `clock-wipe` — clip-path polygon circular sweep
+AI selects transition type per scene via `scene.transition` field. All transitions are inline CSS — compatible with html-to-image export.
 
 ---
 
@@ -418,7 +436,7 @@ Encourage subagent use when work can be split into parallel, non-overlapping tas
 
 Good subagent candidates:
 
-* Remotion composition/template development
+* video engine component development
 * AI prompt engineering and script generation tuning
 * chart animation component development
 * export pipeline testing
@@ -455,7 +473,7 @@ Do not design new behavior by copying reference/sample implementations directly.
 
 When implementation uncertainty appears:
 
-* review `sample-project/` (especially `remotion-4.0.441/packages/example/`)
+* review `sample-project/` for reference patterns (reference-only, Remotion has been removed)
 * confirm concrete file-to-file mapping first
 * adapt patterns only after confirming the active project boundary
 
@@ -474,7 +492,7 @@ If a sample pattern is proposed, capture all three mapping points before impleme
 * MP4 export runs entirely in-browser via FFmpeg.wasm (no Node.js required)
 * FFmpeg.wasm multi-thread requires COOP/COEP headers (Vite dev server has them; CFML host must also set them)
 * `public/ffmpeg-mt/` contains UMD builds of `@ffmpeg/core-mt` — served as static files to bypass Vite ESM transformation
-* preview must work fully in-browser via Remotion Player
+* preview must work fully in-browser via VideoPlayer (rAF-driven)
 * Gemini API key configured via settings panel (localStorage) or `.env.local`
 * IndexedDB used for script caching; PWA service worker for offline asset caching
 * workers are allowed where they reduce UI blocking
@@ -491,7 +509,7 @@ If a sample pattern is proposed, capture all three mapping points before impleme
 Current verification priorities:
 
 * AI output parses into a valid `VideoScript`
-* Remotion compositions render all scene types correctly
+* compositions render all scene types correctly
 * preview and export produce identical results
 * widget mounts and unmounts cleanly in a plain HTML page
 * export handles failure cleanly with user-visible feedback
@@ -530,7 +548,7 @@ Do not introduce:
 A change is aligned when it:
 
 * preserves the shell/state/prompt/AI/preview/render ownership map above
-* keeps `VideoScript` as the single contract between AI and Remotion
+* keeps `VideoScript` as the single contract between AI and the render engine
 * keeps preview and export derived from the same `VideoScript`
 * ensures every failure path clears UI progress/loading state and surfaces the error
 * updates impacted docs/tests

@@ -83,6 +83,7 @@ export const VideoSurface = forwardRef<PlayerHandle, VideoSurfaceProps>(
           width={compositionWidth}
           height={compositionHeight}
           durationInFrames={durationInFrames}
+          playing={false}
         >
           <Composition {...inputProps} />
         </VideoProvider>

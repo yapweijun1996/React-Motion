@@ -10,6 +10,7 @@
 
 import { openDB, STORE_SCRIPTS } from "./db";
 import { logWarn } from "./errors";
+import { saveTTSAudio, restoreTTSAudio, clearTTSAudio } from "./ttsCache";
 import type { VideoScript } from "../types";
 
 const LAST_SCRIPT_KEY = "last-script";
@@ -32,12 +33,15 @@ export async function saveScript(script: VideoScript, prompt: string): Promise<v
     const tx = db.transaction(STORE_SCRIPTS, "readwrite");
     const store = tx.objectStore(STORE_SCRIPTS);
 
-    const cleanScript = stripRuntime(script);
+    const cleanScript = stripBlobUrls(script);
     store.put({ script: cleanScript, prompt, savedAt: Date.now() }, LAST_SCRIPT_KEY);
 
     await idbTx(tx);
     db.close();
-    console.log("[Cache] Saved last script");
+
+    // Persist TTS audio blobs separately (blob URLs can't be serialized)
+    await saveTTSAudio("cache", script.scenes);
+    console.log("[Cache] Saved last script + TTS audio");
   } catch (err) {
     logWarn("Cache", "CACHE_SAVE_FAILED", "Save failed", { error: err });
   }
@@ -63,16 +67,15 @@ export async function loadScript(): Promise<CachedEntry | null> {
       return null;
     }
 
-    // Deep clone + strip stale blob URLs
+    // Deep clone
     const script: VideoScript = JSON.parse(JSON.stringify(result.script));
-    script.scenes = script.scenes.map((s) => ({
-      ...s,
-      ttsAudioUrl: undefined,
-      ttsAudioDurationMs: undefined,
-    }));
+
+    // Restore TTS audio blobs from IndexedDB
+    script.scenes = await restoreTTSAudio("cache", script.scenes);
 
     const ageMin = (age / 60000).toFixed(0);
-    console.log(`[Cache] Loaded last script (${ageMin} min old)`);
+    const audioCount = script.scenes.filter((s) => s.ttsAudioUrl).length;
+    console.log(`[Cache] Loaded last script (${ageMin} min old, ${audioCount} audio tracks)`);
     return { script, prompt: result.prompt, savedAt: result.savedAt };
   } catch (err) {
     logWarn("Cache", "CACHE_LOAD_FAILED", "Load failed", { error: err });
@@ -88,6 +91,7 @@ export async function clearCache(): Promise<void> {
     tx.objectStore(STORE_SCRIPTS).clear();
     await idbTx(tx);
     db.close();
+    await clearTTSAudio("cache");
   } catch (err) {
     logWarn("Cache", "UNKNOWN", "Clear failed", { error: err });
   }
@@ -95,13 +99,14 @@ export async function clearCache(): Promise<void> {
 
 // --- Helpers ---
 
-function stripRuntime(script: VideoScript): VideoScript {
+/** Strip blob URLs (not serializable), but KEEP durationMs (timing metadata). */
+function stripBlobUrls(script: VideoScript): VideoScript {
   return {
     ...script,
     scenes: script.scenes.map((s) => ({
       ...s,
       ttsAudioUrl: undefined,
-      ttsAudioDurationMs: undefined,
+      // Keep ttsAudioDurationMs — used for scene timing on restore
     })),
   };
 }

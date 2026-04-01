@@ -2,16 +2,17 @@
 
 ## Preview (Browser)
 
-Remotion `<Player>` renders the `ReportComposition` in the browser. No server needed.
+`VideoPlayer` renders the `ReportComposition` in the browser via `VideoProvider` context. No server needed.
 
 ```
 VideoScript
   → ReportComposition.tsx
-    → TransitionSeries (scene sequencing + transitions)
-      → GenericScene (layout + element routing)
-        → 15 element renderers (text, metric, bar-chart, icon, map, etc.)
-        → Dark/light text auto-contrast (isDarkBg detection)
-      → <Audio> (TTS narration per scene, blob URL)
+    → SceneRenderer (scene sequencing + CSS transitions)
+      → FrameProvider (scene-local frame remap)
+        → GenericScene (layout + element routing)
+          → 15 element renderers (text, metric, bar-chart, icon, map, etc.)
+          → Dark/light text auto-contrast (isDarkBg detection)
+        → AudioTrack (TTS narration per scene, blob URL)
     → Progress bar (bottom, theme color)
 ```
 
@@ -30,7 +31,7 @@ Transition duration: **20 frames** (spring timing, damping=200).
 
 ### Audio in Preview
 
-Each scene's `ttsAudioUrl` (blob URL to WAV) is passed to Remotion's `<Audio>` component inside `<TransitionSeries.Sequence>`. Audio plays automatically when the scene's sequence is active.
+Each scene's `ttsAudioUrl` (blob URL to WAV) is passed to `<AudioTrack>` inside each scene's `<FrameProvider>`. AudioTrack syncs play/pause with `usePlaying()` and corrects drift when it exceeds 0.3s via frame-to-time seek. Audio pauses automatically on scene unmount.
 
 ---
 
@@ -40,7 +41,7 @@ Export uses a completely separate path from preview — no screen recording.
 
 ```
 Step 1: Frame Capture
-  Remotion Player (hidden, full resolution 1920x1080)
+  VideoSurface (hidden, full resolution 1920x1080)
     → html-to-image (toPng) every 3rd frame
     → PNG data URLs stored in memory
 

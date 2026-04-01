@@ -30,6 +30,7 @@ export type VideoConfig = {
 // ---------------------------------------------------------------------------
 
 const FrameContext = createContext<number>(0);
+const PlayingContext = createContext<boolean>(false);
 const VideoConfigContext = createContext<VideoConfig>({
   fps: 30,
   width: 1920,
@@ -51,6 +52,11 @@ export function useVideoConfig(): VideoConfig {
   return useContext(VideoConfigContext);
 }
 
+/** Returns whether playback is active. Only AudioTrack typically needs this. */
+export function usePlaying(): boolean {
+  return useContext(PlayingContext);
+}
+
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
@@ -62,6 +68,8 @@ type VideoProviderProps = {
   width: number;
   height: number;
   durationInFrames: number;
+  /** Whether playback is active (default false). AudioTrack uses this. */
+  playing?: boolean;
   children: React.ReactNode;
 };
 
@@ -75,6 +83,7 @@ export function VideoProvider({
   width,
   height,
   durationInFrames,
+  playing = false,
   children,
 }: VideoProviderProps) {
   const config = useMemo<VideoConfig>(
@@ -84,9 +93,11 @@ export function VideoProvider({
 
   return (
     <VideoConfigContext.Provider value={config}>
-      <FrameContext.Provider value={frame}>
-        {children}
-      </FrameContext.Provider>
+      <PlayingContext.Provider value={playing}>
+        <FrameContext.Provider value={frame}>
+          {children}
+        </FrameContext.Provider>
+      </PlayingContext.Provider>
     </VideoConfigContext.Provider>
   );
 }

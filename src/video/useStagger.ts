@@ -8,8 +8,8 @@
  * - Spring config presets by visual hierarchy
  */
 
-import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
-import { noise2D } from "@remotion/noise";
+import { useCurrentFrame, useVideoConfig } from "./VideoContext";
+import { spring, interpolate, noise2D } from "./animation";
 
 const NOISE_SEED = "stagger";
 

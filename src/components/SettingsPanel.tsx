@@ -111,6 +111,23 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
           </div>
         </div>
 
+        {/* Export Quality */}
+        <div className="rm-field">
+          <label className="rm-label">Export Quality</label>
+          <select
+            value={settings.exportQuality}
+            onChange={(e) => setSettings({ ...settings, exportQuality: e.target.value as "draft" | "standard" | "high" })}
+            className="rm-select"
+          >
+            <option value="draft">Draft (fast export, smaller file)</option>
+            <option value="standard">Standard (balanced)</option>
+            <option value="high">High (sharp text, larger file)</option>
+          </select>
+          <div className="rm-hint">
+            Higher quality produces sharper text and charts but increases file size and export time.
+          </div>
+        </div>
+
         {/* Data & Privacy */}
         <div className="rm-field">
           <label className="rm-label">Data & Privacy</label>
@@ -135,7 +152,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
                 clearSettings();
                 clearCache();
-                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsConcurrency: 2 });
+                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsConcurrency: 2, exportQuality: "standard" });
                 alert("All local data cleared.");
               }}
             >

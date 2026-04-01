@@ -1,4 +1,5 @@
-import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "../VideoContext";
+import { spring, interpolate } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor, formatValue, formatPercent } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";

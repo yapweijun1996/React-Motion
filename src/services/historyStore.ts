@@ -12,6 +12,7 @@
 
 import { openDB, STORE_HISTORY } from "./db";
 import { logWarn } from "./errors";
+import { saveTTSAudio, restoreTTSAudio, clearTTSAudio } from "./ttsCache";
 import type { VideoScript, VideoScene } from "../types";
 
 const MAX_ENTRIES = 50;
@@ -46,7 +47,7 @@ export async function saveToHistory(
 
     const entry: HistoryEntry = {
       prompt,
-      script: stripRuntime(script),
+      script: stripBlobUrls(script),
       ttsMetadata: extractTTSMetadata(script.scenes),
       createdAt: Date.now(),
     };
@@ -56,10 +57,13 @@ export async function saveToHistory(
     await idbTx(tx);
     db.close();
 
+    // Persist TTS audio blobs
+    await saveTTSAudio(`history-${id}`, script.scenes);
+
     // Evict oldest if over limit
     await evictOldest();
 
-    console.log(`[History] Saved entry #${id}`);
+    console.log(`[History] Saved entry #${id} + TTS audio`);
     return id;
   } catch (err) {
     logWarn("History", "CACHE_SAVE_FAILED", "Failed to save history entry", { error: err });
@@ -95,7 +99,11 @@ export async function loadHistoryEntry(id: number): Promise<HistoryEntry | null>
 
     const entry = await idbRequest<HistoryEntry | undefined>(store.get(id));
     db.close();
-    return entry ?? null;
+    if (!entry) return null;
+
+    // Restore TTS audio blobs from IndexedDB
+    entry.script.scenes = await restoreTTSAudio(`history-${id}`, entry.script.scenes);
+    return entry;
   } catch (err) {
     logWarn("History", "CACHE_LOAD_FAILED", `Failed to load history #${id}`, { error: err });
     return null;
@@ -110,7 +118,8 @@ export async function deleteHistoryEntry(id: number): Promise<void> {
     tx.objectStore(STORE_HISTORY).delete(id);
     await idbTx(tx);
     db.close();
-    console.log(`[History] Deleted entry #${id}`);
+    await clearTTSAudio(`history-${id}`);
+    console.log(`[History] Deleted entry #${id} + TTS audio`);
   } catch (err) {
     logWarn("History", "UNKNOWN", `Failed to delete history #${id}`, { error: err });
   }
@@ -132,13 +141,14 @@ export async function clearHistory(): Promise<void> {
 
 // --- Helpers ---
 
-function stripRuntime(script: VideoScript): VideoScript {
+/** Strip blob URLs (not serializable), but KEEP durationMs (timing metadata). */
+function stripBlobUrls(script: VideoScript): VideoScript {
   return {
     ...script,
     scenes: script.scenes.map((s) => ({
       ...s,
       ttsAudioUrl: undefined,
-      ttsAudioDurationMs: undefined,
+      // Keep ttsAudioDurationMs — used for scene timing on restore
     })),
   };
 }

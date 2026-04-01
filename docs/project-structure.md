@@ -99,7 +99,7 @@ React-Motion/
 
 | File | Purpose |
 |------|---------|
-| `ReportComposition.tsx` | Root Remotion composition. Renders scenes with transitions + progress bar. |
+| `ReportComposition.tsx` | Root composition. SceneRenderer + AudioTrack + progress bar. |
 | `GenericScene.tsx` | Scene dispatcher: renders elements based on `el.type`. |
 
 **Atomic Elements (`src/video/elements/`)**
@@ -116,7 +116,7 @@ React-Motion/
 | `DividerElement.tsx` | `divider` | spring width expansion |
 | `CalloutElement.tsx` | `callout` | spring fade + slide (60px content) |
 | `KawaiiElement.tsx` | `kawaii` | react-kawaii SVG mascots + bounce-in |
-| `LottieElement.tsx` | `lottie` | @remotion/lottie animated icons |
+| `LottieElement.tsx` | `lottie` | lottie-web animated icons (frame-synced) |
 | `IconElement.tsx` | `icon` | lucide-react SVG icons + bounce |
 | `AnnotationElement.tsx` | `annotation` | roughjs hand-drawn + stroke-draw |
 | `SvgElement.tsx` | `svg` | AI-generated inline SVG diagrams |
@@ -144,15 +144,14 @@ All elements accept a `dark` prop from `GenericScene` for text contrast auto-ada
 | Package | Purpose |
 |---------|---------|
 | `react` / `react-dom` | UI framework |
-| `remotion` / `@remotion/player` | Video composition + browser preview |
-| `@remotion/transitions` | Scene transition effects (slide, wipe, clock-wipe) |
+| `src/video/*` (custom engine) | Video composition, player, scene transitions, animation |
 | `@ffmpeg/ffmpeg` + `@ffmpeg/core` | Browser-side MP4 encoding |
 | `html-to-image` | DOM → PNG frame capture for export |
 | `d3-shape` / `d3-scale` / `d3-sankey` | Chart path calculations (math only) |
 | `chroma-js` | LCH uniform color palette generation |
 | `pptxgenjs` | Browser-side PowerPoint generation |
 | `react-kawaii` | Cute SVG mascot characters |
-| `lottie-web` / `@remotion/lottie` | Lottie animation playback |
+| `lottie-web` | Lottie animation playback (frame-synced via useCurrentFrame) |
 | `lucide-react` | Curated SVG icon library |
 | `roughjs` | Hand-drawn sketch annotations |
 | `vite` | Build tool (IIFE library mode) |

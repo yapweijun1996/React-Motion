@@ -101,6 +101,7 @@
 
 | Key | Type | Summary | Priority | Notes |
 |-----|------|---------|----------|-------|
+| RM-121 | Task | TTS audio IndexedDB persistence — WAV blobs saved/restored via ttsCache.ts | Done | DB v3→v4, new `ttsAudio` store. cache.ts + historyStore.ts integrated. `onblocked`/`onversionchange` handlers for upgrade reliability. |
 | RM-83 | Task | Migrate IndexedDB cache layer to `idb` promise wrapper | Low | 当前 db.ts 手写 IDB 正常工作。简化语法但不解决实际问题。 |
 | RM-84 | Task | Evaluate `vite-plugin-pwa` to replace hand-managed manifest/service worker wiring | Low | 当前 SW 正常运行，迁移风险 > 收益。 |
 
@@ -113,18 +114,18 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 | Key | Type | Summary | Priority | Status | Notes |
 |-----|------|---------|----------|--------|-------|
 | RM-110 | Task | `animation.ts` — custom `spring()`, `interpolate()`, `noise2D/3D` | High | ✅ Done | Drop-in API replacement. 18 tests pass. ~230 lines. |
-| RM-111 | Task | `VideoContext.tsx` — custom `useCurrentFrame`, `useVideoConfig` via React Context + rAF | High | ✅ Done | Dual-context design: FrameContext (nestable for scene-local frames) + VideoConfigContext (global). VideoProvider (top-level) + FrameProvider (per-scene remap). 7 tests pass. ~100 lines. |
-| RM-112 | Task | `SceneRenderer.tsx` — custom scene sequencer + CSS transitions | High | To Do | Replaces `TransitionSeries` + `fade/slide/wipe/clockWipe`. Scene dispatch by startFrame. |
+| RM-111 | Task | `VideoContext.tsx` — custom `useCurrentFrame`, `useVideoConfig`, `usePlaying` via React Context | High | ✅ Done | Triple-context: FrameContext (nestable for scene-local frames) + VideoConfigContext (global, useMemo cached) + PlayingContext (AudioTrack sync). VideoProvider (top-level) + FrameProvider (per-scene remap). 11 tests pass. ~127 lines. |
+| RM-112 | Task | `SceneRenderer.tsx` — custom scene sequencer + CSS transitions | High | ✅ Done | Replaces `TransitionSeries` + `fade/slide/wipe/clockWipe`. Framework-agnostic (accepts `frame` prop + `renderScene` callback). Pure CSS transitions: opacity (fade), translateX (slide), clip-path inset (wipe), clip-path polygon (clock-wipe). Overlap compression via `computeEffectiveStarts`. 37 tests pass. ~210 lines. |
 | RM-113 | Task | `VideoPlayer.tsx` + `VideoSurface.tsx` + `PlayerHandle.ts` — custom player | High | ✅ Done | VideoPlayer: rAF playback, play/pause/seek/progress bar/keyboard/responsive scaling/loop. VideoSurface: headless export player (seekTo only). PlayerHandle: imperative ref type replacing Remotion PlayerRef. 11 tests pass. ~355 lines total. |
 | RM-114 | Task | `AbsoluteFill.tsx` — trivial div wrapper | Low | ✅ Done | Drop-in replacement. 28 lines. `position:absolute; inset:0; flex column`. Supports `style` merge + `children`. |
-| RM-115 | Task | `AudioTrack.tsx` — HTML5 Audio API synced to frame engine | Medium | To Do | Replaces Remotion `<Audio>`. Sync play/pause/seek with frame. |
-| RM-116 | Task | Batch update all element imports — switch from `remotion` to custom modules | Medium | To Do | ~15 element files + useStagger.ts + ReportComposition.tsx + GenericScene.tsx. |
+| RM-115 | Task | `AudioTrack.tsx` — HTML5 Audio API synced to frame engine | Medium | ✅ Done | 80 lines. usePlaying() → play/pause sync. useCurrentFrame()/fps → drift > 0.3s seek correction. Volume clamp 0-1. Unmount pauses. ReportComposition: bare `<audio>` → `<AudioTrack>` integrated. 10 tests pass. |
+| RM-116 | Task | Batch update all element imports — switch from `remotion` to custom modules | Medium | ✅ Done | 12 files, 19 import lines migrated. 8 elements + useStagger + NoiseBackground + GenericScene (import swap) + ReportComposition (rewritten: TransitionSeries → SceneRenderer + FrameProvider). Zero `remotion`/`@remotion/*` imports remain in src/. AudioTrack integrated (RM-115 ✅). 167 tests pass. Build OK. |
 | RM-117 | Task | Replace `@remotion/lottie` — use `lottie-web` directly | Low | ✅ Done | Custom `LottieAnimationData` type in lottiePresets.ts. LottieElement rewritten: lottie-web `loadAnimation` + `goToAndStop(frame, true)` frame sync via useCurrentFrame. Removed useDelayRender/continueRender (SSR-only). |
-| RM-118 | Task | Remove all `remotion` and `@remotion/*` from package.json | Medium | To Do | Final cleanup. Verify build + tests pass. Bundle size reduction. |
+| RM-118 | Task | Remove all `remotion` and `@remotion/*` from package.json | Medium | ✅ Done | Removed 5 packages (remotion + 4 @remotion/* scopes). 8 packages pruned from node_modules. Build OK. 167 tests pass. |
 | RM-119 | Task | Update ExportStage.tsx — use VideoSurface for frame capture | Medium | ✅ Done | ExportStage: `Player` → `VideoSurface`, `PlayerRef` → `PlayerHandle`. exportVideo.ts + useVideoActions.ts: pure type swap. App.tsx: `Player` → `VideoPlayer` for preview. `@remotion/player` import count: 0. |
-| RM-120 | Task | Update AGENTS.md + docs — reflect custom engine architecture | Low | To Do | Remove all Remotion references from docs. |
+| RM-120 | Task | Update AGENTS.md + docs — reflect custom engine architecture | Low | ✅ Done | 15 sections updated: Project goal, Current phase (→Phase 3), Core flow diagram, Runtime stack (+8 engine modules), Preview/Composition layer, Data contract, AI rules, "Remotion usage rules"→"Custom video engine" (full rewrite with module table), MVP scope (9→15 elements), Element table (lottie), Animation system, Scene transitions (CSS), Subagent list, Edit workflow, Runtime constraints, Verification, Change acceptance. 4 remaining "Remotion" mentions are historical context (already-removed). CLAUDE.md clean. |
 
-**Execution order:** RM-110 ✅ → RM-111 ✅ → RM-114 ✅ → RM-113 ✅ → RM-117 ✅ → RM-119 ✅ → RM-112 → RM-115 → RM-116 → RM-118 → RM-120
+**Execution order:** RM-110 ✅ → RM-111 ✅ → RM-114 ✅ → RM-113 ✅ → RM-117 ✅ → RM-119 ✅ → RM-112 ✅ → RM-116 ✅ → RM-115 ✅ → RM-118 ✅ → RM-120 ✅
 
 **Remotion replacement map:**
 
@@ -140,30 +141,78 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 | `PlayerRef` type | `PlayerHandle.ts` | ✅ Done (RM-113+119) |
 | `@remotion/lottie` | `lottie-web` direct | ✅ Done (RM-117) |
 | `@remotion/noise` | `animation.ts` noise2D/3D | ✅ Done (RM-110) |
-| `TransitionSeries` + effects | `SceneRenderer.tsx` | To Do (RM-112) |
-| `<Audio>` | `AudioTrack.tsx` | To Do (RM-115) |
+| `TransitionSeries` + effects | `SceneRenderer.tsx` | ✅ Done (RM-112) |
+| `<Audio>` | `AudioTrack.tsx` | ✅ Done (RM-115) |
 
-**Progress: 10/12 Remotion features replaced. 6/11 tasks done.**
+**Progress: 12/12 Remotion features replaced. 11/11 tasks done. RM-EPIC-04 COMPLETE ✅**
 
-### To Do — Priority 3 (Post-MVP)
+### To Do — Priority 3 (Phase 4A — Video Quality, immediate user impact)
+
+**Epic: RM-EPIC-05 — Video Quality & Personalization (10K business users)**
+
+Goal: Raise output quality from "internal demo" to "client-facing". Biggest bang-for-buck improvements first.
+
+| Key | Type | Summary | Priority | Status | Notes |
+|-----|------|---------|----------|--------|-------|
+| RM-121 | Task | Full-frame capture — frameStep 3→1 + streaming write | Highest | ✅ Done | frameStep 3→1 (full-frame). Streaming: toPng→writeFile→discard (O(1) memory). waitFrame 2→1. FFmpeg pre-loaded. inputFps=fps (no interpolation). |
+| RM-122 | Task | Export quality presets — CRF/preset dynamic by settings | High | ✅ Done | 3 presets: draft (CRF 28/ultrafast), standard (CRF 24/fast), high (CRF 20/medium). AppSettings.exportQuality + validate.ts + SettingsPanel dropdown + exportVideo.ts QUALITY_PROFILES. Default: standard. |
+| RM-123 | Task | TTS voice selection UI — expose Gemini 30+ voices + language picker | High | To Do | Currently hardcoded single voice "Kore". Gemini supports 30+ voices across languages. Settings panel voice dropdown + per-video language. |
+| RM-124 | Task | Background music — ambient audio layer with auto-ducking during narration | Medium | To Do | AI selects music mood from presets (corporate/upbeat/calm/dramatic). Volume auto-reduces during TTS narration. HTML5 Audio or AudioTrack extension. |
+
+### To Do — Priority 4 (Phase 4B — User Experience, retention)
+
+**Epic: RM-EPIC-06 — Post-Generation Editing & Media**
+
+Goal: Let users refine AI output without regenerating. Add brand assets.
+
+| Key | Type | Summary | Priority | Status | Notes |
+|-----|------|---------|----------|--------|-------|
+| RM-125 | Task | Scene-level editor — reorder/delete/edit scenes post-generation | High | To Do | Users say "almost perfect but...". Edit scene narration, swap element values, reorder scenes. Modify VideoScript in-place without AI round-trip. |
+| RM-126 | Task | Image element — URL/upload → embed in scene as `<img>` | High | To Do | Company logo, product photos, team pictures. New atomic element type. AI can reference user-provided image URLs. |
+| RM-127 | Task | Video template library — pre-built script skeletons + data slot binding | Medium | To Do | "Quarterly Report", "Product Launch", "Team Update" templates. User fills in data, AI adapts the template. Lowers barrier for first-time users. |
+| RM-128 | Task | SRT/VTT subtitle export — generate from scene narration text + timing | Low | To Do | Accessibility + multi-language. Derive from existing narration + startFrame/durationInFrames. Near-zero AI cost. |
+
+### To Do — Priority 5 (Phase 4C — Enterprise Scale, 10K users)
+
+**Epic: RM-EPIC-07 — Enterprise Infrastructure**
+
+Goal: Support 10,000 concurrent users with quota, branding, and batch workflows.
+
+| Key | Type | Summary | Priority | Status | Notes |
+|-----|------|---------|----------|--------|-------|
+| RM-129 | Task | API gateway + per-user quota management | High | To Do | Centralized Gemini API key pool. Per-user/per-org rate limits. Usage tracking + billing hooks. |
+| RM-130 | Task | PPTX export completeness — add icon, annotation, svg, map element rendering | Medium | To Do | Currently 9/15 elements export to PPT. 6 missing: icon (→ lucide name text), annotation (→ shape), svg (→ image), map (→ image snapshot), kawaii (→ emoji), lottie (→ skip). |
+| RM-131 | Task | Batch generation — 1 template × N data sets → N videos | Medium | To Do | Sales teams generate per-region reports. Queue-based: user uploads CSV, each row → one video. Progress dashboard. |
+| RM-132 | Task | Brand kit — company logo + font preset + color palette saved per org | Medium | To Do | Auto-apply logo to title/close scenes. Font selector (Google Fonts). Saved palette overrides AI generate_palette. |
+
+### To Do — Maintenance / Superseded
 
 | Key | Type | Summary | Priority | Notes |
 |-----|------|---------|----------|-------|
 | RM-56 | Task | ~~Reduce bundle size — analyze and tree-shake Remotion deps~~ | ~~Low~~ | Superseded by RM-EPIC-04 (remove Remotion entirely) |
 | RM-57 | Task | Multi-provider AI support — Claude, GPT as alternatives to Gemini | Low | Provider abstraction layer |
-| RM-58 | Task | Multi-speaker TTS — different voices for different scenes | Low | Gemini TTS supports 2 speakers |
-| RM-85 | Task | Evaluate MediaBunny/WebCodecs-era browser media pipeline for future export simplification | Low | Research-only. Do not introduce a second live export path during MVP. |
+| RM-58 | Task | Multi-speaker TTS — different voices for different scenes | Low | Partially addressed by RM-123 (voice selection). Full multi-speaker = different voice per scene role. |
+| RM-83 | Task | Migrate IndexedDB cache layer to `idb` promise wrapper | Low | 当前 db.ts 手写 IDB 正常工作。简化语法但不解决实际问题。 |
+| RM-84 | Task | Evaluate `vite-plugin-pwa` to replace hand-managed manifest/service worker wiring | Low | 当前 SW 正常运行，迁移风险 > 收益。 |
+| RM-85 | Task | Evaluate MediaBunny/WebCodecs-era browser media pipeline for future export simplification | Low | Research-only. May become relevant if RM-121 full-frame capture hits performance wall. |
 
 ### Milestone Status
 
 **Production Hardening — 5/7 complete:**
 - ✅ Unified runtime schema (RM-90 validate.ts)
-- ✅ Unit tests (RM-80: 80 tests, 4 files)
+- ✅ Unit tests (RM-80: 167 tests, 9 files)
 - ✅ Observability (RM-87 metrics.ts — generation/export/tts/error events)
 - ✅ Export UI responsiveness (RM-91 yield)
 - ✅ CJK language-aware timing (RM-48)
 - ⬜ Export failure clears progress state and stays user-visible (RM-97)
 - ⬜ FFmpeg multi-thread validated in production-like conditions (RM-38)
+
+**Remove Remotion (RM-EPIC-04) — 11/11 COMPLETE ✅**
+
+**Phase 4 Roadmap:**
+- ⬜ Phase 4A: Video Quality (RM-121~124) — frameStep, CRF, TTS voices, BGM
+- ⬜ Phase 4B: User Experience (RM-125~128) — scene editor, images, templates, subtitles
+- ⬜ Phase 4C: Enterprise Scale (RM-129~132) — API gateway, PPTX, batch, brand kit
 
 ### JIRA Backlog Format
 
@@ -226,7 +275,7 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 - Goal: Improve perceived output quality with a reusable SVG vocabulary for professional and educational videos.
 - Acceptance Criteria:
   - Business scenes can render consistent KPI/risk/growth icons. ✅ RM-100a: 45 lucide icons (6 categories)
-  - Study scenes can render instructional annotation graphics without leaving the SVG/Remotion model. ✅ RM-100b: 7 roughjs hand-drawn shapes
+  - Study scenes can render instructional annotation graphics within the SVG/custom engine model. ✅ RM-100b: 7 roughjs hand-drawn shapes
 - Bonus: RM-100c unified chart formatting + Tableau10 professional palette
 
 **Task: RM-100a Add `lucide` icon layer**
@@ -254,7 +303,7 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 - Scope:
   - Add SVG-only annotation primitives such as arrows, circles, brackets, highlights, and hand-drawn emphasis.
 - Acceptance Criteria:
-  - Renderer works inside Remotion/export path. ✅ rough.generator() 纯计算 → React `<path>` 渲染，无 DOM 操作
+  - Renderer works inside custom engine/export path. ✅ rough.generator() 纯计算 → React `<path>` 渲染，无 DOM 操作
   - No canvas-only dependency is introduced into the live composition path. ✅ SVG-only（generator 内部 Canvas 仅用于路径计算，不渲染）
 - Implementation Notes:
   - `roughjs` installed. AnnotationElement.tsx (~150 lines) with 7 shapes: circle, underline, arrow, box, cross, highlight, bracket.
@@ -368,11 +417,17 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 | 2026-04-01 | Custom video context: dual-context frame remapping (RM-111) | Remotion TransitionSeries.Sequence remaps useCurrentFrame() to scene-local frames. Custom design: FrameContext (nestable, scene remap via FrameProvider) + VideoConfigContext (global, immutable). VideoProvider is controlled component — parent owns frame state, context only distributes. This enables both rAF-driven preview and seekTo-driven export to share the same composition tree. |
 | 2026-04-01 | VideoPlayer/VideoSurface split (RM-113) | Preview and export need different player behavior. VideoPlayer: rAF loop + controls + responsive scaling + keyboard. VideoSurface: headless, seekTo-only, fixed resolution. Both share PlayerHandle interface (pause/play/seekTo/getCurrentFrame). This replaces the Remotion pattern of two <Player> instances (controls=true vs controls=false) with purpose-built components. |
 | 2026-04-01 | Added @testing-library/react + jsdom devDependency | Required for testing React component hooks (VideoContext, VideoPlayer). Vitest config extended: include test/**/*.test.{ts,tsx}. jsdom selected per-file via `// @vitest-environment jsdom` comment to avoid affecting pure-node tests. |
+| 2026-04-01 | Batch import migration — zero Remotion imports in src/ (RM-116) | 12 files, 19 import lines migrated in one pass. All elements, useStagger, NoiseBackground, GenericScene: pure import-path swap (remotion → VideoContext/animation/AbsoluteFill). ReportComposition rewritten: TransitionSeries → SceneRenderer + FrameProvider. TTS audio: HTML5 `<audio>` placeholder pending RM-115 AudioTrack. Confirms API compatibility of all custom modules — zero behavioral regressions. |
 | 2026-03-31 | Remove Remotion — build custom video engine (RM-EPIC-04) | Remotion dual-license requires paid Company License for 4+ person teams. Project only uses ~10% of Remotion (spring, interpolate, Player, TransitionSeries, Audio, noise). Export pipeline already self-built (html-to-image + FFmpeg.wasm). Building custom replacements: ~450 lines new code, eliminates ~44MB bundle weight from Remotion packages, zero license risk, full control over animation/rendering. Execution: animation.ts (done) → VideoContext → AbsoluteFill → SceneRenderer → AudioTrack → VideoPlayer → batch import update → remove packages. |
 | 2026-03-31 | CSS domain split (RM-95) | Single 862-line styles.css split into 9 domain files under src/styles/ (tokens, base, header, forms, settings, export, templates, panel, responsive). styles.css becomes @import hub (14 lines). Vite resolves @import natively. Each file < 180 lines, single responsibility. No runtime cost — CSS is bundled at build time. |
 | 2026-03-31 | HistoryPanel CSS + layout fixes (RM-94, RM-96) | HistoryPanel had 16 undefined CSS classes (panel overlay, tabs, history list, btn-sm, btn-danger). backdrop-filter removed (GPU pressure). PromptTemplates moved above Player. History button H→↻. Mobile bottom-sheet for both Settings and History panels. |
 | 2026-03-31 | PPT export — dual-format output from single VideoScript (RM-103) | pptxgenjs (~795KB) generates .pptx entirely in-browser. Same VideoScript drives both MP4 (Remotion+FFmpeg) and PPTX (pptxgenjs). Element mapping: text→addText, metric→multi addText, bar/pie/line→native addChart (editable in PowerPoint!), sankey→addTable (no native support), list→addText with bullets, callout→addShape+addText, divider→addShape(rect). kawaii→caption text only, lottie→skipped. Narration→slide speaker notes. Layout engine calculates x/y/w/h from scene.layout (column/row/center). Font sizes scaled ×0.6 (video 1080p→PPT 10"). Zero AI pipeline changes. |
 | 2026-04-01 | AbsoluteFill.tsx — minimal drop-in (RM-114) | 27 lines. Remotion's AbsoluteFill has ~100 lines of Tailwind className detection — skipped entirely (project does not use Tailwind). Only `style` + `children` props needed (verified: 2 usage sites in GenericScene + ReportComposition). `forwardRef` deferred — not needed until RM-113 (VideoPlayer) or RM-119 (export frame capture). |
+| 2026-04-01 | SceneRenderer — pure CSS scene transitions (RM-112) | Replaces Remotion TransitionSeries. 4 transition effects via inline CSS: fade (opacity), slide (translateX), wipe (clip-path inset), clock-wipe (clip-path polygon 24-point arc). Framework-agnostic design: accepts `frame` prop + `renderScene` callback — no context dependency. Overlap compression via `computeEffectiveStarts()`. Exiting scene uses entering scene's transition type (Remotion convention). 37 tests. |
+| 2026-04-01 | Batch import migration — zero Remotion in src/ (RM-116) | 12 files, 19 import lines. 8 elements + useStagger + NoiseBackground + GenericScene: pure path swap. ReportComposition rewritten: TransitionSeries → SceneRenderer + FrameProvider. All custom modules confirmed API-compatible — zero behavioral regressions. 167 tests pass. |
+| 2026-04-01 | TTS IndexedDB persistence (RM-121) | WAV blobs persisted via ttsCache.ts. DB v3→v4 adds `ttsAudio` object store. Save: fetch blob URL → store Blob. Load: read Blob → createObjectURL. Key format: `cache:sceneId` / `history-{id}:sceneId`. Cleanup on cache expire / history delete. `onblocked` + `onversionchange` handlers for reliable DB upgrades during HMR. |
+| 2026-04-01 | VideoPlayer fullscreen + layout fix | Composition div changed to position:absolute (was in normal flow causing 1080px DOM height + 540px spacer = 1620px container). Fullscreen: browser Fullscreen API + `f` key shortcut + responsive fit (min width/height). |
+| 2026-04-01 | Phase 4 roadmap — end-user perspective deep dive | Codebase review from end-user POV for 10K business users. Key gaps identified: (1) frameStep=3 choppy animation, (2) CRF=28 text blur, (3) single TTS voice, (4) no image/logo embed, (5) no post-gen editing, (6) PPTX missing 6/15 elements. Three phases: 4A video quality (RM-121~124), 4B UX/media (RM-125~128), 4C enterprise (RM-129~132). Priority: quality first (biggest user perception impact), then editing, then scale. |
 
 ---
 
@@ -407,14 +462,15 @@ Goal: Replace all Remotion imports with self-built modules. Fully frontend, zero
 └──────────────┬───────────────────────────────┘
                │
 ┌──────────────▼───────────────────────────────┐
-│         Harness (React/Remotion)             │
+│         Harness (React/Custom Engine)        │
 │                                              │
-│  Renders: GenericScene + 11 atomic elements  │
+│  Renders: GenericScene + 15 atomic elements  │
 │  (text, metric, bar-chart, pie-chart,        │
 │   line-chart, sankey, list, divider,         │
-│   callout, kawaii, lottie)                    │
+│   callout, kawaii, lottie, icon,             │
+│   annotation, svg, map)                      │
 │                                              │
-│  Audio: Gemini TTS → <Audio>                 │
+│  Audio: Gemini TTS → AudioTrack              │
 │  Export: html-to-image → FFmpeg.wasm         │
 │  Validates: parseScript + retry              │
 └──────────────────────────────────────────────┘
@@ -471,7 +527,7 @@ MP4 file (H.264 + AAC audio) → download
 ```
 Prompt → Agent Loop (OODAE) → VideoScript (with narration per scene)
        → Gemini TTS (each narration → PCM audio → WAV)
-       → Remotion (<Audio> components synced with scenes)
+       → AudioTrack (HTML5 audio synced with scenes via frame engine)
        → Scene timing adjusted to match audio length (TTS-first)
        → FFmpeg.wasm (mux video + audio → MP4 with AAC)
 ```
@@ -482,25 +538,24 @@ Prompt → Agent Loop (OODAE) → VideoScript (with narration per scene)
 
 ```
 Layer 1 (RM-68~71) — 立即提升 ✅ ALL DONE
-├── spring() 弹性动画 ✅
-├── @remotion/transitions (slide/wipe/clock-wipe) ✅
-├── @remotion/noise (Perlin 动态背景) ✅
+├── spring() 弹性动画 (custom animation.ts) ✅
+├── SceneRenderer CSS transitions (slide/wipe/clock-wipe) ✅
+├── noise2D/3D (custom animation.ts Perlin 动态背景) ✅
 └── Stagger choreography (useStagger hook) ✅
 
 Layer 2 (RM-72~75) — 视觉丰富 ✅ ALL DONE
 ├── react-kawaii (可爱角色引导) ✅
-├── @remotion/lottie (动态图标预设) ✅
+├── lottie-web direct (动态图标预设) ✅
 ├── chroma-js (智能配色) ✅
 └── 更多 entrance animation (9 种) ✅
 
-Layer 3 (RM-76~78) — 高级功能
-├── @remotion/three (3D 可视化)
-├── AI Avatar (HeyGen/D-ID)
-└── SVG 角色 + TTS 口型同步
+Layer 3 (RM-76~78) — ALL REMOVED
+├── ~~3D 可视化~~ Removed — html-to-image 不支持 Canvas/WebGL
+├── ~~AI Avatar (HeyGen/D-ID)~~ Removed — 付费 API + 需服务器代理
+└── ~~SVG 角色 + TTS 口型同步~~ Removed — ROI 过低
 ```
 
 ### 兼容性约束
-- 必须帧驱动 (useCurrentFrame) — CSS animation 不可用
+- 必须帧驱动 (useCurrentFrame from VideoContext) — CSS animation 不可用
 - 必须纯 DOM/SVG — html-to-image 不支持 Canvas
-- @remotion/three 例外 — 官方包有特殊帧同步处理
-- @remotion/lottie 例外 — 官方包将 Lottie 帧同步到 Remotion
+- lottie-web 使用 goToAndStop(frame, true) 实现帧同步

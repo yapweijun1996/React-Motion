@@ -6,6 +6,7 @@ import {
   FrameProvider,
   useCurrentFrame,
   useVideoConfig,
+  usePlaying,
 } from "../src/video/VideoContext";
 
 describe("useCurrentFrame", () => {
@@ -84,6 +85,48 @@ describe("useVideoConfig", () => {
       height: 720,
       durationInFrames: 600,
     });
+  });
+});
+
+describe("usePlaying", () => {
+  it("returns false by default when no provider is present", () => {
+    const { result } = renderHook(() => usePlaying());
+    expect(result.current).toBe(false);
+  });
+
+  it("returns false when VideoProvider omits playing prop", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <VideoProvider frame={0} fps={30} width={1920} height={1080} durationInFrames={300}>
+        {children}
+      </VideoProvider>
+    );
+
+    const { result } = renderHook(() => usePlaying(), { wrapper });
+    expect(result.current).toBe(false);
+  });
+
+  it("returns true when VideoProvider sets playing={true}", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <VideoProvider frame={0} fps={30} width={1920} height={1080} durationInFrames={300} playing={true}>
+        {children}
+      </VideoProvider>
+    );
+
+    const { result } = renderHook(() => usePlaying(), { wrapper });
+    expect(result.current).toBe(true);
+  });
+
+  it("is NOT affected by nested FrameProvider", () => {
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <VideoProvider frame={100} fps={30} width={1920} height={1080} durationInFrames={600} playing={true}>
+        <FrameProvider frame={50}>
+          {children}
+        </FrameProvider>
+      </VideoProvider>
+    );
+
+    const { result } = renderHook(() => usePlaying(), { wrapper });
+    expect(result.current).toBe(true);
   });
 });
 

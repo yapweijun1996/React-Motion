@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "../VideoContext";
+import { spring, interpolate } from "../animation";
 import { sankey, sankeyLinkHorizontal, sankeyCenter } from "d3-sankey";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor } from "../../services/chartHelpers";

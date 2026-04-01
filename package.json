@@ -16,10 +16,6 @@
     "@ffmpeg/core-mt": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
-    "@remotion/lottie": "^4.0.442",
-    "@remotion/noise": "^4.0.442",
-    "@remotion/player": "4.0.442",
-    "@remotion/transitions": "4.0.442",
     "@types/chroma-js": "^3.1.2",
     "@types/d3-geo": "^3.1.0",
     "@types/react-kawaii": "^0.17.3",
@@ -38,7 +34,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-kawaii": "^1.6.0",
-    "remotion": "4.0.442",
     "roughjs": "^4.6.6",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2"

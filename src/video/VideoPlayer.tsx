@@ -82,23 +82,47 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
     // Container ref for responsive scaling
     const containerRef = useRef<HTMLDivElement>(null);
     const [scale, setScale] = useState(1);
+    const [fullscreen, setFullscreen] = useState(false);
 
-    // --- Responsive scaling ---
+    // --- Responsive scaling (works for both normal + fullscreen) ---
     useEffect(() => {
       const container = containerRef.current;
       if (!container) return;
 
-      // Initial scale from current size
-      setScale(Math.min(container.clientWidth / compositionWidth, 1));
+      const updateScale = () => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        // In fullscreen: fit both width AND height. Normal: fit width only.
+        const s = fullscreen
+          ? Math.min(w / compositionWidth, h / compositionHeight)
+          : Math.min(w / compositionWidth, 1);
+        setScale(s);
+      };
+
+      updateScale();
 
       if (typeof ResizeObserver === "undefined") return;
-      const observer = new ResizeObserver((entries) => {
-        const { width } = entries[0].contentRect;
-        setScale(Math.min(width / compositionWidth, 1));
-      });
+      const observer = new ResizeObserver(updateScale);
       observer.observe(container);
       return () => observer.disconnect();
-    }, [compositionWidth]);
+    }, [compositionWidth, compositionHeight, fullscreen]);
+
+    // --- Fullscreen ---
+    const toggleFullscreen = useCallback(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        el.requestFullscreen();
+      }
+    }, []);
+
+    useEffect(() => {
+      const onFsChange = () => setFullscreen(!!document.fullscreenElement);
+      document.addEventListener("fullscreenchange", onFsChange);
+      return () => document.removeEventListener("fullscreenchange", onFsChange);
+    }, []);
 
     // --- rAF playback loop ---
     const tick = useCallback(
@@ -191,7 +215,7 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
       [seekTo, durationInFrames],
     );
 
-    // Keyboard: space = play/pause, arrows = seek
+    // Keyboard: space/k = play/pause, arrows = seek, f = fullscreen
     const handleKeyDown = useCallback(
       (e: React.KeyboardEvent) => {
         if (e.key === " " || e.key === "k") {
@@ -203,12 +227,35 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
         } else if (e.key === "ArrowLeft") {
           e.preventDefault();
           seekTo(frameRef.current - (e.shiftKey ? fps : 1));
+        } else if (e.key === "f") {
+          e.preventDefault();
+          toggleFullscreen();
         }
       },
-      [handlePlayPause, seekTo, fps],
+      [handlePlayPause, seekTo, fps, toggleFullscreen],
     );
 
     const scaledHeight = compositionHeight * scale;
+
+    // In fullscreen: center the composition. Normal: top-left aligned.
+    const compositionStyle: React.CSSProperties = fullscreen
+      ? {
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          width: compositionWidth,
+          height: compositionHeight,
+          transform: `translate(-50%, -50%) scale(${scale})`,
+        }
+      : {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: compositionWidth,
+          height: compositionHeight,
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+        };
 
     return (
       <div
@@ -218,33 +265,28 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
           width: "100%",
           overflow: "hidden",
           backgroundColor: "#000",
+          ...(fullscreen ? { height: "100%" } : {}),
           ...style,
         }}
         tabIndex={0}
         onKeyDown={handleKeyDown}
       >
         {/* Composition viewport */}
-        <div
-          style={{
-            width: compositionWidth,
-            height: compositionHeight,
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-          }}
-        >
+        <div style={compositionStyle}>
           <VideoProvider
             frame={frame}
             fps={fps}
             width={compositionWidth}
             height={compositionHeight}
             durationInFrames={durationInFrames}
+            playing={playing}
           >
             <Composition {...inputProps} />
           </VideoProvider>
         </div>
 
-        {/* Spacer to maintain aspect ratio */}
-        <div style={{ height: scaledHeight, pointerEvents: "none" }} />
+        {/* Spacer — sets container height in normal mode (not needed in fullscreen) */}
+        {!fullscreen && <div style={{ height: scaledHeight, pointerEvents: "none" }} />}
 
         {/* Controls bar */}
         {controls && (
@@ -279,6 +321,15 @@ export const VideoPlayer = forwardRef<PlayerHandle, VideoPlayerProps>(
             <span style={timeStyle}>
               {formatTime(frame, fps)} / {formatTime(durationInFrames, fps)}
             </span>
+
+            {/* Fullscreen */}
+            <button
+              onClick={toggleFullscreen}
+              style={btnStyle}
+              aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            >
+              {fullscreen ? "⊡" : "⛶"}
+            </button>
           </div>
         )}
       </div>

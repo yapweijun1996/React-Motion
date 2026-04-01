@@ -1,24 +1,10 @@
-import { AbsoluteFill, Audio, useCurrentFrame } from "remotion";
-import { TransitionSeries, springTiming } from "@remotion/transitions";
-import { fade } from "@remotion/transitions/fade";
-import { slide } from "@remotion/transitions/slide";
-import { wipe } from "@remotion/transitions/wipe";
-import { clockWipe } from "@remotion/transitions/clock-wipe";
+import { AbsoluteFill } from "./AbsoluteFill";
+import { AudioTrack } from "./AudioTrack";
+import { useCurrentFrame } from "./VideoContext";
+import { FrameProvider } from "./VideoContext";
+import { SceneRenderer } from "./SceneRenderer";
 import { GenericScene } from "./GenericScene";
-import type { VideoScript, VideoScene } from "../types";
-
-const TRANSITION_FRAMES = 20;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getPresentation(scene: VideoScene): any {
-  const type = scene.transition;
-  switch (type) {
-    case "slide": return slide();
-    case "wipe": return wipe();
-    case "clock-wipe": return clockWipe({ width: 1920, height: 1080 });
-    default: return fade();
-  }
-}
+import type { VideoScript } from "../types";
 
 type ReportCompositionProps = {
   script: VideoScript;
@@ -31,38 +17,19 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
 
   return (
     <AbsoluteFill>
-      <TransitionSeries>
-        {script.scenes.map((scene, i) => {
-          const isLast = i === script.scenes.length - 1;
-
-          return [
-            <TransitionSeries.Sequence
-              key={`scene-${scene.id}`}
-              durationInFrames={scene.durationInFrames}
-            >
-              <GenericScene
-                scene={scene}
-                primaryColor={script.theme?.primaryColor}
-              />
-              {scene.ttsAudioUrl && (
-                <Audio src={scene.ttsAudioUrl} volume={1} />
-              )}
-            </TransitionSeries.Sequence>,
-
-            !isLast && (
-              <TransitionSeries.Transition
-                key={`trans-${scene.id}`}
-                presentation={getPresentation(script.scenes[i + 1])}
-                timing={springTiming({
-                  config: { damping: 120 },
-                  durationInFrames: TRANSITION_FRAMES,
-                  durationRestThreshold: 0.001,
-                })}
-              />
-            ),
-          ];
-        })}
-      </TransitionSeries>
+      <SceneRenderer
+        frame={frame}
+        scenes={script.scenes}
+        renderScene={(scene, localFrame) => (
+          <FrameProvider frame={localFrame}>
+            <GenericScene
+              scene={scene}
+              primaryColor={script.theme?.primaryColor}
+            />
+            {scene.ttsAudioUrl && <AudioTrack src={scene.ttsAudioUrl} />}
+          </FrameProvider>
+        )}
+      />
 
       {/* Progress bar */}
       <div

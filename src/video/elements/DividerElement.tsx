@@ -1,4 +1,4 @@
-import { interpolate } from "remotion";
+import { interpolate } from "../animation";
 import { useStagger, parseStagger } from "../useStagger";
 import type { SceneElement } from "../../types";
 

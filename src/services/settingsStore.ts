@@ -1,6 +1,6 @@
-import { validateSettings, type AppSettings } from "./validate";
+import { validateSettings, type AppSettings, type ExportQuality } from "./validate";
 
-export type { AppSettings } from "./validate";
+export type { AppSettings, ExportQuality } from "./validate";
 
 const STORAGE_KEY = "react-motion-settings";
 
@@ -40,6 +40,7 @@ export function loadSettings(): AppSettings {
         import.meta.env.VITE_GEMINI_MODEL ||
         "gemini-2.0-flash",
       ttsConcurrency: stored.ttsConcurrency ?? 1,
+      exportQuality: stored.exportQuality ?? "standard",
     };
 
     const result = validateSettings(merged);
@@ -69,6 +70,7 @@ export function saveSettings(settings: AppSettings): void {
       k: obfuscate(result.data.geminiApiKey),
       geminiModel: result.data.geminiModel,
       ttsConcurrency: result.data.ttsConcurrency,
+      exportQuality: result.data.exportQuality,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch (err) {
@@ -98,6 +100,7 @@ type StoredSettings = {
   k?: string;
   geminiModel?: string;
   ttsConcurrency?: number;
+  exportQuality?: ExportQuality;
   // Legacy field — read for migration then discard
   geminiApiKey?: string;
 };
@@ -113,6 +116,7 @@ function getDefaults(): AppSettings {
       import.meta.env.VITE_GEMINI_MODEL ||
       "gemini-2.0-flash",
     ttsConcurrency: 1,
+    exportQuality: "standard",
   };
 }
 

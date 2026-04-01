@@ -1,4 +1,4 @@
-import { AbsoluteFill } from "remotion";
+import { AbsoluteFill } from "./AbsoluteFill";
 import { TextElement } from "./elements/TextElement";
 import { MetricElement } from "./elements/MetricElement";
 import { BarChartElement } from "./elements/BarChartElement";

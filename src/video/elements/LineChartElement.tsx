@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useCurrentFrame, useVideoConfig, spring } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "../VideoContext";
+import { spring } from "../animation";
 import { line, curveMonotoneX } from "d3-shape";
 import { scaleLinear, scalePoint } from "d3-scale";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";

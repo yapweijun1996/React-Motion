@@ -1,4 +1,5 @@
-import { useCurrentFrame, useVideoConfig, spring } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "../VideoContext";
+import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import type { SceneElement } from "../../types";
 

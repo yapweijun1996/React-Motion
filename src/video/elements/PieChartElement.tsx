@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useCurrentFrame, useVideoConfig, spring } from "remotion";
+import { useCurrentFrame, useVideoConfig } from "../VideoContext";
+import { spring } from "../animation";
 import { pie, arc } from "d3-shape";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor, formatPercent } from "../../services/chartHelpers";

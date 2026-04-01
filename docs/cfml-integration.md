@@ -8,7 +8,7 @@ React-Motion is packaged as a single IIFE bundle for embedding in CFML/Lucee app
 
 ```
 dist/
-├── react-motion.iife.js    # ~44 MB (includes all deps, React, Remotion, FFmpeg refs)
+├── react-motion.iife.js    # ~45 MB (includes all deps, React, D3, FFmpeg refs)
 ├── react-motion.css         # ~7 KB
 └── assets/worker-*.js       # Web worker (FFmpeg)
 ```
@@ -134,7 +134,7 @@ Current MVP uses option 1 or 2. For production deployment (RM-55), implement a s
 | Issue | Solution |
 |-------|----------|
 | Widget shows blank | Check that `el` exists in DOM before calling `mount()` |
-| No video player | Remotion requires the container to have non-zero dimensions |
+| No video player | Container must have non-zero dimensions for VideoPlayer to render |
 | Export slow | Add COOP/COEP headers to enable multi-thread FFmpeg |
 | API key exposed | Move to server-side proxy for production |
 | Large bundle (~44MB) | Mostly FFmpeg WASM. Consider lazy loading or CDN caching. |
