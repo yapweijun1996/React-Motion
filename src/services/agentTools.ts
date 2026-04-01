@@ -1,7 +1,7 @@
 import type { FunctionDeclaration } from "./gemini";
 import type { BusinessData } from "../types";
 import { generatePalette, type PaletteScheme } from "./palette";
-import { ELEMENT_CATALOG, STAGGER_SYSTEM, ELEMENT_TIPS } from "./elementCatalog";
+import { ELEMENT_CATALOG, STAGGER_SYSTEM } from "./elementCatalog";
 
 // --- Tool result type ---
 
@@ -66,17 +66,16 @@ register(
     },
   },
   async (args, context) => {
-    // We feed the data + instruction back as structured context.
-    // The AI will interpret this on the next turn.
-    const dataSnapshot = context.data
-      ? JSON.stringify(context.data, null, 2)
-      : extractInlineData(context.userPrompt);
-
+    // Data is already in the user message (buildUserMessage sends it).
+    // Do NOT echo it back — that doubles payload for zero benefit.
+    const hasStructuredData = !!context.data?.rows?.length;
     return {
       result: {
-        data_snapshot: dataSnapshot,
         analysis_instruction: args.instruction,
-        note: "Data provided above. Perform the requested analysis and use the results in your storyboard.",
+        data_location: hasStructuredData
+          ? "Structured data is in the user message above (rows, columns, aggregations)."
+          : "Inline data is in the user's prompt text above.",
+        note: "Perform the requested analysis on the data already in context, then use results in your storyboard.",
       },
     };
   },
@@ -129,6 +128,7 @@ register(
   },
   async (args) => {
     console.log("[Tool:draft_storyboard] Scenes:", args.scene_count, "| Mood:", args.color_mood, "| Climax:", args.climax_scene);
+    // Reminders removed — all rules are already in the system prompt.
     return {
       result: {
         storyboard: args.storyboard,
@@ -136,14 +136,7 @@ register(
         color_mood: args.color_mood ?? "professional",
         pacing: args.pacing ?? "steady",
         climax_scene: args.climax_scene,
-        reminders: {
-          narrative_arc: "Ensure your storyboard follows: Hook → Context → Tension → Evidence → Climax → Resolution → Close",
-          so_what: "Every chart/metric scene MUST include a 'So What?' interpretation in narration — don't just read data, EXPLAIN what it means",
-          breathing: "Insert 1 breathing scene (single metric, kawaii, or callout) after every 2-3 data-heavy scenes",
-          variety: "Use at least 4 different element types. Never use the same element type 3 scenes in a row",
-          pacing: "Vary scene durations: hook=150f, context=180f, data=210f, climax=270f, close=150f",
-        },
-        status: "Storyboard saved. Next steps: (1) call get_element_catalog, (2) call generate_palette with your color_mood — REQUIRED, (3) produce_script using palette colors and narrative arc.",
+        status: "Storyboard saved. Next: call generate_palette (REQUIRED), then produce_script.",
       },
     };
   },
@@ -167,11 +160,14 @@ register(
     },
   },
   async () => {
+    // Full element schemas are already in the system prompt.
+    // Return only a lightweight index to avoid ~12KB duplication in conversation history.
+    const typeIndex = ELEMENT_CATALOG.map((e) => e.type);
     return {
       result: {
-        elements: ELEMENT_CATALOG,
-        stagger_system: STAGGER_SYSTEM,
-        tips: ELEMENT_TIPS,
+        available_types: typeIndex,
+        stagger_values: Object.keys(STAGGER_SYSTEM.values),
+        note: "Full element schemas and props are in your system instructions. Refer to them directly when building scenes.",
       },
     };
   },
@@ -213,19 +209,10 @@ register(
 
     console.log("[Tool:generate_palette] Input:", input, "| Scheme:", scheme, "| Primary:", palette.primary);
 
+    // Usage guide removed — palette mapping rules are in the system prompt.
+    // Return only the palette data (AI needs the actual hex values).
     return {
-      result: {
-        palette,
-        usage_guide: {
-          "theme.primaryColor": palette.primary,
-          "theme.secondaryColor": palette.secondary,
-          scene_backgrounds: "Alternate between palette.background.light and palette.background.dark",
-          chart_colors: "Use palette.chart array for bar/pie/line/sankey element colors",
-          text_on_dark_bg: palette.text.light,
-          text_on_light_bg: palette.text.dark,
-          accent_for_callouts: palette.accent,
-        },
-      },
+      result: { palette },
     };
   },
 );
@@ -278,9 +265,3 @@ register(
   },
 );
 
-// --- Helpers ---
-
-function extractInlineData(prompt: string): string {
-  // Return the raw prompt as data context when no structured BusinessData provided
-  return `[User's raw prompt contains inline data]:\n${prompt}`;
-}

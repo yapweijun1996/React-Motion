@@ -4,6 +4,11 @@
  * AI drives the loop. It decides which tools to call and when to stop.
  * We do NOT hardcode the order of tool calls.
  * Max iterations prevent infinite loops.
+ *
+ * Hooks (Claude Code pattern):
+ * - PostToolUse: storyboard advisory when produce_script called without planning
+ * - Stop Hook: deterministic quality checks before accepting result
+ * - Budget tracking: warn on high token usage
  */
 
 import {
@@ -18,9 +23,11 @@ import {
   getToolExecutor,
   type ToolContext,
 } from "./agentTools";
+import { runStopChecks } from "./agentHooks";
 import { ClassifiedError, logError } from "./errors";
 
 const MAX_ITERATIONS = 12;
+const BUDGET_WARN_CHARS = 200_000; // ~50K tokens
 
 export type AgentProgress = {
   iteration: number;
@@ -55,6 +62,13 @@ export async function runAgentLoop(
 
   const log: AgentProgress[] = [];
 
+  // --- Hook state ---
+  const calledTools = new Set<string>();
+  let textOnlyStreak = 0;
+  let stopRetried = false;
+  let storyboardAdvisoryGiven = false;
+  let totalChars = systemPrompt.length + userMessage.length;
+
   function report(iteration: number, action: string, detail?: string) {
     const p: AgentProgress = { iteration, maxIterations: MAX_ITERATIONS, action, detail };
     log.push(p);
@@ -65,22 +79,31 @@ export async function runAgentLoop(
   for (let i = 1; i <= MAX_ITERATIONS; i++) {
     report(i, "thinking", "Calling Gemini with tools...");
 
-    // Call Gemini — it may return text, tool calls, or both
     const result: GeminiCallResult = await callGeminiRaw(
       systemPrompt,
       messages,
       { tools, temperature: 0.8 },
     );
 
-    // Collect function calls from response
+    // RM-143e: Budget tracking
+    const responseChars = result.parts.reduce(
+      (s, p) => s + (p.text?.length ?? JSON.stringify(p).length), 0,
+    );
+    totalChars += responseChars;
+    if (totalChars > BUDGET_WARN_CHARS) {
+      report(i, "budget_warning", `~${Math.round(totalChars / 4000)}K tokens`);
+    }
+
     const functionCalls = result.parts.filter((p) => p.functionCall);
     const textParts = result.parts.filter((p) => p.text);
 
-    // If no function calls, AI produced only text — shouldn't happen with tools, but handle it
+    // RM-143d: Smart text-only handling
     if (functionCalls.length === 0) {
       const text = textParts.map((p) => p.text).join("");
       report(i, "text_only", `${textParts.length} text parts`);
       console.log("[Agent] AI text:", text.slice(0, 300) + (text.length > 300 ? "..." : ""));
+
+      // Try parsing as fallback JSON
       if (text.includes('"scenes"')) {
         try {
           const parsed = JSON.parse(text);
@@ -89,26 +112,32 @@ export async function runAgentLoop(
         } catch { /* not valid JSON, continue */ }
       }
 
-      // Add AI response to conversation and prompt it to use tools
+      textOnlyStreak++;
       messages.push({ role: "model", parts: result.parts as GeminiPart[] });
-      messages.push({
-        role: "user",
-        parts: [{ text: "Please use the available tools. Call analyze_data or draft_storyboard first, then produce_script when ready." }],
-      });
+
+      // First text-only: allow AI to think. Second+: gentle guidance.
+      if (textOnlyStreak >= 2) {
+        messages.push({
+          role: "user",
+          parts: [{ text: "When you're ready, please use the available tools to proceed. Start with draft_storyboard if you haven't yet." }],
+        });
+      }
       continue;
     }
 
-    // Log AI reasoning if it included text alongside tool calls
+    // AI called tools — reset streak
+    textOnlyStreak = 0;
+
     if (textParts.length > 0) {
       const reasoning = textParts.map((p) => p.text).join("");
       console.log("[Agent] AI reasoning:", reasoning.slice(0, 300) + (reasoning.length > 300 ? "..." : ""));
     }
 
-    // Add model's response (with function calls) to conversation
     messages.push({ role: "model", parts: result.parts as GeminiPart[] });
 
     // Execute each function call
     const responseParts: GeminiPart[] = [];
+    let terminalScript: Record<string, unknown> | null = null;
 
     for (const part of functionCalls) {
       const { name, args } = part.functionCall!;
@@ -116,10 +145,11 @@ export async function runAgentLoop(
 
       const executor = getToolExecutor(name);
       if (!executor) {
+        // RM-143c: is_error flag
         responseParts.push({
           functionResponse: {
             name,
-            response: { error: `Unknown tool: ${name}` },
+            response: { error: `Unknown tool: ${name}`, is_error: true },
           },
         });
         continue;
@@ -127,18 +157,14 @@ export async function runAgentLoop(
 
       try {
         const toolResult = await executor(args, context);
-
-        // Debug: log tool result summary
         const resultKeys = Object.keys(toolResult.result);
         console.log(`[Agent] Tool "${name}" returned: { ${resultKeys.join(", ")} }`);
 
-        // Check if this is the terminal tool (produce_script)
+        calledTools.add(name);
+
+        // Capture terminal result — don't return yet (hooks run after inner loop)
         if (name === "produce_script" && toolResult.result.terminal) {
-          const scriptJson = toolResult.result.script as Record<string, unknown>;
-          const sceneCount = (scriptJson.scenes as unknown[])?.length ?? "?";
-          report(i, "produce_script", `Script produced — ${sceneCount} scenes`);
-          console.log("[Agent] Final script:", JSON.stringify(scriptJson).slice(0, 500) + "...");
-          return { scriptJson, conversationLog: log, iterations: i };
+          terminalScript = toolResult.result.script as Record<string, unknown>;
         }
 
         responseParts.push({
@@ -147,17 +173,62 @@ export async function runAgentLoop(
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         report(i, `tool_error:${name}`, msg);
+        // RM-143c: is_error flag
         responseParts.push({
-          functionResponse: { name, response: { error: msg } },
+          functionResponse: { name, response: { error: msg, is_error: true } },
         });
       }
     }
 
     // Send tool results back to AI
     messages.push({ role: "user", parts: responseParts });
+    totalChars += responseParts.reduce((s, p) => s + JSON.stringify(p).length, 0);
+
+    // --- Post-tool hooks: only when produce_script returned terminal ---
+    if (terminalScript) {
+      // RM-143a: PostToolUse — storyboard advisory (one-time)
+      if (!calledTools.has("draft_storyboard") && !storyboardAdvisoryGiven) {
+        storyboardAdvisoryGiven = true;
+        report(i, "advisory", "No storyboard drafted before produce_script");
+        messages.push({
+          role: "user",
+          parts: [{
+            text: "Note: You produced a script without drafting a storyboard. " +
+              "Scripts without narrative planning typically lack: " +
+              "a compelling hook (scene 1), emotional arc (tension → climax), and action close. " +
+              "Consider calling draft_storyboard first and then produce_script again with an improved narrative.",
+          }],
+        });
+        terminalScript = null;
+        continue; // AI gets a chance to revise
+      }
+
+      // RM-143b: Stop hook — deterministic quality gate
+      const checks = runStopChecks(terminalScript);
+      if (!checks.pass && !stopRetried) {
+        stopRetried = true;
+        report(i, "quality_gate", checks.issues.join("; "));
+        messages.push({
+          role: "user",
+          parts: [{
+            text: "Quality check found issues with the script:\n" +
+              checks.issues.map((s) => "- " + s).join("\n") +
+              "\nPlease fix these issues and call produce_script again.",
+          }],
+        });
+        terminalScript = null;
+        continue; // one retry
+      }
+
+      // All hooks passed (or already retried) — accept and return
+      const sceneCount = (terminalScript.scenes as unknown[])?.length ?? "?";
+      report(i, "produce_script", `Script produced — ${sceneCount} scenes`);
+      console.log("[Agent] Final script:", JSON.stringify(terminalScript).slice(0, 500) + "...");
+      return { scriptJson: terminalScript, conversationLog: log, iterations: i };
+    }
   }
 
-  // Max iterations reached — ask AI for final output as plain JSON
+  // Max iterations reached — force JSON output
   report(MAX_ITERATIONS, "max_reached", "Requesting final output...");
 
   messages.push({
