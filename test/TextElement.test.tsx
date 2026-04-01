@@ -146,4 +146,47 @@ describe("TextElement", () => {
       expect(cursor.style.opacity).toBe("0");
     });
   });
+
+  describe("glow and shadow", () => {
+    it("applies glow textShadow on dark bg", () => {
+      mockFrame = 60;
+      const el = makeEl({ glow: true, color: "#60a5fa" });
+      const { container } = render(<TextElement el={el} index={0} dark={true} />);
+      const div = container.firstElementChild as HTMLElement;
+      expect(div.style.textShadow).toContain("0 0 24px");
+      expect(div.style.textShadow).toContain("0 0 48px");
+    });
+
+    it("applies shadow textShadow", () => {
+      mockFrame = 60;
+      const el = makeEl({ shadow: true });
+      const { container } = render(<TextElement el={el} index={0} />);
+      const div = container.firstElementChild as HTMLElement;
+      expect(div.style.textShadow).toContain("2px 4px 8px");
+    });
+
+    it("combines glow + shadow", () => {
+      mockFrame = 60;
+      const el = makeEl({ glow: true, shadow: true });
+      const { container } = render(<TextElement el={el} index={0} dark={true} />);
+      const div = container.firstElementChild as HTMLElement;
+      expect(div.style.textShadow).toContain("0 0 24px");
+      expect(div.style.textShadow).toContain("2px 4px 8px");
+    });
+
+    it("no textShadow when neither glow nor shadow set", () => {
+      mockFrame = 60;
+      const { container } = render(<TextElement el={makeEl()} index={0} />);
+      const div = container.firstElementChild as HTMLElement;
+      expect(div.style.textShadow).toBe("");
+    });
+
+    it("glow works with typewriter animation", () => {
+      mockFrame = 60;
+      const el = makeEl({ animation: "typewriter", content: "Hi!", glow: true, color: "#60a5fa" });
+      const { container } = render(<TextElement el={el} index={0} dark={true} />);
+      const div = container.firstElementChild as HTMLElement;
+      expect(div.style.textShadow).toContain("0 0 24px");
+    });
+  });
 });

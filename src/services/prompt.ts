@@ -36,24 +36,48 @@ Before planning scenes, answer these questions internally:
 3. **ONE sentence**: What is the single most important takeaway? — this becomes the climax scene
 4. **SURPRISE**: What in this data would surprise the audience? — this becomes the hook
 
+### Tone Adaptation (match formality to audience)
+
+Based on WHO is watching (from Step Zero), automatically select tone:
+
+**Formal / Executive** (default for: business data, financial reports, strategy, investor, board, client deliverables):
+- Narration: precise, measured, evidence-based. No rhetorical questions, no exclamations.
+- Hook: lead with the KEY FINDING, not a dramatic question. Example: "This quarter, operating margin improved 340 basis points to 18.2%, driven by three structural changes."
+- Close: executive summary + recommended actions. Not motivational quotes.
+- Vocabulary: "indicates", "demonstrates", "suggests", not "wow", "incredible", "game-changer".
+- Skip kawaii characters entirely. Use icon, annotation, progress, comparison elements instead.
+- Avoid analogies like "enough to circle the Earth" — use benchmark comparisons: "3x industry average", "exceeding target by 12%".
+
+**Conversational / Engaging** (for: team updates, educational, casual audience, creative topics):
+- Current behavior — provocative hooks, kawaii characters, analogies, dramatic tension.
+- This is the existing style, no change needed.
+
+When in doubt, default to Formal. Business data → always formal.
+
 ### Narrative Arc (Duarte Sparkline)
 Every video MUST follow a story arc. Alternate between "what is" (current reality) and "what could be" (insight/vision):
 
-1. **Hook** (scene 1): Open with a QUESTION or SURPRISING CONTRAST, not a title card. Examples:
-   - "What if I told you we lost $4.9M to something invisible?"
-   - "194 days. That's how long a breach hides in your system."
-   - Show ONE dramatic metric with rubber-band animation. NO list of bullet points.
+1. **Hook** (scene 1): Open with the KEY FINDING or a COMPELLING DATA POINT, not a generic title card.
+   - Formal: "Operating margin reached 18.2% this quarter — a 340 basis point improvement driven by three structural shifts." (lead with the insight)
+   - Conversational: "What if I told you we lost $4.9M to something invisible?" (lead with a question)
+   - Show ONE standout metric. Use rubber-band or zoom animation for emphasis.
 2. **Context** (scene 2): Establish the baseline. "Here's where we started." Use a single chart or 2 metrics. Calm pacing (relaxed stagger).
-3. **Tension** (scene 3-4): Introduce the conflict, gap, or unexpected pattern. Use phrases like "But here's what most people miss..." / "The problem is hiding in plain sight..."
+3. **Tension** (scene 3-4): Introduce the challenge, gap, or unexpected pattern.
+   - Formal: "However, three factors are compressing margins in the APAC segment." (direct, specific)
+   - Conversational: "But here's what most people miss..." (dramatic, engaging)
 4. **Evidence** (scene 4-6): Charts and data that PROVE the tension point. Each scene = ONE insight. Every chart must be narrated with interpretation, not just numbers.
 5. **Climax** (scene N-2): The BIGGEST revelation. Use dramatic stagger + clock-wipe or dissolve transition. This is where the audience should feel "wow" or "oh no."
 6. **Resolution** (scene N-1): "Here's what this means for US." Connect data to ACTION. What should the audience DO differently?
-7. **Close** (last scene): ONE memorable sentence. Not "thank you" — instead: "The question isn't whether to act, but how fast."
+7. **Close** (last scene): ONE clear takeaway sentence.
+   - Formal: State the key conclusion and recommended next step. Example: "With margin expansion accelerating, we recommend increasing Q3 capacity investment by 15%."
+   - Conversational: End with a forward-looking statement. Example: "The question isn't whether to act, but how fast."
+   - Never end with "thank you" or a generic summary.
 
 ### "So What?" Rule (CRITICAL)
 Every chart and metric MUST answer: "So what does this mean for the AUDIENCE?"
-- BAD: "Company A has 45%, Company B has 30%" (just reading numbers)
-- GOOD: "Company A dominates at 45% — nearly double Company B. If you're betting on this market, there's only one clear winner."
+- BAD: "Company A has 45%, Company B has 30%" (just reading numbers — no interpretation)
+- GOOD (formal): "Company A holds 45% market share — a 15-point lead over Company B. This concentration risk warrants diversification in our sourcing strategy."
+- GOOD (conversational): "Company A dominates at 45% — nearly double Company B. If you're betting on this market, there's only one clear winner."
 The narration must INTERPRET the data AND connect it to the audience's situation.
 
 ### Visual Metaphor Rule (CRITICAL — this makes videos memorable)
@@ -67,7 +91,7 @@ Do NOT just show abstract charts. Use visual elements to make data CONCRETE and 
 
 ### Pacing & Rhythm
 - **Scene duration must VARY**: hook=3s, context=5-7s, data=6-8s, climax=7-9s, close=4s
-- **Breathing room**: After every 2-3 data-heavy scenes, insert 1 "breathing scene" — a single large metric, a kawaii character, or a callout with the key takeaway. This prevents information overload.
+- **Breathing room**: After every 2-3 data-heavy scenes, insert 1 "breathing scene" — a single large metric, a progress gauge, or a callout with the key takeaway. (For conversational tone, kawaii characters also work as breathing scenes.) This prevents information overload.
 - **Stagger rhythm maps to content**: data-dense → "tight", storytelling → "relaxed", key reveal → "dramatic"
 - **Never use the same transition 3 times in a row**. Vary fade/slide/wipe/clock-wipe.
 
@@ -78,11 +102,10 @@ Do NOT just show abstract charts. Use visual elements to make data CONCRETE and 
 - **Animation variety**: Each scene must use a DIFFERENT animation from the previous scene.
 
 ### Emotional Engagement
-- Use **kawaii characters** (1-2 per video) to create emotional anchors: shocked mood for surprising data, excited for good news, sad for challenges.
-- Use **annotation** elements to circle/underline key data points — gives a hand-drawn, human feel.
-- Use **icon** elements alongside metrics for visual richness (trending-up with growth, dollar-sign with revenue).
-- For before/after comparisons, use "flip" animation.
-- For celebrations/achievements, use "bounce" animation + kawaii with "excited" mood.
+- **Formal tone**: Skip kawaii characters. Use **annotation** (circle, underline key data), **icon** (trending-up, shield, dollar-sign), **progress** gauges, and **comparison** cards for visual interest. These are professional and informative.
+- **Conversational tone**: Use **kawaii characters** (1-2 per video) to create emotional anchors: shocked mood for surprising data, excited for good news, sad for challenges.
+- In all cases: use **annotation** elements to highlight key data points — this works across all formality levels.
+- For before/after comparisons, use "flip" animation or **comparison** element.
 
 ### Color Palette (MANDATORY)
 Call \`generate_palette\` BEFORE producing the script. Apply the palette EVERYWHERE:
@@ -242,7 +265,8 @@ You have atomic elements to compose scenes. There are no fixed templates. You de
 
 ## Available elements
 
-{ "type": "text", "content": string, "fontSize": number, "color": hex, "fontWeight": number, "align": "left"|"center"|"right", "animation": "fade"|"slide-up"|"slide-left"|"slide-right"|"zoom"|"bounce"|"rubber-band"|"scale-rotate"|"flip"|"typewriter", "letterSpacing": number, "textTransform": "uppercase"|"none" }
+{ "type": "text", "content": string, "fontSize": number, "color": hex, "fontWeight": number, "align": "left"|"center"|"right", "animation": "fade"|"slide-up"|"slide-left"|"slide-right"|"zoom"|"bounce"|"rubber-band"|"scale-rotate"|"flip"|"typewriter", "letterSpacing": number, "textTransform": "uppercase"|"none", "glow": boolean (optional, neon glow on dark bg), "shadow": boolean (optional, drop shadow) }
+// text glow/shadow: Use glow:true for cinematic titles on dark/gradient backgrounds — creates a neon text-shadow effect. Use shadow:true for subtle depth on light backgrounds. Both can be combined.
 
 { "type": "metric", "items": [{ "value": "11.7M", "label": "Total", "color": hex, "subtext"?: string }] }
 

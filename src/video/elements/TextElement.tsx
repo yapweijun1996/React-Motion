@@ -4,6 +4,17 @@ import type { SceneElement } from "../../types";
 
 type Props = { el: SceneElement; index: number; dark?: boolean };
 
+/** Build CSS textShadow from glow / shadow props. */
+function resolveTextShadow(el: SceneElement, dark?: boolean): string | undefined {
+  const glow = el.glow as boolean | undefined;
+  const shadow = el.shadow as boolean | undefined;
+  const color = (el.color as string) ?? (dark ? "#f1f5f9" : "#1e293b");
+  const parts: string[] = [];
+  if (glow) parts.push(`0 0 24px ${color}88`, `0 0 48px ${color}44`);
+  if (shadow) parts.push("2px 4px 8px rgba(0,0,0,0.3)");
+  return parts.length > 0 ? parts.join(", ") : undefined;
+}
+
 /** Characters revealed per frame at 30 fps (~60 chars/sec). */
 const CHARS_PER_FRAME = 2;
 /** Cursor blink cycle in frames (on for half, off for half). */
@@ -21,6 +32,7 @@ export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
 
   const content = (el.content as string) ?? "";
   const isTypewriter = animation === "typewriter" && content.length > 0;
+  const textShadow = resolveTextShadow(el, dark);
 
   // --- Typewriter mode ---
   if (isTypewriter) {
@@ -34,6 +46,7 @@ export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
         align={(el.align as "left" | "center" | "right") ?? "left"}
         letterSpacing={(el.letterSpacing as number) ?? 0}
         textTransform={(el.textTransform as string) as React.CSSProperties["textTransform"]}
+        textShadow={textShadow}
       />
     );
   }
@@ -51,6 +64,7 @@ export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
         letterSpacing: (el.letterSpacing as number) ?? 0,
         textTransform: (el.textTransform as string) as React.CSSProperties["textTransform"],
         lineHeight: 1.3,
+        textShadow,
         opacity,
         transform,
       }}
@@ -73,6 +87,7 @@ type TypewriterProps = {
   align: "left" | "center" | "right";
   letterSpacing: number;
   textTransform: React.CSSProperties["textTransform"];
+  textShadow?: string;
 };
 
 /**
@@ -99,6 +114,7 @@ const TypewriterText: React.FC<TypewriterProps> = ({
   align,
   letterSpacing,
   textTransform,
+  textShadow,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -128,6 +144,7 @@ const TypewriterText: React.FC<TypewriterProps> = ({
         textTransform,
         lineHeight: 1.3,
         whiteSpace: "pre-wrap",
+        textShadow,
       }}
     >
       {tokens.map((token, i) => (
