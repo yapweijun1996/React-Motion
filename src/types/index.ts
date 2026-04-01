@@ -12,4 +12,8 @@ export type {
   VideoScene,
   SceneElement,
   ThemeConfig,
+  StoryboardPlan,
+  StoryboardScenePlan,
+  ReviewResult,
+  ReviewIssue,
 } from "./video";

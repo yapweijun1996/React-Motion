@@ -45,3 +45,39 @@ export type ThemeConfig = {
   style?: "corporate" | "modern" | "minimal";
   chartColors?: string[];
 };
+
+// --- Multi-Agent intermediate types ---
+
+/** Storyboard Agent → Visual Director Agent 通信合约 */
+export type StoryboardPlan = {
+  storyboard: string;
+  sceneCount: number;
+  colorMood: string;
+  pacing: string;
+  climaxScene?: number;
+  scenePlan: StoryboardScenePlan[];
+  userPrompt: string;
+  dataContext: string;
+};
+
+export type StoryboardScenePlan = {
+  sceneNumber: number;
+  role: "hook" | "context" | "tension" | "evidence" | "climax" | "resolution" | "breathing" | "close";
+  insight: string;
+  soWhat: string;
+  elementHints: string[];
+  duration: "short" | "medium" | "long";
+};
+
+/** Quality Reviewer Agent 输出 */
+export type ReviewResult = {
+  pass: boolean;
+  issues: ReviewIssue[];
+};
+
+export type ReviewIssue = {
+  target: "storyboard" | "visual";
+  category: string;
+  description: string;
+  sceneIds?: string[];
+};

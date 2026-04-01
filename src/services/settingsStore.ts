@@ -1,6 +1,6 @@
-import { validateSettings, type AppSettings, type ExportQuality, type BgmMood } from "./validate";
+import { validateSettings, type AppSettings, type ExportQuality, type BgmMood, type AgentMode } from "./validate";
 
-export type { AppSettings, ExportQuality, BgmMood } from "./validate";
+export type { AppSettings, ExportQuality, BgmMood, AgentMode } from "./validate";
 
 const STORAGE_KEY = "react-motion-settings";
 
@@ -46,6 +46,7 @@ export function loadSettings(): AppSettings {
       canvasEffects: stored.canvasEffects ?? false,
       bgMusicEnabled: stored.bgMusicEnabled ?? false,
       bgMusicMood: stored.bgMusicMood ?? "ambient",
+      agentMode: stored.agentMode ?? "single",
     };
 
     const result = validateSettings(merged);
@@ -80,6 +81,7 @@ export function saveSettings(settings: AppSettings): void {
       canvasEffects: result.data.canvasEffects,
       bgMusicEnabled: result.data.bgMusicEnabled,
       bgMusicMood: result.data.bgMusicMood,
+      agentMode: result.data.agentMode,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch (err) {
@@ -114,6 +116,7 @@ type StoredSettings = {
   canvasEffects?: boolean;
   bgMusicEnabled?: boolean;
   bgMusicMood?: BgmMood;
+  agentMode?: AgentMode;
   // Legacy field — read for migration then discard
   geminiApiKey?: string;
 };
@@ -134,6 +137,7 @@ function getDefaults(): AppSettings {
     canvasEffects: false,
     bgMusicEnabled: false,
     bgMusicMood: "ambient",
+    agentMode: "single",
   };
 }
 

@@ -20,4 +20,6 @@ export type AgentLoopResult = {
   iterations: number;
   /** Token budget summary for observability */
   budgetSummary: BudgetSummary;
+  /** Which agent mode was used (for A/B testing observability) */
+  agentMode?: "single" | "multi";
 };

@@ -277,7 +277,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
                 clearSettings();
                 clearCache();
-                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsVoice: "Kore", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient" });
+                setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsVoice: "Kore", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient", agentMode: "single" });
                 alert("All local data cleared.");
               }}
             >

@@ -28,6 +28,8 @@ export type ExportQuality = "draft" | "standard" | "high";
 
 export type BgmMood = "corporate" | "upbeat" | "calm" | "dramatic" | "inspirational" | "playful" | "cinematic" | "ambient";
 
+export type AgentMode = "single" | "multi";
+
 export type AppSettings = {
   geminiApiKey: string;
   geminiModel: string;
@@ -37,6 +39,7 @@ export type AppSettings = {
   canvasEffects: boolean;
   bgMusicEnabled: boolean;
   bgMusicMood: BgmMood;
+  agentMode: AgentMode;
 };
 
 const VALID_MODEL_IDS = [
@@ -94,9 +97,14 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
     ? (input.bgMusicMood as BgmMood)
     : "ambient";
 
+  const VALID_AGENT_MODES: AgentMode[] = ["single", "multi"];
+  const agentMode: AgentMode = isStr(input.agentMode) && VALID_AGENT_MODES.includes(input.agentMode as AgentMode)
+    ? (input.agentMode as AgentMode)
+    : "single";
+
   return {
     ok: true,
-    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood },
+    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood, agentMode },
     warnings,
   };
 }
