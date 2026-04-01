@@ -6,13 +6,13 @@
  * and returns actionable decisions (continue / warn / force_finish).
  */
 
-// --- Constants ---
-
-const DEFAULT_BUDGET_TOKENS = 150_000; // ~600K chars at /4
-const WARN_THRESHOLD = 0.70;           // 70% → lower temperature, restrict tools
-const FORCE_THRESHOLD = 0.90;          // 90% → force produce_script
-const DIMINISHING_TURNS = 2;           // consecutive low-output turns to trigger
-const DIMINISHING_MIN_TOKENS = 100;    // model must produce > this per turn
+import {
+  DEFAULT_BUDGET_TOKENS,
+  BUDGET_WARN_THRESHOLD,
+  BUDGET_FORCE_THRESHOLD,
+  DIMINISHING_TURNS,
+  DIMINISHING_MIN_TOKENS,
+} from "./agentConfig";
 
 // --- Types ---
 
@@ -139,7 +139,7 @@ export function checkBudget(tracker: BudgetTracker): BudgetDecision {
   const pctRounded = Math.round(pct * 100);
   const isDiminishing = detectDiminishingReturns(tracker);
 
-  if (isDiminishing || pct >= FORCE_THRESHOLD) {
+  if (isDiminishing || pct >= BUDGET_FORCE_THRESHOLD) {
     tracker.forceCount++;
     const reason = isDiminishing
       ? "diminishing returns"
@@ -151,7 +151,7 @@ export function checkBudget(tracker: BudgetTracker): BudgetDecision {
     };
   }
 
-  if (pct >= WARN_THRESHOLD) {
+  if (pct >= BUDGET_WARN_THRESHOLD) {
     tracker.warnCount++;
     return {
       action: "warn",

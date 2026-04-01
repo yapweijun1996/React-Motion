@@ -22,6 +22,11 @@ import {
 import type { FunctionDeclaration } from "./gemini";
 import type { ToolContext } from "./agentToolRegistry";
 import type { AgentProgress } from "./agentLoopTypes";
+import {
+  TEMP_NORMAL,
+  TEMP_PRESSURE,
+  TEXT_ONLY_NUDGE_THRESHOLD,
+} from "./agentConfig";
 
 // ═══════════════════════════════════════════════════════════════════
 // Types
@@ -90,7 +95,7 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
     const result = await callGeminiRaw(
       systemPrompt,
       messages,
-      { tools, temperature: isUnderPressure ? 0.5 : 0.8 },
+      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL },
     );
 
     recordModelOutput(budget, i, result.parts);
@@ -102,7 +107,7 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
       textOnlyStreak++;
       messages.push({ role: "model", parts: result.parts as GeminiPart[] });
 
-      if (textOnlyStreak >= 2) {
+      if (textOnlyStreak >= TEXT_ONLY_NUDGE_THRESHOLD) {
         const nudge = `Please use your available tools to proceed. Call \`${terminalTool}\` when ready.`;
         messages.push({ role: "user", parts: [{ text: nudge }] });
         recordUserMessage(budget, nudge);
@@ -243,7 +248,7 @@ async function runPhaseWithMessages(
     const isUnderPressure = budget.warnCount > 0 || budget.forceCount > 0;
     const result = await callGeminiRaw(
       systemPrompt, messages,
-      { tools, temperature: isUnderPressure ? 0.5 : 0.8 },
+      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL },
     );
     recordModelOutput(budget, i, result.parts);
 

@@ -32,6 +32,14 @@ import {
   parseReviewResult,
 } from "./promptAgents";
 import type { AgentProgress, AgentLoopResult } from "./agentLoopTypes";
+import {
+  DEFAULT_BUDGET_TOKENS,
+  MULTI_REPORT_MAX_ITERATIONS,
+  MULTI_STORYBOARD_MAX_ITERATIONS,
+  MULTI_DIRECTOR_MAX_ITERATIONS,
+  MULTI_RETRY_MAX_ITERATIONS,
+  TEMP_REVIEWER,
+} from "./agentConfig";
 
 // ═══════════════════════════════════════════════════════════════════
 // Main entry point
@@ -47,12 +55,12 @@ export async function runMultiAgentLoop(
 
   const log: AgentProgress[] = [];
   let totalIterations = 0;
-  const budget = createBudgetTracker(0, userMessage.length, 150_000);
+  const budget = createBudgetTracker(0, userMessage.length, DEFAULT_BUDGET_TOKENS);
 
   function report(action: string, detail?: string) {
     const p: AgentProgress = {
       iteration: totalIterations,
-      maxIterations: 12,
+      maxIterations: MULTI_REPORT_MAX_ITERATIONS,
       action,
       detail,
     };
@@ -73,7 +81,7 @@ export async function runMultiAgentLoop(
     systemPrompt: storyboardPrompt,
     userMessage,
     toolDeclarations: getToolDeclarationsFiltered(STORYBOARD_TOOLS),
-    maxIterations: 4,
+    maxIterations: MULTI_STORYBOARD_MAX_ITERATIONS,
     context,
     budget,
     terminalTool: "draft_storyboard",
@@ -105,7 +113,7 @@ export async function runMultiAgentLoop(
     systemPrompt: visualPrompt,
     userMessage: handoffMessage,
     toolDeclarations: getToolDeclarationsFiltered(VISUAL_DIRECTOR_TOOLS),
-    maxIterations: 6,
+    maxIterations: MULTI_DIRECTOR_MAX_ITERATIONS,
     context,
     budget,
     terminalTool: "produce_script",
@@ -137,7 +145,7 @@ export async function runMultiAgentLoop(
         name: "VisualDirector",
         systemPrompt: visualPrompt,
         toolDeclarations: getToolDeclarationsFiltered(VISUAL_DIRECTOR_TOOLS),
-        maxIterations: 2,
+        maxIterations: MULTI_RETRY_MAX_ITERATIONS,
         context,
         budget,
         terminalTool: "produce_script",
@@ -168,7 +176,7 @@ export async function runMultiAgentLoop(
 
   try {
     const reviewResult = await callGeminiRaw(reviewPrompt, reviewMessages, {
-      temperature: 0.3,
+      temperature: TEMP_REVIEWER,
       jsonOutput: true,
     });
 
@@ -194,7 +202,7 @@ export async function runMultiAgentLoop(
             name: "VisualDirector",
             systemPrompt: visualPrompt,
             toolDeclarations: getToolDeclarationsFiltered(VISUAL_DIRECTOR_TOOLS),
-            maxIterations: 2,
+            maxIterations: MULTI_RETRY_MAX_ITERATIONS,
             context,
             budget,
             terminalTool: "produce_script",

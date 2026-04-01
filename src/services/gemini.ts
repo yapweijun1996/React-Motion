@@ -2,6 +2,7 @@ import { loadSettings } from "./settingsStore";
 import { ClassifiedError, classifyHttpStatus, logError } from "./errors";
 import { addLogEntry } from "./geminiLog";
 import { GEMINI_API_BASE } from "./apiConfig";
+import { TEMP_DEFAULT } from "./agentConfig";
 
 function getApiKey(): string {
   const { geminiApiKey } = loadSettings();
@@ -75,7 +76,7 @@ export async function callGemini(
 ): Promise<string> {
   const result = await callGeminiRaw(systemPrompt, messages, {
     jsonOutput: true,
-    temperature: 0.7,
+    temperature: TEMP_DEFAULT,
   });
   const text = result.parts.find((p) => p.text)?.text;
   if (!text) throw new ClassifiedError("API_EMPTY_RESPONSE", "Gemini returned no text in response");
@@ -97,7 +98,7 @@ export async function callGeminiRaw(
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: messages,
     generationConfig: {
-      temperature: options.temperature ?? 0.7,
+      temperature: options.temperature ?? TEMP_DEFAULT,
       ...(options.jsonOutput ? { responseMimeType: "application/json" } : {}),
     },
   };

@@ -8,6 +8,7 @@ import {
   checkBudget,
   getBudgetSummary,
 } from "../src/services/budgetTracker";
+import { DEFAULT_BUDGET_TOKENS } from "../src/services/agentConfig";
 
 describe("estimateTokens", () => {
   it("estimates text at /4", () => {
@@ -30,7 +31,7 @@ describe("createBudgetTracker", () => {
     expect(t.breakdown.user).toBe(50);    // 200/4
     expect(t.breakdown.model).toBe(0);
     expect(t.breakdown.toolResults).toBe(0);
-    expect(t.budget).toBe(80_000);
+    expect(t.budget).toBe(DEFAULT_BUDGET_TOKENS);
   });
 
   it("accepts custom budget", () => {

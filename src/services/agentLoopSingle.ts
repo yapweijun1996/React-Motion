@@ -26,8 +26,14 @@ import {
   getBudgetSummary,
 } from "./budgetTracker";
 import type { AgentProgress, AgentLoopResult } from "./agentLoopTypes";
+import {
+  SINGLE_AGENT_MAX_ITERATIONS,
+  TEMP_NORMAL,
+  TEMP_PRESSURE,
+  TEXT_ONLY_NUDGE_THRESHOLD,
+} from "./agentConfig";
 
-const MAX_ITERATIONS = 12;
+const MAX_ITERATIONS = SINGLE_AGENT_MAX_ITERATIONS;
 
 export async function runSingleAgentLoop(
   systemPrompt: string,
@@ -80,7 +86,7 @@ export async function runSingleAgentLoop(
     const result: GeminiCallResult = await callGeminiRaw(
       systemPrompt,
       messages,
-      { tools: isUnderPressure ? toolsMinimal : tools, temperature: isUnderPressure ? 0.5 : 0.8 },
+      { tools: isUnderPressure ? toolsMinimal : tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL },
     );
 
     // RM-143e: Record model output tokens
@@ -108,7 +114,7 @@ export async function runSingleAgentLoop(
       messages.push({ role: "model", parts: result.parts as GeminiPart[] });
 
       // First text-only: allow AI to think. Second+: gentle guidance.
-      if (textOnlyStreak >= 2) {
+      if (textOnlyStreak >= TEXT_ONLY_NUDGE_THRESHOLD) {
         const nudge = "When you're ready, please use the available tools to proceed. Start with draft_storyboard if you haven't yet.";
         messages.push({ role: "user", parts: [{ text: nudge }] });
         recordUserMessage(budget, nudge);
@@ -270,7 +276,7 @@ export async function runSingleAgentLoop(
   messages.push({ role: "user", parts: [{ text: forceMsg }] });
   recordUserMessage(budget, forceMsg);
   const finalResult = await callGeminiRaw(systemPrompt, messages, {
-    temperature: 0.5,
+    temperature: TEMP_PRESSURE,
     jsonOutput: true,
   });
 

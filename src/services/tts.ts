@@ -57,9 +57,14 @@ export type TTSProgress = {
 
 // --- Public API ---
 
-/** Base delay before retrying a rate-limited request (exponential backoff) */
-const RETRY_BASE_MS = 2000;
-const MAX_RETRIES = 3;
+import {
+  TTS_MAX_RETRIES,
+  TTS_RETRY_BASE_MS,
+  RETRYABLE_HTTP_CODES,
+} from "./agentConfig";
+
+const RETRY_BASE_MS = TTS_RETRY_BASE_MS;
+const MAX_RETRIES = TTS_MAX_RETRIES;
 
 /**
  * Generate TTS audio for all scenes that have narration text.
@@ -149,8 +154,7 @@ async function runPool<T>(
   await Promise.all(workers);
 }
 
-/** Status codes worth retrying (transient errors) */
-const RETRYABLE_CODES = ["429", "500", "502", "503"];
+const RETRYABLE_CODES = RETRYABLE_HTTP_CODES;
 
 /**
  * Call Gemini TTS with exponential backoff retry on transient errors (429/500/502/503).

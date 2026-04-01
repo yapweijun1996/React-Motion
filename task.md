@@ -144,6 +144,7 @@
 | RM-174 | Feature | 增强生成进度指示器 + Gemini API Log Modal | Done | 进度条新增: Turn X/Y iteration 显示, action 图标+详情, 动作历史(最近5条). Log 系统: geminiLog.ts 环形缓冲区(50条)拦截所有 API 调用, LogModal 可展开查看完整 request/response JSON, Copy All 一键复制调试. Header 新增 📋 Log 按钮. |
 | RM-175 | Refactor | 集中管理 API 端点 & 模型名 — 消除硬编码重复 | Done | 新建 apiConfig.ts 作为唯一真相源 (Single Source of Truth): GEMINI_API_BASE (3处→1处)、AVAILABLE_MODELS (2处→1处)、DEFAULT_MODEL/DEFAULT_TTS_VOICE/DEFAULT_BGM_MOOD (散落5+处→1处)、BGM_MOODS+BgmMood type (2处→1处). 零循环依赖 (纯叶子模块). 修改 6 文件, 新增 1 文件. |
 | RM-176 | Refactor | SVG icon 统一化 — 消除全部 emoji/unicode 硬编码 | Done | 新建 Icons.tsx (18 个 SVG icon 组件, inline SVG, 零外部依赖). 替换 5 个文件 20+ 处硬编码: GenerationProgressBar (🧠🔍🔧💬📝🎬✅🛠⚠▶), SettingsPanel (🙈👁⏹✓), App (↻📋⚙✕), PlayerControls (⏸▶⊡⛶), TimelineElement (✓×2). 所有 icon 统一管理, size/color prop 可控. |
+| RM-177 | Refactor | Agent 行为参数集中管理 — agentConfig.ts 唯一真相源 | Done | 新建 agentConfig.ts (纯叶子模块, 零 import): 27 个参数分 5 区块 (迭代上限/预算阈值/温度控制/重试配置/行为阈值)。消除 8 文件散落 hardcode: budgetTracker (5 const)、agentLoopSingle (MAX_ITERATIONS+temp+nudge)、agentLoopMulti (budget 150K+iter 12/4/6/2+temp 0.3)、agentPhase (temp×3+nudge)、tts (retry×3)、bgMusic (retry×3)、generateScript (parse retry)、gemini (temp 0.7×2)。RETRYABLE_CODES 2处→1处。测试 import agentConfig 断言 (不再硬编码期望值)。tsc 零错误, 326 tests pass。新增 1 文件, 修改 9 文件。 |
 
 ### To Do — Remaining
 

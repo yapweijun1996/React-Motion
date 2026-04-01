@@ -8,6 +8,7 @@ import { generateBgMusic } from "./bgMusic";
 import { adjustSceneTimings } from "./adjustTiming";
 import { loadSettings } from "./settingsStore";
 import { trackEvent } from "./metrics";
+import { JSON_PARSE_MAX_RETRIES } from "./agentConfig";
 
 export type GenerationProgress = {
   stage: "agent" | "evaluate" | "tts" | "bgm" | "done";
@@ -100,7 +101,7 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
   };
 }
 
-const MAX_PARSE_RETRIES = 2;
+const MAX_PARSE_RETRIES = JSON_PARSE_MAX_RETRIES;
 
 export async function generateScript(
   userPrompt: string,

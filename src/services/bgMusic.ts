@@ -40,8 +40,14 @@ const MOOD_PROMPTS: Record<BgmMood, string> = {
 
 // --- Public API ---
 
-const RETRY_BASE_MS = 2000;
-const MAX_RETRIES = 2;
+import {
+  BGM_MAX_RETRIES,
+  BGM_RETRY_BASE_MS,
+  RETRYABLE_HTTP_CODES,
+} from "./agentConfig";
+
+const RETRY_BASE_MS = BGM_RETRY_BASE_MS;
+const MAX_RETRIES = BGM_MAX_RETRIES;
 
 /**
  * Generate background music from a mood keyword or custom prompt.
@@ -149,7 +155,7 @@ async function callLyria(
 
 // --- Retry logic ---
 
-const RETRYABLE_CODES = ["429", "500", "502", "503"];
+const RETRYABLE_CODES = RETRYABLE_HTTP_CODES;
 
 async function callLyriaWithRetry(
   prompt: string,
