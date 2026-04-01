@@ -24,27 +24,16 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
   const previewAudioRef = useRef<HTMLAudioElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
 
-  // Sync when panel opens
   useEffect(() => {
-    if (open) {
-      setSettings(loadSettings());
-      setSaved(false);
-    }
+    if (open) { setSettings(loadSettings()); setSaved(false); }
     if (!open) stopPreview();
   }, [open]);
 
   const stopPreview = () => {
-    if (previewAudioRef.current) {
-      previewAudioRef.current.pause();
-      previewAudioRef.current = null;
-    }
-    if (previewUrlRef.current) {
-      URL.revokeObjectURL(previewUrlRef.current);
-      previewUrlRef.current = null;
-    }
+    if (previewAudioRef.current) { previewAudioRef.current.pause(); previewAudioRef.current = null; }
+    if (previewUrlRef.current) { URL.revokeObjectURL(previewUrlRef.current); previewUrlRef.current = null; }
     setPreviewState("idle");
   };
-
   const handlePreview = async () => {
     if (previewState === "playing") { stopPreview(); return; }
     if (!settings.geminiApiKey) return;
@@ -59,11 +48,8 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
       audio.onerror = () => stopPreview();
       await audio.play();
       setPreviewState("playing");
-    } catch {
-      stopPreview();
-    }
+    } catch { stopPreview(); }
   };
-
   const handleSave = () => {
     saveSettings(settings);
     setSaved(true);
@@ -253,36 +239,39 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
           </div>
         </div>
 
+        {/* Agent Mode */}
+        <div className="rm-field">
+          <label className="rm-label">
+            Agent Mode
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#f59e0b", marginLeft: 6, padding: "1px 6px", background: "#fef3c7", borderRadius: 4 }}>Beta</span>
+          </label>
+          <select
+            value={settings.agentMode}
+            onChange={(e) => setSettings({ ...settings, agentMode: e.target.value as "single" | "multi" })}
+            className="rm-select"
+          >
+            <option value="single">Single Agent (stable)</option>
+            <option value="multi">Multi Agent — 3-role collaboration (beta)</option>
+          </select>
+          <div className="rm-hint">
+            Multi mode splits AI into Storyboard (narrative) + Visual Director (design) + Quality Reviewer (evaluation). May produce higher quality but uses more API calls.
+          </div>
+        </div>
+
         {/* Data & Privacy */}
         <div className="rm-field">
           <label className="rm-label">Data & Privacy</label>
-          <div className="rm-hint" style={{ marginBottom: 8 }}>
-            Cached scripts expire after 7 days. API key is stored obfuscated (not plaintext).
-          </div>
+          <div className="rm-hint" style={{ marginBottom: 8 }}>Cached scripts expire after 7 days. API key is stored obfuscated.</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button
-              className="rm-btn rm-btn-secondary"
-              style={{ fontSize: 13, padding: "6px 14px", minHeight: 36 }}
-              onClick={async () => {
-                await clearCache();
-                alert("Cached scripts cleared.");
-              }}
-            >
-              Clear Cached Scripts
-            </button>
-            <button
-              className="rm-btn rm-btn-secondary"
-              style={{ fontSize: 13, padding: "6px 14px", minHeight: 36, color: "#dc2626" }}
+            <button className="rm-btn rm-btn-secondary" style={{ fontSize: 13, padding: "6px 14px", minHeight: 36 }}
+              onClick={async () => { await clearCache(); alert("Cached scripts cleared."); }}>Clear Cached Scripts</button>
+            <button className="rm-btn rm-btn-secondary" style={{ fontSize: 13, padding: "6px 14px", minHeight: 36, color: "#dc2626" }}
               onClick={() => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
-                clearSettings();
-                clearCache();
+                clearSettings(); clearCache();
                 setSettings({ geminiApiKey: "", geminiModel: "gemini-2.0-flash", ttsVoice: "Kore", ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: "ambient", agentMode: "single" });
                 alert("All local data cleared.");
-              }}
-            >
-              Clear All Data
-            </button>
+              }}>Clear All Data</button>
           </div>
         </div>
         </div>
