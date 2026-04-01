@@ -126,6 +126,11 @@
 | RM-162 | Task | Export 性能优化 — WebCodecs encoder queue 自适应 (cores×2)、事件驱动 backpressure (dequeue event 替代 1ms busy-wait)、encode pipeline 不阻塞 capture、waitMicrotask (setTimeout(0) 替代 rAF)、progress 更新降频、yield 间隔自适应。 | Done |
 | RM-163 | Task | Director Agent — `direct_visuals` tool 强制 AI 为每场景做视觉决策 (visual_metaphor 必填)。Visual advisory hook (跳过 direct_visuals 不允许出脚本)。Stop hook 新增 rich visual check (svg/map/progress/comparison/timeline)。OODAE 流程新增 step 5 visual direction。 | Done |
 | RM-164 | Task | Ken Burns 微运动 — 场景级 scale(1.0→1.03) + translate 漂移，6 种预设自动轮转 (zoom in/out + 不同方向)。easeInOut cubic 平滑。scene.id hash 决定方向。纯 CSS transform，GPU 加速零 CPU 开销。 | Done |
+| RM-165 | Bug | Video UI/UX 深度修复 — (1) useStagger delay cap (MAX_DELAY_FRAMES=90) 防 line-chart 动画不触发; (2) NoiseBackground 移除 (feGaussianBlur GPU 杀手); (3) isDarkBg 支持 #rgb/rgb()/rgba() 格式; (4) GenerationProgressBar 实时 elapsed 计时器 (startTime + setInterval); (5) MALFORMED_FUNCTION_CALL 不崩溃 (返回 retry hint); (6) Budget 80K→150K tokens 防 agent loop 过早 force_finish。 | Done |
+| RM-166 | Feature | Color palette pipeline 打通 — (1) ThemeConfig 新增 chartColors 字段; (2) PaletteContext (React Context) 传递 palette 到所有 chart 元素; (3) chartColor(i, palette?) 优先用 AI palette，fallback 去掉黄/灰的 Tableau8; (4) produce_script 自动注入 lastGeneratedPalette.chart; (5) MapElement 统一用 chartColor 替代 DEFAULT_COLORS; (6) prompt 强化 palette 约束。14 文件改动。 | Done |
+| RM-167 | Bug | 场景 transition 背景穿透修复 — SceneRenderer 分层渲染: 外层 div 持有 scene bgColor (不受 opacity 影响)，内层 div 承载 content (受 fade transition opacity 控制)。防止 player wrapper 黑色背景在 fade 过渡时穿透浅色场景。 | Done |
+| RM-168 | UX | 文字对比度安全网 — readableColor() 共享工具 (chartHelpers.ts)，TextElement/ListElement/CalloutElement 使用。dark 背景上 AI 设的暗色文字强制覆盖为亮色。ListElement body text 不再使用 AI textColor，直接用 dark-aware 默认值。 | Done |
+| RM-169 | UX | Palette 背景色现代化 — palette.ts bgDark desaturate 1.5→0.5 (保留主色调色相，不再出脏灰)。prompt.ts 强制 bgColor 只用 palette.background.dark/light，禁止随机 hex。 | Done |
 
 ### In Progress / Testing
 
