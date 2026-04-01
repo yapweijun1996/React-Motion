@@ -230,7 +230,8 @@ function formatAgentMessage(p: AgentProgress, completedTools: string[]): string 
   if (p.action === "thinking") {
     if (completedTools.length === 0) return "Analyzing your data...";
     if (!completedTools.includes("draft_storyboard")) return "Planning storyboard...";
-    if (!completedTools.includes("generate_palette")) return "Designing visual elements...";
+    if (!completedTools.includes("generate_palette")) return "Designing color palette...";
+    if (!completedTools.includes("direct_visuals")) return "Directing visual approach...";
     if (!completedTools.includes("produce_script")) return "Writing final script...";
     return "Refining script...";
   }
@@ -240,6 +241,7 @@ function formatAgentMessage(p: AgentProgress, completedTools: string[]): string 
     "tool:draft_storyboard": "Writing storyboard...",
     "tool:get_element_catalog": "Reviewing elements...",
     "tool:generate_palette": "Generating color palette...",
+    "tool:direct_visuals": "Directing visual approach...",
     "tool:produce_script": "Producing video script...",
     quality_gate: "Checking script quality...",
     evaluate: "Evaluating script quality...",

@@ -59,6 +59,12 @@ function estimateElementHeight(el: SceneElement): number {
       return 150;
     case "divider":
       return 20;
+    // Decoration elements: small visual footprint, gap absorbed by GenericScene wrapper
+    case "annotation":
+    case "kawaii":
+    case "icon":
+    case "lottie":
+      return 60;
     default:
       return 120;
   }

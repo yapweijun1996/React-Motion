@@ -1,23 +1,7 @@
 import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
-import { isDarkBg } from "../GenericScene";
+import { readableColor } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
-
-const LIGHT_TEXT = "#f1f5f9";
-const DARK_TEXT = "#1e293b";
-
-/**
- * Ensure text color is readable on the current background.
- * If AI set a dark color on a dark background (or light on light), override it.
- */
-function readableColor(explicit: string | undefined, dark?: boolean): string {
-  if (!explicit) return dark ? LIGHT_TEXT : DARK_TEXT;
-  // Check if the explicit color clashes with the background
-  const textIsDark = isDarkBg(explicit);
-  if (dark && textIsDark) return LIGHT_TEXT;       // dark text on dark bg → force light
-  if (!dark && !textIsDark) return explicit;       // light text on light bg is fine (could be accent)
-  return explicit;
-}
 
 type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
 

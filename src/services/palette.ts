@@ -56,13 +56,15 @@ export function generatePalette(
   // Chart colors: 8 perceptually distinct colors via LCH
   const chart = generateChartColors(primary, 8);
 
-  // Background colors derived from primary
+  // Background colors — modern, clean light/dark mode
+  // Light: near-white with a hint of primary hue (not pure white)
+  // Dark: deep slate with primary tint (not muddy gray)
   const bgLight = chroma(primary).luminance(0.96).hex();
-  const bgDark = chroma(primary).luminance(0.04).desaturate(1.5).hex();
+  const bgDark = chroma(primary).luminance(0.03).desaturate(0.5).hex();
 
   // Text colors with guaranteed contrast
-  const textDark = chroma(primary).luminance(0.05).desaturate(2).hex();
-  const textLight = chroma(primary).luminance(0.92).desaturate(2).hex();
+  const textDark = chroma(primary).luminance(0.05).desaturate(1).hex();
+  const textLight = chroma(primary).luminance(0.93).desaturate(0.8).hex();
 
   return {
     primary,

@@ -14,8 +14,10 @@ import { useCurrentFrame, useVideoConfig } from "./VideoContext";
 
 const PARTICLE_COUNT = 50;
 const CONNECTION_DIST = 220;
+const CONNECTION_DIST_SQ = CONNECTION_DIST * CONNECTION_DIST; // avoid sqrt in hot loop
 const PARTICLE_RADIUS = 4;
 const BASE_SPEED = 0.5;
+const ALPHA_BUCKETS = 5; // group connection lines by alpha to batch draw calls
 
 type Particle = {
   x: number;
@@ -110,44 +112,97 @@ export const ParticleBg: React.FC<Props> = ({
 
     const positions = getParticlesAtFrame(baseRef.current, frame, width, height);
     const alpha = opacity * fadeIn;
+    if (alpha <= 0) return;
 
-    // Draw connections
-    ctx.strokeStyle = resolvedColor;
-    ctx.lineWidth = 1.5;
+    // --- Grid spatial partition: only check neighbors within CONNECTION_DIST ---
+    const cellSize = CONNECTION_DIST;
+    const cols = Math.ceil(width / cellSize);
+    const rows = Math.ceil(height / cellSize);
+    const grid: number[][] = new Array(cols * rows);
+    for (let i = 0; i < grid.length; i++) grid[i] = [];
+
     for (let i = 0; i < positions.length; i++) {
-      for (let j = i + 1; j < positions.length; j++) {
-        const dx = positions[i].x - positions[j].x;
-        const dy = positions[i].y - positions[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < CONNECTION_DIST) {
-          const lineAlpha = alpha * (1 - dist / CONNECTION_DIST) * 0.6;
-          ctx.globalAlpha = lineAlpha;
-          ctx.beginPath();
-          ctx.moveTo(positions[i].x, positions[i].y);
-          ctx.lineTo(positions[j].x, positions[j].y);
-          ctx.stroke();
+      const col = Math.min(Math.floor(positions[i].x / cellSize), cols - 1);
+      const row = Math.min(Math.floor(positions[i].y / cellSize), rows - 1);
+      grid[row * cols + col].push(i);
+    }
+
+    // --- Connection lines: collect into alpha buckets for batched stroke ---
+    // Each bucket: array of [x1, y1, x2, y2] segments
+    const buckets: Array<number[]> = [];
+    for (let b = 0; b < ALPHA_BUCKETS; b++) buckets.push([]);
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const cell = grid[row * cols + col];
+        // Check this cell + right/below/diagonal neighbors (avoid duplicate pairs)
+        const neighborOffsets = [
+          [0, 0], [0, 1], [1, 0], [1, 1], [1, -1],
+        ];
+        for (const [dr, dc] of neighborOffsets) {
+          const nr = row + dr;
+          const nc = col + dc;
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+          const neighbor = grid[nr * cols + nc];
+          const isSelf = dr === 0 && dc === 0;
+
+          for (let a = 0; a < cell.length; a++) {
+            const startB = isSelf ? a + 1 : 0;
+            for (let b = startB; b < neighbor.length; b++) {
+              const pi = positions[cell[a]];
+              const pj = positions[neighbor[b]];
+              const dx = pi.x - pj.x;
+              const dy = pi.y - pj.y;
+              const distSq = dx * dx + dy * dy;
+              if (distSq < CONNECTION_DIST_SQ) {
+                const ratio = 1 - Math.sqrt(distSq) / CONNECTION_DIST;
+                const bucketIdx = Math.min(Math.floor(ratio * ALPHA_BUCKETS), ALPHA_BUCKETS - 1);
+                buckets[bucketIdx].push(pi.x, pi.y, pj.x, pj.y);
+              }
+            }
+          }
         }
       }
     }
 
-    // Draw particles with glow
+    // Draw connection lines — one stroke() per alpha bucket
+    ctx.strokeStyle = resolvedColor;
+    ctx.lineWidth = 1.5;
+    for (let b = 0; b < ALPHA_BUCKETS; b++) {
+      const segs = buckets[b];
+      if (segs.length === 0) continue;
+      const bucketAlpha = alpha * ((b + 0.5) / ALPHA_BUCKETS) * 0.6;
+      ctx.globalAlpha = bucketAlpha;
+      ctx.beginPath();
+      for (let s = 0; s < segs.length; s += 4) {
+        ctx.moveTo(segs[s], segs[s + 1]);
+        ctx.lineTo(segs[s + 2], segs[s + 3]);
+      }
+      ctx.stroke();
+    }
+
+    // --- Particles: batched glow + core (2 fill calls total) ---
+    ctx.fillStyle = resolvedColor;
+
+    // Glow layer
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.beginPath();
+    for (const p of positions) {
+      const r = PARTICLE_RADIUS * p.size * 2.5;
+      ctx.moveTo(p.x + r, p.y);
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+
+    // Core layer
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
     for (const p of positions) {
       const r = PARTICLE_RADIUS * p.size;
-
-      // Outer glow
-      ctx.globalAlpha = alpha * 0.3;
-      ctx.fillStyle = resolvedColor;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, r * 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Core dot
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = resolvedColor;
-      ctx.beginPath();
+      ctx.moveTo(p.x + r, p.y);
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      ctx.fill();
     }
+    ctx.fill();
 
     ctx.globalAlpha = 1;
   }, [frame, width, height, resolvedColor, opacity, fadeIn]);

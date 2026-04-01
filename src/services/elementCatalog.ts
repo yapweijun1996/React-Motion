@@ -76,7 +76,7 @@ export const ELEMENT_CATALOG = [
     props: "shape (circle|underline|arrow|box|cross|highlight|bracket), color, fillColor, strokeWidth, roughness (0.5-3), size, label, labelColor, labelSize, stagger",
     description: "Hand-drawn sketch annotation (roughjs). Stroke draws in progressively with spring animation. Perfect for educational emphasis, marking important data, or adding a casual/friendly feel.",
     shapes: "circle (emphasis ring), underline (wavy underline), arrow (pointing direction), box (highlight area), cross (wrong/eliminated), highlight (semi-transparent marker), bracket (curly brace grouping)",
-    usage_tips: "Use 'circle' to emphasize key data points, 'underline' below important text, 'arrow' for flow/direction, 'cross' for wrong answers in educational content, 'highlight' for key phrases, 'bracket' to group items. Set roughness 1-2 for casual, 0.5 for neat. Use size 80-150. Place in 'row' layout with text for annotated explanations.",
+    usage_tips: "Use 'circle' to emphasize key data points, 'underline' below important text, 'arrow' for flow/direction, 'cross' for wrong answers in educational content, 'highlight' for key phrases, 'bracket' to group items. Set roughness 1-2 for casual, 0.5 for neat. Use size 80-150. MUST place in 'row' layout paired with text/metric/callout — NEVER as a standalone element in 'column' layout. Annotation is a decoration, not content. If you need a standalone label, use text or callout instead.",
   },
   {
     type: "svg",
@@ -147,7 +147,7 @@ export const ELEMENT_TIPS = [
   "ANIMATION: Vary animation types across scenes — don't use 'fade' for everything. Mix bounce, slide-up, slide-left, zoom for visual rhythm.",
   "ANIMATION: Charts (bar-chart, pie-chart, line-chart, sankey) now support container-level entrance animation. Prefer 'zoom' or 'bounce' over 'fade' for charts — the whole chart scales/bounces in, then internal animations (bar fill, pie rotation, line draw) play on top.",
   "ICON: Use 'icon' element for section headers (icon + text in 'row'), KPI decoration (icon + metric in 'row'), or standalone visual anchors. Icons are SVG — crisp at any size, lightweight, and export-safe.",
-  "ANNOTATION: Use 'annotation' for educational/study videos — 'circle' to highlight key points, 'cross' for wrong answers, 'arrow' for flow. Hand-drawn style adds warmth. Don't overuse — 1-2 per video for emphasis.",
+  "ANNOTATION: Use 'annotation' for educational/study videos — 'circle' to highlight key points, 'cross' for wrong answers, 'arrow' for flow. Hand-drawn style adds warmth. Don't overuse — 1-2 per video for emphasis. MUST pair with another element in 'row' layout — NEVER place as standalone block in 'column' layout.",
   "SVG: Use 'svg' element for custom diagrams (flowcharts, org charts, mind maps, timelines, Venn diagrams) that don't fit standard chart types. AI generates the SVG markup directly. Include viewBox. Use palette colors. One svg per scene.",
   "MAP: Use 'map' element for geographic data — country comparisons, regional revenue, user distribution, supply chains. Highlight 3-8 countries with palette.chart colors. One map per scene.",
   "PROGRESS: Use 'progress' for KPIs that are percentages, scores, or completion rates. The circular arc fill is inherently cinematic — much more visual than plain metric numbers. Use variant 'circular' on dark backgrounds for maximum drama.",

@@ -21,6 +21,11 @@ const PERSONALITY_TYPES = new Set([
   "kawaii", "icon", "annotation", "svg", "lottie", "map",
 ]);
 
+// Rich visual types — require more creative effort than basic icon/kawaii
+const RICH_VISUAL_TYPES = new Set([
+  "svg", "map", "annotation", "progress", "comparison", "timeline",
+]);
+
 // Action words indicating a call-to-action in the closing scene
 const ACTION_PATTERN = /\b(should|must|need|recommend|action|next|start|focus|prioriti|consider|implement|review|ensure)\b/i;
 
@@ -101,6 +106,21 @@ export function runStopChecks(
   if (!hasPersonality) {
     issues.push(
       "No visual personality elements (kawaii/icon/annotation/svg) — video feels like a spreadsheet",
+    );
+  }
+
+  // 5b. Rich visual variety: at least 1 rich visual element (not just icon/kawaii)
+  let hasRichVisual = false;
+  for (const scene of scenes) {
+    const elements = (scene.elements as Record<string, unknown>[]) ?? [];
+    if (elements.some((el) => RICH_VISUAL_TYPES.has(String(el.type)))) {
+      hasRichVisual = true;
+      break;
+    }
+  }
+  if (!hasRichVisual && scenes.length >= 5) {
+    issues.push(
+      "No rich visual elements (svg/map/progress/comparison/timeline) — use at least one for visual impact",
     );
   }
 

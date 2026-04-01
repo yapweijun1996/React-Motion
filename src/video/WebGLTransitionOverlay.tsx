@@ -10,11 +10,14 @@
  * If WebGL fails or canvasEffects is OFF → stays transparent (pure CSS fallback).
  */
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState } from "react";
 import { toPng } from "html-to-image";
 import { createWebGLTransition, type WebGLTransitionRenderer } from "./webglTransition";
 import { useVideoConfig } from "./VideoContext";
 import type { WebGLTransitionType } from "./transitionShaders";
+
+/** Module-level screenshot cache — avoids redundant toPng for the same DOM element. */
+const snapshotCache = new WeakMap<HTMLElement, string>();
 
 type Props = {
   /** Ref to exiting scene DOM element */
@@ -38,44 +41,58 @@ export const WebGLTransitionOverlay: React.FC<Props> = ({
   const [ready, setReady] = useState(false);
   const { width, height } = useVideoConfig();
 
-  // Capture both scenes on mount, create WebGL renderer
-  const initRenderer = useCallback(async () => {
-    if (!canvasRef.current || !sceneAEl || !sceneBEl) return;
-
-    try {
-      // Capture both scenes as data URLs (one-time cost ~100ms)
-      const [dataA, dataB] = await Promise.all([
-        toPng(sceneAEl, { width, height, canvasWidth: width, canvasHeight: height, skipFonts: true,
-          filter: (node: HTMLElement) => node.tagName !== "AUDIO" && node.tagName !== "VIDEO",
-        }),
-        toPng(sceneBEl, { width, height, canvasWidth: width, canvasHeight: height, skipFonts: true,
-          filter: (node: HTMLElement) => node.tagName !== "AUDIO" && node.tagName !== "VIDEO",
-        }),
-      ]);
-
-      // Load as Image elements for WebGL texture upload
-      const [imgA, imgB] = await Promise.all([
-        loadImage(dataA),
-        loadImage(dataB),
-      ]);
-
-      const renderer = createWebGLTransition(canvasRef.current, imgA, imgB, type);
-      if (renderer) {
-        rendererRef.current = renderer;
-        setReady(true);
-      }
-    } catch (err) {
-      console.warn("[WebGL Transition] Capture failed, falling back to CSS:", err);
-    }
-  }, [sceneAEl, sceneBEl, width, height, type]);
-
+  // Capture both scenes on mount, create WebGL renderer (with unmount guard)
   useEffect(() => {
-    initRenderer();
+    let aborted = false;
+
+    async function init() {
+      if (!canvasRef.current || !sceneAEl || !sceneBEl) return;
+
+      try {
+        const captureOpts = {
+          width, height, canvasWidth: width, canvasHeight: height, skipFonts: true,
+          filter: (node: HTMLElement) => node.tagName !== "AUDIO" && node.tagName !== "VIDEO",
+        };
+
+        // Use cached snapshots when available, capture otherwise
+        const [dataA, dataB] = await Promise.all([
+          getCachedSnapshot(sceneAEl, captureOpts),
+          getCachedSnapshot(sceneBEl, captureOpts),
+        ]);
+
+        if (aborted) return; // unmounted during capture — bail out
+
+        const [imgA, imgB] = await Promise.all([
+          loadImage(dataA),
+          loadImage(dataB),
+        ]);
+
+        if (aborted) return; // unmounted during image load — bail out
+
+        const renderer = createWebGLTransition(canvasRef.current, imgA, imgB, type);
+        if (renderer) {
+          if (aborted) {
+            // Mounted → unmounted → async finished: dispose immediately
+            renderer.dispose();
+            return;
+          }
+          rendererRef.current = renderer;
+          setReady(true);
+        }
+      } catch (err) {
+        if (aborted) return;
+        console.warn("[WebGL Transition] Capture failed, falling back to CSS:", err);
+      }
+    }
+
+    init();
+
     return () => {
+      aborted = true;
       rendererRef.current?.dispose();
       rendererRef.current = null;
     };
-  }, [initRenderer]);
+  }, [sceneAEl, sceneBEl, width, height, type]);
 
   // Render shader each frame
   useEffect(() => {
@@ -111,4 +128,16 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onerror = reject;
     img.src = src;
   });
+}
+
+/** Return cached toPng data URL if available, otherwise capture + cache. */
+async function getCachedSnapshot(
+  el: HTMLElement,
+  opts: Parameters<typeof toPng>[1],
+): Promise<string> {
+  const cached = snapshotCache.get(el);
+  if (cached) return cached;
+  const dataUrl = await toPng(el, opts);
+  snapshotCache.set(el, dataUrl);
+  return dataUrl;
 }

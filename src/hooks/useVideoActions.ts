@@ -18,7 +18,6 @@ import type { BusinessData, VideoScript } from "../types";
 type GenerateOptions = {
   prompt: string;
   data?: BusinessData;
-  currentScript: VideoScript | null;
   onScript: (s: VideoScript) => void;
   onStatus: (p: GenerationProgress | null) => void;
   onError: (msg: string) => void;
@@ -36,11 +35,7 @@ export function useGenerate(opts: GenerateOptions) {
     opts.onStatus(null);
 
     try {
-      // Revoke old blob URLs
-      opts.currentScript?.scenes.forEach((s) => {
-        if (s.ttsAudioUrl) URL.revokeObjectURL(s.ttsAudioUrl);
-      });
-
+      // Old blob URLs are revoked by App's useEffect cleanup when script changes
       const result = await generateScript(opts.prompt, opts.data, (p: GenerationProgress) => {
         opts.onStatus(p);
       });

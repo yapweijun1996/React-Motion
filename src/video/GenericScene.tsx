@@ -1,4 +1,5 @@
 import { AbsoluteFill } from "./AbsoluteFill";
+import { useCurrentFrame, useVideoConfig } from "./VideoContext";
 import { TextElement } from "./elements/TextElement";
 import { MetricElement } from "./elements/MetricElement";
 import { BarChartElement } from "./elements/BarChartElement";
@@ -156,7 +157,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
         background: scene.bgGradient ?? undefined,
       }}
     >
-    <div
+      <div
       style={{
         position: "absolute",
         inset: 0,

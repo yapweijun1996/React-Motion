@@ -155,7 +155,13 @@ The canvas is 1920×1080. Elements must fill the space — do NOT cram too many 
   - No quantitative data for the scene → use text/callout/list
   - Only 1 data point → use metric or progress, not a 1-bar chart
   - Qualitative information (conclusions, recommendations) → use list or callout
-  - Geographic data → use map element, not a chart`;
+  - Geographic data → use map element, not a chart
+- **Decoration elements (annotation, icon, kawaii, lottie) are NOT standalone content.**
+  - NEVER place annotation/icon/kawaii/lottie as the sole element in a scene row.
+  - In "column" layout: pair them with a content element on the SAME row using a nested "row" wrapper, or place them BEFORE/AFTER a text title as a visual accent.
+  - Best practice: use layout "row" when combining a decoration element with text or metric.
+  - annotation is for EMPHASIS on existing content — circle around data, underline below text — not a standalone block.
+  - If you need a standalone label/tag, use a text element or callout instead of annotation.`;
 
 /** Narration and visual synchronization rules. */
 export const NARRATION_VISUAL_SYNC = `## Narration ↔ Visual Sync (CRITICAL)

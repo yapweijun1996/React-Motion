@@ -8,6 +8,44 @@
 import { format } from "d3-format";
 
 // ============================================================
+// Color utilities — contrast & readability
+// ============================================================
+
+/** Parse CSS color to [r,g,b]. Handles #hex (3/4/6/8), rgb(), rgba(). */
+function parseColor(color: string): [number, number, number] | null {
+  const hex = color.match(/^#([0-9a-fA-F]{3,8})$/);
+  if (hex) {
+    let c = hex[1];
+    if (c.length === 3 || c.length === 4) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+    return [parseInt(c.slice(0,2),16), parseInt(c.slice(2,4),16), parseInt(c.slice(4,6),16)];
+  }
+  const rgb = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgb) return [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])];
+  return null;
+}
+
+/** Check if a CSS color is dark (luminance < 0.4). */
+export function isColorDark(color: string | undefined): boolean {
+  if (!color) return false;
+  const c = parseColor(color.trim());
+  if (!c) return false;
+  return 0.2126*(c[0]/255) + 0.7152*(c[1]/255) + 0.0722*(c[2]/255) < 0.4;
+}
+
+const LIGHT_TEXT = "#f1f5f9";
+const DARK_TEXT = "#1e293b";
+
+/**
+ * Ensure text color is readable against the background.
+ * If AI set dark text on dark bg (or no color set), return a safe alternative.
+ */
+export function readableColor(explicit: string | undefined, dark?: boolean): string {
+  if (!explicit) return dark ? LIGHT_TEXT : DARK_TEXT;
+  if (dark && isColorDark(explicit)) return LIGHT_TEXT;
+  return explicit;
+}
+
+// ============================================================
 // Chart color palette — single source of truth
 // ============================================================
 

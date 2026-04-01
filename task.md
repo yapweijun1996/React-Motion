@@ -121,6 +121,12 @@
 | RM-158 | Refactor | 拆分 6 个超 300 行文件 — SceneRenderer(439→117) + sceneTimeline.ts(142) + transitionStyles.ts(176)；validate(422→296) + validateEnums.ts(65) + validateSettings.ts(97)；VideoPlayer(390→288) + playerStyles.ts(53) + PlayerControls.tsx(94)；agentTools(366→265) + agentToolRegistry.ts(61) + agentToolScript.ts(64)；App(347→207) + useAppState.ts(182)；agentLoop(328→300) + agentLoopTypes.ts(23)。+10 新文件，所有文件 ≤300 行。re-export 保持向后兼容，零 import 破坏。tsc 零新增错误。 | Done |
 | RM-159 | Resilience | 3 层 React Error Boundary — L1 Element (GenericScene 每个 element 独立包裹，崩溃显示占位符)、L2 Scene (SceneRenderer 每个 scene 独立包裹，崩溃显示遮罩)、L3 Player (App.tsx VideoPlayer 外层包裹，崩溃显示 Retry)。新建 ErrorBoundary.tsx (class component, 138行)。errors.ts 新增 RENDER_ELEMENT_CRASH / RENDER_SCENE_CRASH / RENDER_PLAYER_CRASH 错误码。所有崩溃自动 logError→trackError 上报 metrics。零性能开销，仅异常时触发。tsc 零错误。 | Done |
 
+| RM-160 | Task | Agent quality gate — Evaluate 移入 agentLoop (stop hook 后 AI 评估，失败反馈重试 1 次)。Stop hook 新增 3 项布局检查 (空 chart 数据、元素 >4、字体 <48)。Prompt layout 指导增强。generateScript.ts 移除冗余 evaluate API 调用。 | Done |
+| RM-161 | Task | Video UI/UX 8 项修复 — React Hooks 违规 (BarChart/List/Metric 提取子组件)、useMemo 依赖修复 (Pie/Line/Sankey)、BarChart 动态 barHeight (12+ bars 不裁剪)、PieChart legend 限 8 项、chartWrap overflow:visible、BarChart label 动态宽度、LineChart totalLen 估算、MetricElement 字体自适应。 | Done |
+| RM-162 | Task | Export 性能优化 — WebCodecs encoder queue 自适应 (cores×2)、事件驱动 backpressure (dequeue event 替代 1ms busy-wait)、encode pipeline 不阻塞 capture、waitMicrotask (setTimeout(0) 替代 rAF)、progress 更新降频、yield 间隔自适应。 | Done |
+| RM-163 | Task | Director Agent — `direct_visuals` tool 强制 AI 为每场景做视觉决策 (visual_metaphor 必填)。Visual advisory hook (跳过 direct_visuals 不允许出脚本)。Stop hook 新增 rich visual check (svg/map/progress/comparison/timeline)。OODAE 流程新增 step 5 visual direction。 | Done |
+| RM-164 | Task | Ken Burns 微运动 — 场景级 scale(1.0→1.03) + translate 漂移，6 种预设自动轮转 (zoom in/out + 不同方向)。easeInOut cubic 平滑。scene.id hash 决定方向。纯 CSS transform，GPU 加速零 CPU 开销。 | Done |
+
 ### In Progress / Testing
 
 | Key | Type | Summary | Status | Notes |

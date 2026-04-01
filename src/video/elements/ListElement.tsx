@@ -63,7 +63,8 @@ export const ListElement: React.FC<Props> = ({ el, index, primaryColor, dark, fo
   const items = (el.items as string[]) ?? [];
   const icon = ICON_MAP[(el.icon as string) ?? "bullet"] ?? "\u25cf";
   const color = (el.color as string) ?? primaryColor ?? "#2563eb";
-  const textColor = (el.textColor as string) ?? (dark ? "#e2e8f0" : "#1f2937");
+  // Body text always uses high-contrast defaults — AI-set textColor is unreliable
+  const textColor = dark ? "#e2e8f0" : "#1e293b";
   const stagger = parseStagger(el);
   const animation = (el.animation as string) ? parseAnimation(el) : "slide-left";
   const baseFontSize = (el.fontSize as number) ?? 56;

@@ -1,4 +1,5 @@
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
+import { readableColor } from "../../services/chartHelpers";
 import type { SceneElement } from "../../types";
 
 type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; fontScale?: number };
@@ -45,7 +46,7 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark,
       <div
         style={{
           fontSize: Math.round(((el.fontSize as number) ?? 60) * fontScale),
-          color: (el.color as string) ?? borderColor,
+          color: readableColor((el.color as string) ?? borderColor, dark),
           fontWeight: 600,
           lineHeight: 1.4,
         }}
