@@ -161,6 +161,7 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
       style={{
         position: "absolute",
         inset: 0,
+        overflow: "hidden",
         transform: `scale(${kbScale}) translate(${kbX}px, ${kbY}px)`,
         transformOrigin: "center center",
         display: "flex",

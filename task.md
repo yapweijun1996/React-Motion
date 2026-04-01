@@ -131,6 +131,7 @@
 | RM-167 | Bug | 场景 transition 背景穿透修复 — SceneRenderer 分层渲染: 外层 div 持有 scene bgColor (不受 opacity 影响)，内层 div 承载 content (受 fade transition opacity 控制)。防止 player wrapper 黑色背景在 fade 过渡时穿透浅色场景。 | Done |
 | RM-168 | UX | 文字对比度安全网 — readableColor() 共享工具 (chartHelpers.ts)，TextElement/ListElement/CalloutElement 使用。dark 背景上 AI 设的暗色文字强制覆盖为亮色。ListElement body text 不再使用 AI textColor，直接用 dark-aware 默认值。 | Done |
 | RM-169 | UX | Palette 背景色现代化 — palette.ts bgDark desaturate 1.5→0.5 (保留主色调色相，不再出脏灰)。prompt.ts 强制 bgColor 只用 palette.background.dark/light，禁止随机 hex。 | Done |
+| RM-170 | Bug | 场景高度溢出修复 — PieChartElement SVG maxHeight 从 100% 改为 60vh (防止 1:1 viewBox 按宽度膨胀到 912px)。GenericScene Ken Burns 内层容器增加 overflow:hidden 兜底。根因：row-wrap 布局下 pie-chart + callout 总高度 1158px 超出 1008px 可用高度。 | Done |
 
 ### In Progress / Testing
 
