@@ -40,8 +40,8 @@ export async function saveScript(script: VideoScript, prompt: string): Promise<v
     db.close();
 
     // Persist TTS audio blobs separately (blob URLs can't be serialized)
-    await saveTTSAudio("cache", script.scenes);
-    console.log("[Cache] Saved last script + TTS audio");
+    const audioSaved = await saveTTSAudio("cache", script.scenes);
+    console.log(`[Cache] Saved last script${audioSaved ? " + TTS audio" : ""}`);
   } catch (err) {
     logWarn("Cache", "CACHE_SAVE_FAILED", "Save failed", { error: err });
   }

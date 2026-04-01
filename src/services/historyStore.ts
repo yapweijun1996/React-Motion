@@ -58,12 +58,12 @@ export async function saveToHistory(
     db.close();
 
     // Persist TTS audio blobs
-    await saveTTSAudio(`history-${id}`, script.scenes);
+    const audioSaved = await saveTTSAudio(`history-${id}`, script.scenes);
 
     // Evict oldest if over limit
     await evictOldest();
 
-    console.log(`[History] Saved entry #${id} + TTS audio`);
+    console.log(`[History] Saved entry #${id}${audioSaved ? " + TTS audio" : ""}`);
     return id;
   } catch (err) {
     logWarn("History", "CACHE_SAVE_FAILED", "Failed to save history entry", { error: err });

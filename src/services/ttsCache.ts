@@ -30,9 +30,9 @@ type TTSAudioEntry = {
 export async function saveTTSAudio(
   prefix: string,
   scenes: readonly VideoScene[],
-): Promise<void> {
+): Promise<boolean> {
   const audioScenes = scenes.filter((s) => s.ttsAudioUrl);
-  if (audioScenes.length === 0) return;
+  if (audioScenes.length === 0) return false;
 
   // Step 1: Fetch all blobs from blob URLs (outside IDB transaction)
   const entries: { key: string; blob: Blob; durationMs: number }[] = [];
@@ -50,11 +50,16 @@ export async function saveTTSAudio(
     }
   }
 
-  if (entries.length === 0) return;
+  if (entries.length === 0) return false;
 
   // Step 2: Write all in one IDB transaction
   try {
     const db = await openDB();
+    if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+      console.warn("[TTSCache] Store not found — skipping save");
+      db.close();
+      return false;
+    }
     const tx = db.transaction(STORE_TTS_AUDIO, "readwrite");
     const store = tx.objectStore(STORE_TTS_AUDIO);
     for (const e of entries) {
@@ -62,9 +67,12 @@ export async function saveTTSAudio(
     }
     await idbTx(tx);
     db.close();
-    console.log(`[TTS Cache] Saved ${entries.length} audio tracks (${prefix})`);
+    console.log(`[TTSCache] Saved ${entries.length} audio tracks (${prefix})`);
+    return true;
   } catch (err) {
-    logWarn("TTSCache", "CACHE_SAVE_FAILED", "Failed to save TTS audio", { error: err });
+    logWarn("TTSCache", "CACHE_SAVE_FAILED", `Failed to save TTS audio (${prefix})`,
+      { error: err instanceof Error ? err.message : err });
+    return false;
   }
 }
 
@@ -79,6 +87,11 @@ export async function restoreTTSAudio(
 ): Promise<VideoScene[]> {
   try {
     const db = await openDB();
+    if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+      console.warn("[TTSCache] Store not found — skipping restore");
+      db.close();
+      return scenes;
+    }
     const tx = db.transaction(STORE_TTS_AUDIO, "readonly");
     const store = tx.objectStore(STORE_TTS_AUDIO);
 
@@ -110,11 +123,12 @@ export async function restoreTTSAudio(
     });
 
     if (count > 0) {
-      console.log(`[TTS Cache] Restored ${count} audio tracks (${prefix})`);
+      console.log(`[TTSCache] Restored ${count} audio tracks (${prefix})`);
     }
     return result;
   } catch (err) {
-    logWarn("TTSCache", "CACHE_LOAD_FAILED", "Failed to restore TTS audio", { error: err });
+    logWarn("TTSCache", "CACHE_LOAD_FAILED", `Failed to restore TTS audio (${prefix})`,
+      { error: err instanceof Error ? err.message : err });
     return scenes;
   }
 }

@@ -7,7 +7,7 @@
  */
 
 const DB_NAME = "react-motion";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 export const STORE_SCRIPTS = "scripts";
 export const STORE_HISTORY = "history";
@@ -53,9 +53,12 @@ export function openDB(): Promise<IDBDatabase> {
         metricsStore.createIndex("type", "type", { unique: false });
       }
 
-      // v4: TTS audio blob store (key = "cache:scene-0" or "history-5:scene-0")
-      if (oldVersion < 4) {
-        db.createObjectStore(STORE_TTS_AUDIO);
+      // v4/v5: TTS audio blob store (key = "cache:scene-0" or "history-5:scene-0")
+      // Defensive: check existence to handle edge case where DB was at v4 without this store
+      if (oldVersion < 5) {
+        if (!db.objectStoreNames.contains(STORE_TTS_AUDIO)) {
+          db.createObjectStore(STORE_TTS_AUDIO);
+        }
       }
     };
 
