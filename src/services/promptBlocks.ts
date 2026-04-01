@@ -12,7 +12,7 @@ export const VIDEO_SCRIPT_SCHEMA = `{
   "height": 1080,
   "durationInFrames": number,
   "narrative": "overall narrative summary",
-  "theme": { "primaryColor": "#hex", "secondaryColor": "#hex", "style": "corporate"|"modern"|"minimal" },
+  "theme": { "primaryColor": "#hex", "secondaryColor": "#hex", "style": "corporate"|"modern"|"minimal", "chartColors": [palette.chart] },
   "scenes": [
     {
       "id": "scene-N",
@@ -148,7 +148,14 @@ The canvas is 1920×1080. Elements must fill the space — do NOT cram too many 
   - **ABSOLUTE MINIMUM: 48.** Any fontSize below 48 is FORBIDDEN — it will be unreadable when displayed.
   - **Metric values**: fontSize is controlled internally (160px), just keep value strings concise ("2.5M" not "2,500,000").
 - **Prefer fewer, bigger elements** over many small elements. Each scene should have one clear focal point.
-- Scene backgrounds should alternate light/dark for visual rhythm. Use high-contrast text colors.`;
+- Scene backgrounds should alternate light/dark for visual rhythm. Use high-contrast text colors.
+- **NEVER use a chart element without data.** bar-chart needs bars[], pie-chart needs slices[], line-chart needs series[], sankey needs nodes[]+links[]. If the scene has no numeric data to chart, use text, callout, list, metric, or comparison instead.
+- **Non-chart scenes still fill space.** Use layout "center" with a large metric, callout, comparison, or progress element as the focal point. Avoid scenes with only small text floating in empty space.
+- **When NOT to use chart elements:**
+  - No quantitative data for the scene → use text/callout/list
+  - Only 1 data point → use metric or progress, not a 1-bar chart
+  - Qualitative information (conclusions, recommendations) → use list or callout
+  - Geographic data → use map element, not a chart`;
 
 /** Narration and visual synchronization rules. */
 export const NARRATION_VISUAL_SYNC = `## Narration ↔ Visual Sync (CRITICAL)

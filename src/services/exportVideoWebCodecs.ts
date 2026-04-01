@@ -11,8 +11,12 @@
 import { Muxer, ArrayBufferTarget } from "mp4-muxer";
 import { WEBCODECS_CODEC } from "./webCodecsSupport";
 
-/** Max frames queued in encoder before we pause feeding. */
-const MAX_QUEUE_SIZE = 5;
+/**
+ * Adaptive queue size — scale with available hardware.
+ * More cores → GPU can pipeline more frames → larger queue = fewer stalls.
+ * Minimum 8 (low-end), max 30 (high-end 16+ core machines).
+ */
+const MAX_QUEUE_SIZE = Math.min(30, Math.max(8, (navigator.hardwareConcurrency ?? 4) * 2));
 /** Insert keyframe every N seconds. */
 const KEYFRAME_INTERVAL_SEC = 2;
 
@@ -75,9 +79,15 @@ export function createStreamingEncoder(
   const feedFrame = async (canvas: HTMLCanvasElement, frameIndex: number) => {
     if (encodingError) throw encodingError;
 
-    // Backpressure
-    while (encoder.encodeQueueSize > MAX_QUEUE_SIZE) {
-      await new Promise<void>((r) => setTimeout(r, 1));
+    // Backpressure — event-driven wait instead of busy-polling
+    if (encoder.encodeQueueSize > MAX_QUEUE_SIZE) {
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          if (encoder.encodeQueueSize <= MAX_QUEUE_SIZE) resolve();
+          else encoder.addEventListener("dequeue", check, { once: true });
+        };
+        encoder.addEventListener("dequeue", check, { once: true });
+      });
     }
 
     // Canvas → ImageBitmap → VideoFrame (no PNG encoding!)

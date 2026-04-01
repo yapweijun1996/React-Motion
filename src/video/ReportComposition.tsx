@@ -3,6 +3,7 @@ import { AbsoluteFill } from "./AbsoluteFill";
 import { AudioTrack } from "./AudioTrack";
 import { useCurrentFrame } from "./VideoContext";
 import { FrameProvider } from "./VideoContext";
+import { PaletteProvider } from "./PaletteContext";
 import { SceneRenderer } from "./SceneRenderer";
 import { GenericScene } from "./GenericScene";
 import type { VideoScript } from "../types";
@@ -32,6 +33,7 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
 
   return (
     <AbsoluteFill>
+      <PaletteProvider colors={script.theme?.chartColors}>
       <SceneRenderer
         frame={frame}
         scenes={script.scenes}
@@ -45,6 +47,7 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
           </FrameProvider>
         )}
       />
+      </PaletteProvider>
 
       {/* Background music — global track with auto-ducking */}
       {script.bgMusicUrl && (

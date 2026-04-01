@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { GenerationProgress } from "../services/generateScript";
 
 const TOOL_LABELS: Record<string, string> = {
@@ -22,7 +23,16 @@ function formatEta(seconds: number): string {
 type Props = { progress: GenerationProgress };
 
 export const GenerationProgressBar: React.FC<Props> = ({ progress }) => {
-  const { stageIndex, stageCount, stageLabel, message, percent, elapsedMs, eta, completedTools } = progress;
+  const { stageIndex, stageCount, stageLabel, message, percent, startTime, eta, completedTools } = progress;
+
+  // Real-time elapsed timer — ticks every second
+  const [now, setNow] = useState(() => performance.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(performance.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const liveElapsed = startTime ? Math.round(now - startTime) : progress.elapsedMs;
 
   return (
     <div className="rm-alert rm-alert-info">
@@ -31,7 +41,7 @@ export const GenerationProgressBar: React.FC<Props> = ({ progress }) => {
         <strong>
           Step {stageIndex + 1}/{stageCount} &middot; {stageLabel}
         </strong>
-        <span className="rm-eta">{formatElapsed(elapsedMs)} elapsed</span>
+        <span className="rm-eta">{formatElapsed(liveElapsed)} elapsed</span>
       </div>
 
       {/* Detail message + ETA */}

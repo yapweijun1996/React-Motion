@@ -6,6 +6,9 @@
  *
  * Pattern: Claude Code "Stop Hook" — validate result before accepting.
  * If checks fail, issues are sent back to AI for one retry.
+ *
+ * 8 checks: hook, action-close, element-diversity, transition-diversity,
+ * personality, empty-chart-data, element-overflow, font-size-minimum.
  */
 
 export type StopCheckResult = {
@@ -99,6 +102,38 @@ export function runStopChecks(
     issues.push(
       "No visual personality elements (kawaii/icon/annotation/svg) — video feels like a spreadsheet",
     );
+  }
+
+  // 6. Empty chart data: charts without data render as invisible spacers
+  for (let si = 0; si < scenes.length; si++) {
+    const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
+    for (const el of elements) {
+      const t = String(el.type);
+      if (t === "bar-chart" && !((el.bars as unknown[])?.length > 0))
+        issues.push(`Scene ${si + 1}: bar-chart has no bars — remove it or add data`);
+      if (t === "pie-chart" && !((el.slices as unknown[])?.length > 0))
+        issues.push(`Scene ${si + 1}: pie-chart has no slices — remove it or add data`);
+      if (t === "line-chart" && !((el.series as unknown[])?.length > 0))
+        issues.push(`Scene ${si + 1}: line-chart has no series — remove it or add data`);
+      if (t === "sankey" && (!((el.nodes as unknown[])?.length > 0) || !((el.links as unknown[])?.length > 0)))
+        issues.push(`Scene ${si + 1}: sankey missing nodes or links — remove it or add data`);
+    }
+  }
+
+  // 7. Element overflow: > 4 elements per scene crowds the 1920×1080 layout
+  for (let si = 0; si < scenes.length; si++) {
+    const count = ((scenes[si].elements as unknown[]) ?? []).length;
+    if (count > 4)
+      issues.push(`Scene ${si + 1}: ${count} elements — split into multiple scenes (max 4)`);
+  }
+
+  // 8. Font size minimum: < 48 is unreadable at 1920×1080 displayed size
+  for (let si = 0; si < scenes.length; si++) {
+    const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
+    for (const el of elements) {
+      if (el.type === "text" && typeof el.fontSize === "number" && el.fontSize < 48)
+        issues.push(`Scene ${si + 1}: text fontSize ${el.fontSize} below 48 minimum`);
+    }
   }
 
   return { pass: issues.length === 0, issues };

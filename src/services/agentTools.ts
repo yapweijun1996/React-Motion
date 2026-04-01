@@ -1,7 +1,16 @@
 import type { FunctionDeclaration } from "./gemini";
 import type { BusinessData } from "../types";
-import { generatePalette, type PaletteScheme } from "./palette";
+import { generatePalette, type Palette, type PaletteScheme } from "./palette";
 import { ELEMENT_CATALOG, STAGGER_SYSTEM } from "./elementCatalog";
+
+// --- Palette state (captured by generate_palette, consumed by produce_script) ---
+
+let lastGeneratedPalette: Palette | null = null;
+
+/** Reset palette state between generation runs. Called at start of agentLoop. */
+export function resetPaletteState(): void {
+  lastGeneratedPalette = null;
+}
 
 // --- Tool result type ---
 
@@ -208,11 +217,91 @@ register(
     const palette = generatePalette(input, scheme);
 
     console.log("[Tool:generate_palette] Input:", input, "| Scheme:", scheme, "| Primary:", palette.primary);
+    lastGeneratedPalette = palette;
 
-    // Usage guide removed — palette mapping rules are in the system prompt.
-    // Return only the palette data (AI needs the actual hex values).
     return {
       result: { palette },
+    };
+  },
+);
+
+// ============================================================
+// Tool: direct_visuals
+// OODAE phase: Decide (Director)
+// AI makes explicit visual decisions for each scene
+// ============================================================
+
+const RICH_VISUAL_TYPES = new Set([
+  "svg", "map", "annotation", "progress", "comparison", "timeline",
+]);
+
+register(
+  {
+    name: "direct_visuals",
+    description:
+      "Visual direction for each scene — called AFTER storyboard and palette, BEFORE produce_script. " +
+      "You are now the DIRECTOR: for each scene, decide the concrete visual approach. " +
+      "Do NOT default to bar-chart for everything. Think: what VISUAL METAPHOR makes this data memorable? " +
+      "At least 2 scenes MUST use rich visual elements (svg, map, annotation, progress, comparison, timeline). " +
+      "Icons and kawaii do NOT count as rich visuals.",
+    parameters: {
+      type: "object",
+      properties: {
+        scenes: {
+          type: "array",
+          description: "Visual direction for each planned scene.",
+          items: {
+            type: "object",
+            properties: {
+              scene_role: {
+                type: "string",
+                description: "Role in narrative arc: hook/context/tension/evidence/climax/resolution/breathing/close.",
+              },
+              primary_element: {
+                type: "string",
+                description: "Main visual element type for this scene (e.g. 'bar-chart', 'svg', 'map', 'progress', 'comparison', 'timeline', 'metric').",
+              },
+              visual_metaphor: {
+                type: "string",
+                description: "How the data is visually represented. Be specific: 'SVG flowchart showing fund allocation path', 'progress ring showing 73% target achieved', 'map highlighting APAC revenue concentration'. Do NOT write 'bar chart showing values' — that's not a metaphor.",
+              },
+              supporting_elements: {
+                type: "array",
+                items: { type: "string" },
+                description: "Additional elements: annotation circles on key data, icon pairs, callout for insight, etc.",
+              },
+              emotion: {
+                type: "string",
+                description: "Scene emotion: confident/alarming/celebratory/neutral/dramatic/hopeful.",
+              },
+            },
+            required: ["scene_role", "primary_element", "visual_metaphor"],
+          },
+        },
+      },
+      required: ["scenes"],
+    },
+  },
+  async (args) => {
+    const scenes = (args.scenes as Array<Record<string, unknown>>) ?? [];
+    const richCount = scenes.filter((s) =>
+      RICH_VISUAL_TYPES.has(String(s.primary_element)),
+    ).length;
+
+    console.log(
+      `[Tool:direct_visuals] ${scenes.length} scenes directed | ${richCount} rich visuals`,
+    );
+
+    const guidance = richCount < 2
+      ? `Only ${richCount} scene(s) use rich visuals. Replace some bar-chart/pie-chart scenes with svg, map, progress, comparison, or timeline. Aim for at least 2 rich visual scenes.`
+      : "Visual plan accepted. Now call produce_script — follow these visual directions for each scene.";
+
+    return {
+      result: {
+        visual_plan: scenes,
+        richVisualCount: richCount,
+        guidance,
+      },
     };
   },
 );
@@ -261,6 +350,16 @@ register(
         };
       }
     }
+    // Auto-inject palette chartColors if AI didn't set them
+    if (lastGeneratedPalette) {
+      const theme = (script.theme as Record<string, unknown>) ?? {};
+      if (!Array.isArray(theme.chartColors) || (theme.chartColors as unknown[]).length === 0) {
+        theme.chartColors = lastGeneratedPalette.chart;
+        script.theme = theme;
+        console.log("[produce_script] Auto-injected palette.chart →", lastGeneratedPalette.chart.length, "colors");
+      }
+    }
+
     return { result: { script, terminal: true } };
   },
 );

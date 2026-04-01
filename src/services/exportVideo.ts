@@ -180,16 +180,25 @@ export async function exportToMp4(
 
     onProgress({ stage: "capturing", percent: 0, message: "Capturing + encoding (WebCodecs HW)..." });
     playerRef.pause();
-    console.log("[Export] WebCodecs streaming: capture + encode in one pass");
+    console.log(`[Export] WebCodecs streaming: capture + encode in one pass | cores=${navigator.hardwareConcurrency} queueSize=${Math.min(30, Math.max(8, (navigator.hardwareConcurrency ?? 4) * 2))} yieldEvery=${Math.min(16, Math.max(4, navigator.hardwareConcurrency ?? 4))}`);
+
+    // Adaptive yield interval — more cores = fewer yields needed
+    const yieldEvery = Math.min(16, Math.max(4, navigator.hardwareConcurrency ?? 4));
+
+    // Pipeline: fire-and-forget encode promises, collect for error checking
+    let encodeInFlight: Promise<void> = Promise.resolve();
 
     try {
       for (let i = 0; i < totalFrames; i++) {
         playerRef.seekTo(i);
-        await waitFrame();
+        // Minimal wait: just one microtask flush for React to commit DOM update
+        await waitMicrotask();
 
         try {
           const canvas = await toCanvas(captureTarget, captureOpts);
-          await streamEnc.feedFrame(canvas, capturedCount);
+          // Pipeline: don't await encode — let GPU work while we capture next frame
+          // Backpressure is handled inside feedFrame (dequeue event)
+          encodeInFlight = streamEnc.feedFrame(canvas, capturedCount);
           capturedCount++;
         } catch (err) {
           logWarn("Export", "EXPORT_TOO_MANY_FAILED", `Frame ${i} capture failed`, { error: err });
@@ -197,20 +206,26 @@ export async function exportToMp4(
           continue;
         }
 
-        const pct = Math.round(((i + 1) / totalFrames) * 100);
-        const elapsed = (performance.now() - captureStart) / 1000;
-        const etaSec = Math.round((elapsed / (i + 1)) * (totalFrames - i - 1));
+        // Progress update — only emit every 8 frames to reduce overhead
+        if (i % 8 === 0 || i === totalFrames - 1) {
+          const pct = Math.round(((i + 1) / totalFrames) * 100);
+          const elapsed = (performance.now() - captureStart) / 1000;
+          const etaSec = Math.round((elapsed / (i + 1)) * (totalFrames - i - 1));
 
-        onProgress({
-          stage: "capturing",
-          percent: pct,
-          message: `Frame ${capturedCount}/${totalFrames} (WebCodecs HW)`,
-          eta: etaSec,
-        });
+          onProgress({
+            stage: "capturing",
+            percent: pct,
+            message: `Frame ${capturedCount}/${totalFrames} (WebCodecs HW)`,
+            eta: etaSec,
+          });
+        }
 
-        // Yield every 4 frames
-        if (i % 4 === 0) await new Promise<void>((r) => setTimeout(r, 0));
+        // Yield to browser — adaptive based on hardware
+        if (i % yieldEvery === 0) await new Promise<void>((r) => setTimeout(r, 0));
       }
+
+      // Wait for last encode to finish before finalizing
+      await encodeInFlight;
 
       if (capturedCount === 0) {
         streamEnc.close();
@@ -408,6 +423,16 @@ async function ffmpegEncode(
 
 function waitFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+/**
+ * Lightweight DOM flush — wait for React to commit state update.
+ * html-to-image reads from live DOM (getComputedStyle), doesn't need browser paint.
+ * setTimeout(0) is enough for React to flush synchronous setState.
+ * ~0-4ms vs waitFrame's ~16ms → saves ~12ms per frame.
+ */
+function waitMicrotask(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

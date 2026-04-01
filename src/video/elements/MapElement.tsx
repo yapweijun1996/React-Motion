@@ -17,6 +17,8 @@ import worldData from "world-atlas/countries-110m.json";
 import { feature } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
+import { chartColor } from "../../services/chartHelpers";
+import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 
 type CountryData = {
@@ -46,17 +48,13 @@ const NAME_TO_ID: Record<string, string> = {
   "Belgium": "056", "Austria": "040", "Czech Republic": "203",
 };
 
-const DEFAULT_COLORS = [
-  "#3b82f6", "#f97316", "#ef4444", "#10b981",
-  "#8b5cf6", "#f59e0b", "#ec4899", "#06b6d4",
-];
-
 const MAP_W = 960;
 const MAP_H = 500;
 
 type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const MapElement: React.FC<Props> = ({ el, index }) => {
+  const palette = usePaletteColors();
   const countries = (el.countries as CountryData[]) ?? [];
   const baseColor = (el.baseColor as string) ?? "#e2e8f0";
   const strokeColor = (el.strokeColor as string) ?? "#94a3b8";
@@ -80,7 +78,7 @@ export const MapElement: React.FC<Props> = ({ el, index }) => {
       if (id) {
         map.set(id, {
           ...c,
-          assignedColor: c.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+          assignedColor: c.color ?? chartColor(i, palette),
         });
       }
     });

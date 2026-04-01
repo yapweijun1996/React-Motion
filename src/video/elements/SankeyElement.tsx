@@ -4,6 +4,7 @@ import { spring, interpolate } from "../animation";
 import { sankey, sankeyLinkHorizontal, sankeyCenter } from "d3-sankey";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor, extractValue } from "../../services/chartHelpers";
+import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 
 type NodeInput = { name: string; color?: string };
@@ -34,10 +35,13 @@ const NODE_PAD = 20;
 type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
+  const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const inputNodes = normalizeNodes(el);
-  const inputLinks = normalizeLinks(el);
+
+  // Stable memo — depend on raw el.nodes/el.links, not normalized arrays
+  const inputNodes = useMemo(() => normalizeNodes(el), [el.nodes]);
+  const inputLinks = useMemo(() => normalizeLinks(el), [el.links]);
 
   if (inputNodes.length === 0 || inputLinks.length === 0) return null;
 
@@ -85,7 +89,7 @@ export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
         const linkOpacity = interpolate(linkProgress, [0, 1], [0, 0.4]);
 
         const sourceNode = link.source as typeof nodes[0];
-        const color = sourceNode.color ?? chartColor(sourceNode.index!);
+        const color = sourceNode.color ?? chartColor(sourceNode.index!, palette);
 
         return (
           <path
@@ -100,7 +104,7 @@ export const SankeyElement: React.FC<Props> = ({ el, index, dark }) => {
       })}
 
       {nodes.map((node, i) => {
-        const color = node.color ?? chartColor(node.index!);
+        const color = node.color ?? chartColor(node.index!, palette);
         const x0 = node.x0 ?? 0;
         const y0 = node.y0 ?? 0;
         const x1 = node.x1 ?? 0;

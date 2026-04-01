@@ -4,6 +4,7 @@ import { spring } from "../animation";
 import { pie, arc } from "d3-shape";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor, formatPercent, extractValue, extractLabel } from "../../services/chartHelpers";
+import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 
 type SliceItem = { label: string; value: number; color?: string };
@@ -17,13 +18,19 @@ function normalizeSlices(el: SceneElement): SliceItem[] {
   }));
 }
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+const MAX_LEGEND = 8;
 
-export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
+type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
+
+export const PieChartElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
+  const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const slices = normalizeSlices(el);
+
+  // Stable memo — depend on raw el.slices, not normalized array
+  const slices = useMemo(() => normalizeSlices(el), [el.slices]);
   if (slices.length === 0) return null;
+
   const donut = (el.donut as boolean) ?? false;
   const highlightIndex = (el.highlightIndex as number) ?? -1;
   const showPercentage = (el.showPercentage as boolean) ?? true;
@@ -45,7 +52,6 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
 
   const totalValue = slices.reduce((s, d) => s + d.value, 0);
 
-  // Memoize D3 pie layout — only recompute when data changes
   const arcs = useMemo(() => {
     const pieGen = pie<SliceItem>().value((d) => d.value).sort(null);
     return pieGen(slices);
@@ -56,11 +62,16 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
 
   const vb = `-${size / 2 + 10} -${size / 2 + 10} ${size + 20} ${size + 20}`;
 
+  // Legend: cap at MAX_LEGEND items to prevent overflow
+  const legendSlices = slices.length > MAX_LEGEND ? slices.slice(0, MAX_LEGEND) : slices;
+  const legendFontSize = Math.round((slices.length > 6 ? 36 : 42) * fontScale);
+  const truncated = slices.length - MAX_LEGEND;
+
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 48, width: "100%", height: "100%", opacity: entrance.opacity, transform: entrance.transform }}>
       <svg viewBox={vb} style={{ flex: 1, maxWidth: "50%", maxHeight: "100%", overflow: "visible" }}>
         {arcs.map((a, i) => {
-          const color = slices[i].color ?? chartColor(i);
+          const color = slices[i].color ?? chartColor(i, palette);
           const isHl = i === highlightIndex;
 
           const animatedEnd = a.startAngle + (a.endAngle - a.startAngle) * progress;
@@ -86,8 +97,8 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
       </svg>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 12, opacity: labelOpacity }}>
-        {slices.map((s, i) => {
-          const color = s.color ?? chartColor(i);
+        {legendSlices.map((s, i) => {
+          const color = s.color ?? chartColor(i, palette);
           const pct = totalValue > 0 ? formatPercent((s.value / totalValue) * 100) : "0%";
           const isHl = i === highlightIndex;
 
@@ -98,12 +109,12 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
                 backgroundColor: color, flexShrink: 0,
               }} />
               <span style={{
-                fontSize: 42, color: dark ? "#e2e8f0" : "#374151",
+                fontSize: legendFontSize, color: dark ? "#e2e8f0" : "#374151",
                 fontWeight: isHl ? 700 : 400,
               }}>
                 {s.label}
                 {showPercentage && (
-                  <span style={{ color: dark ? "#94a3b8" : "#9ca3af", marginLeft: 12, fontSize: 36 }}>
+                  <span style={{ color: dark ? "#94a3b8" : "#9ca3af", marginLeft: 12, fontSize: legendFontSize - 6 }}>
                     {pct}
                   </span>
                 )}
@@ -111,6 +122,11 @@ export const PieChartElement: React.FC<Props> = ({ el, index, dark }) => {
             </div>
           );
         })}
+        {truncated > 0 && (
+          <div style={{ fontSize: legendFontSize - 4, color: dark ? "#64748b" : "#9ca3af", paddingLeft: 48 }}>
+            +{truncated} more
+          </div>
+        )}
       </div>
     </div>
   );

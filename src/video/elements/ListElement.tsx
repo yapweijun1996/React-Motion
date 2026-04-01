@@ -1,4 +1,4 @@
-import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
+import { useStagger, parseStagger, parseAnimation, computeEntranceStyle, type EntranceAnimation } from "../useStagger";
 import type { SceneElement } from "../../types";
 
 const ICON_MAP: Record<string, string> = {
@@ -9,51 +9,79 @@ const ICON_MAP: Record<string, string> = {
   warning: "\u26a0",
 };
 
-type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean };
+// Sub-component — hooks called at legal component top level
+type ListItemRowProps = {
+  item: string;
+  i: number;
+  index: number;
+  stagger: ReturnType<typeof parseStagger>;
+  delayOverride?: number;
+  animation: EntranceAnimation;
+  fontSize: number;
+  color: string;
+  textColor: string;
+  icon: string;
+};
 
-export const ListElement: React.FC<Props> = ({ el, index, primaryColor, dark }) => {
+const ListItemRow: React.FC<ListItemRowProps> = ({
+  item, i, index, stagger, delayOverride, animation, fontSize, color, textColor, icon,
+}) => {
+  const { progress } = useStagger({
+    elementIndex: index,
+    itemIndex: i,
+    stagger,
+    delayOverride,
+    elementType: "list",
+  });
+
+  const entrance = computeEntranceStyle(progress, animation);
+
+  return (
+    <div
+      style={{
+        fontSize,
+        color: textColor,
+        opacity: entrance.opacity,
+        transform: entrance.transform,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 20,
+        lineHeight: 1.4,
+      }}
+    >
+      <span style={{ color, fontWeight: 700, fontSize: Math.round(fontSize * 0.9), marginTop: 4, flexShrink: 0 }}>
+        {icon}
+      </span>
+      <span>{item}</span>
+    </div>
+  );
+};
+
+type Props = { el: SceneElement; index: number; primaryColor?: string; dark?: boolean; fontScale?: number };
+
+export const ListElement: React.FC<Props> = ({ el, index, primaryColor, dark, fontScale = 1 }) => {
   const items = (el.items as string[]) ?? [];
   const icon = ICON_MAP[(el.icon as string) ?? "bullet"] ?? "\u25cf";
   const color = (el.color as string) ?? primaryColor ?? "#2563eb";
   const textColor = (el.textColor as string) ?? (dark ? "#e2e8f0" : "#1f2937");
   const stagger = parseStagger(el);
-  // List defaults to slide-left if no animation specified (natural for staggered items)
   const animation = (el.animation as string) ? parseAnimation(el) : "slide-left";
+  const baseFontSize = (el.fontSize as number) ?? 56;
+  // Adaptive: shrink font + gap when many items to prevent overflow
+  const itemScale = items.length > 8 ? 0.75 : items.length > 6 ? 0.85 : 1;
+  const fontSize = Math.round(baseFontSize * fontScale * itemScale);
+  const gap = Math.round(28 * fontScale * itemScale);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 28, width: "100%" }}>
-      {items.map((item, i) => {
-        const { progress } = useStagger({
-          elementIndex: index,
-          itemIndex: i,
-          stagger,
-          delayOverride: el.delay,
-          elementType: "list",
-        });
-
-        const entrance = computeEntranceStyle(progress, animation);
-
-        return (
-          <div
-            key={i}
-            style={{
-              fontSize: (el.fontSize as number) ?? 56,
-              color: textColor,
-              opacity: entrance.opacity,
-              transform: entrance.transform,
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 20,
-              lineHeight: 1.4,
-            }}
-          >
-            <span style={{ color, fontWeight: 700, fontSize: 50, marginTop: 4, flexShrink: 0 }}>
-              {icon}
-            </span>
-            <span>{item}</span>
-          </div>
-        );
-      })}
+    <div style={{ display: "flex", flexDirection: "column", gap, width: "100%" }}>
+      {items.map((item, i) => (
+        <ListItemRow
+          key={i}
+          item={item} i={i} index={index} stagger={stagger}
+          delayOverride={el.delay} animation={animation}
+          fontSize={fontSize} color={color} textColor={textColor} icon={icon}
+        />
+      ))}
     </div>
   );
 };

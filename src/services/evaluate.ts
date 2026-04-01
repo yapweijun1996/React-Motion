@@ -192,11 +192,47 @@ export async function evaluateScript(
   userPrompt: string,
   script: VideoScript,
 ): Promise<EvalResult> {
-  console.group("[ReactMotion] evaluate");
-
   const summary = buildEvalSummary(script);
+  return runEval(userPrompt, summary, JSON.stringify(script).length);
+}
+
+/**
+ * Evaluate raw script JSON (before full validation).
+ * Used inside agentLoop where we have Record<string, unknown>, not VideoScript.
+ */
+export async function evaluateScriptJson(
+  userPrompt: string,
+  scriptJson: Record<string, unknown>,
+): Promise<EvalResult> {
+  const scenes = (scriptJson.scenes as Record<string, unknown>[]) ?? [];
+  const summary = {
+    title: scriptJson.title,
+    sceneCount: scenes.length,
+    scenes: scenes.map((s) => {
+      const elements = (s.elements as Record<string, unknown>[]) ?? [];
+      return {
+        id: s.id,
+        startFrame: s.startFrame,
+        durationInFrames: s.durationInFrames,
+        layout: s.layout,
+        transition: s.transition,
+        narration: s.narration,
+        elements: elements.map(summarizeElement as (el: Record<string, unknown>) => Record<string, unknown>),
+      };
+    }),
+  };
+  return runEval(userPrompt, summary, JSON.stringify(scriptJson).length);
+}
+
+/** Shared eval runner — calls Gemini with EVALUATE_SYSTEM prompt. */
+async function runEval(
+  userPrompt: string,
+  summary: Record<string, unknown>,
+  fullScriptLength: number,
+): Promise<EvalResult> {
+  console.group("[ReactMotion] evaluate");
   const summaryJson = JSON.stringify(summary);
-  console.log("[Eval] Summary:", summaryJson.length, "chars (full script was", JSON.stringify(script).length, "chars)");
+  console.log("[Eval] Summary:", summaryJson.length, "chars (full script was", fullScriptLength, "chars)");
 
   const messages: GeminiMessage[] = [
     {

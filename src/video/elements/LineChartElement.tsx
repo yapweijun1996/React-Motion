@@ -5,6 +5,7 @@ import { line, curveMonotoneX } from "d3-shape";
 import { scaleLinear, scalePoint } from "d3-scale";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor, formatValue, extractValue, extractLabel } from "../../services/chartHelpers";
+import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 
 type DataPoint = { label: string; value: number };
@@ -16,12 +17,31 @@ const MARGIN = { top: 24, right: 36, bottom: 50, left: 70 };
 const INNER_W = CHART_W - MARGIN.left - MARGIN.right;
 const INNER_H = CHART_H - MARGIN.top - MARGIN.bottom;
 
+function normalizeSeries(el: SceneElement): LineSeries[] {
+  const coerce = (pts: DataPoint[]): DataPoint[] =>
+    pts.map((d) => {
+      const raw = d as unknown as Record<string, unknown>;
+      return { label: extractLabel(raw), value: extractValue(raw) };
+    });
+
+  if (Array.isArray(el.series)) {
+    return (el.series as LineSeries[]).map((s) => ({ ...s, data: coerce(s.data) }));
+  }
+  if (Array.isArray(el.data)) {
+    return [{ name: "default", data: coerce(el.data as DataPoint[]), color: el.color as string | undefined }];
+  }
+  return [];
+}
+
 type Props = { el: SceneElement; index: number; dark?: boolean };
 
 export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
+  const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const series = normalizeSeries(el);
+
+  // Stable memo — depend on raw el.series/el.data, not normalized array
+  const series = useMemo(() => normalizeSeries(el), [el.series, el.data]);
   const showDots = (el.showDots as boolean) ?? true;
 
   const stagger = parseStagger(el);
@@ -37,13 +57,12 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
 
   if (series.length === 0) return null;
 
-  // Memoize D3 scales — only recompute when data changes, not every frame
   const { allLabels, xScale, yScale, yTicks } = useMemo(() => {
     const labels = series[0].data.map((d) => d.label);
     const values = series.flatMap((s) => s.data.map((d) => d.value));
     let min = Math.min(...values, 0);
     let max = Math.max(...values, 1);
-    if (min === max) { min = 0; max = max || 1; } // guard: all-zero or identical values
+    if (min === max) { min = 0; max = max || 1; }
     const pad = (max - min) * 0.1 || 1;
 
     const x = scalePoint<string>().domain(labels).range([0, INNER_W]).padding(0.1);
@@ -91,7 +110,7 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
         ))}
 
         {series.map((s, si) => {
-          const color = s.color ?? chartColor(si);
+          const color = s.color ?? chartColor(si, palette);
 
           const lineGen = line<DataPoint>()
             .x((d) => xScale(d.label)!)
@@ -127,7 +146,8 @@ export const LineChartElement: React.FC<Props> = ({ el, index, dark }) => {
 const AnimatedPath: React.FC<{ d: string; color: string; progress: number }> = ({
   d, color, progress,
 }) => {
-  const totalLen = 2000;
+  // Large enough for any reasonable line chart path
+  const totalLen = Math.max(3000, INNER_W * 2);
   const offset = totalLen * (1 - progress);
 
   return (
@@ -142,20 +162,3 @@ const AnimatedPath: React.FC<{ d: string; color: string; progress: number }> = (
     />
   );
 };
-
-function normalizeSeries(el: SceneElement): LineSeries[] {
-  const coerce = (pts: DataPoint[]): DataPoint[] =>
-    pts.map((d) => {
-      const raw = d as unknown as Record<string, unknown>;
-      return { label: extractLabel(raw), value: extractValue(raw) };
-    });
-
-  if (Array.isArray(el.series)) {
-    return (el.series as LineSeries[]).map((s) => ({ ...s, data: coerce(s.data) }));
-  }
-  if (Array.isArray(el.data)) {
-    return [{ name: "default", data: coerce(el.data as DataPoint[]), color: el.color as string | undefined }];
-  }
-  return [];
-}
-

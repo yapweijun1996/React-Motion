@@ -136,6 +136,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
         message: `Regenerating narration (${done}/${total})...`,
         percent: total > 0 ? (done / total) * 100 : 0,
         elapsedMs: Math.round(performance.now() - ttsStart),
+        startTime: ttsStart,
         eta: done > 0 ? Math.round(((performance.now() - ttsStart) / done) * (total - done) / 1000) : undefined,
       });
       setGenerationStatus(ttsProg(0, ttsMetadata.length));

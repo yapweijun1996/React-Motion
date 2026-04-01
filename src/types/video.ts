@@ -43,4 +43,5 @@ export type ThemeConfig = {
   secondaryColor?: string;
   fontFamily?: string;
   style?: "corporate" | "modern" | "minimal";
+  chartColors?: string[];
 };

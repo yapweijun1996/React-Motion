@@ -8,7 +8,7 @@
 
 // --- Constants ---
 
-const DEFAULT_BUDGET_TOKENS = 80_000;  // ~320K chars at /4
+const DEFAULT_BUDGET_TOKENS = 150_000; // ~600K chars at /4
 const WARN_THRESHOLD = 0.70;           // 70% → lower temperature, restrict tools
 const FORCE_THRESHOLD = 0.90;          // 90% → force produce_script
 const DIMINISHING_TURNS = 2;           // consecutive low-output turns to trigger

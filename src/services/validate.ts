@@ -326,11 +326,18 @@ function validateElement(
 function validateTheme(input: unknown): ThemeConfig | null {
   if (!isObj(input)) return null;
 
+  let chartColors: string[] | undefined;
+  if (Array.isArray(input.chartColors)) {
+    chartColors = input.chartColors.filter(isStr).slice(0, 16);
+    if (chartColors.length === 0) chartColors = undefined;
+  }
+
   return {
     primaryColor: isStr(input.primaryColor) ? input.primaryColor : undefined,
     secondaryColor: isStr(input.secondaryColor) ? input.secondaryColor : undefined,
     fontFamily: isStr(input.fontFamily) ? input.fontFamily : undefined,
     style: inEnum(input.style, VALID_THEME_STYLES) ? input.style : undefined,
+    chartColors,
   };
 }
 

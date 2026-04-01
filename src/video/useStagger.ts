@@ -127,8 +127,8 @@ export function useStagger(options: UseStaggerOptions): StaggerResult {
     config: springConfig,
   });
 
-  // Debug: log when animation is stuck at 0 past a reasonable threshold
-  if (progress === 0 && frame > 10) {
+  // Debug: only log when frame is PAST the delay but progress is still 0 (indicates a bug)
+  if (progress === 0 && frame > delay + 5) {
     console.warn(
       `[useStagger] progress=0 | type=${elementType} idx=${elementIndex}` +
       ` item=${itemIndex ?? "-"} | frame=${frame} delay=${delay}` +

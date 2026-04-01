@@ -33,7 +33,7 @@ export const ProgressElement: React.FC<Props> = ({ el, index, dark }) => {
   const stagger = parseStagger(el);
   const animation = parseAnimation(el, "zoom");
 
-  const { delay, springConfig, progress: containerProgress } = useStagger({
+  const { delay, progress: containerProgress } = useStagger({
     elementIndex: index,
     stagger,
     delayOverride: el.delay,

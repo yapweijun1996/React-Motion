@@ -18,9 +18,9 @@ type ComparisonSide = {
   items?: string[];
 };
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
 
-export const ComparisonElement: React.FC<Props> = ({ el, index, dark }) => {
+export const ComparisonElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -84,6 +84,7 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark }) => {
         dark={dark}
         progress={leftProgress}
         translateX={leftX}
+        fontScale={fontScale}
       />
 
       {/* VS divider */}
@@ -94,7 +95,7 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark }) => {
         transform: `scale(${interpolate(vsProgress, [0, 1], [0.5, 1])})`,
       }}>
         <div style={{
-          fontSize: 56, fontWeight: 800, color: dark ? "#94a3b8" : "#9ca3af",
+          fontSize: Math.round(56 * fontScale), fontWeight: 800, color: dark ? "#94a3b8" : "#9ca3af",
           letterSpacing: 4, textTransform: "uppercase",
         }}>
           {vsLabel}
@@ -111,6 +112,7 @@ export const ComparisonElement: React.FC<Props> = ({ el, index, dark }) => {
         dark={dark}
         progress={rightProgress}
         translateX={rightX}
+        fontScale={fontScale}
       />
     </div>
   );
@@ -129,10 +131,11 @@ type CardProps = {
   dark?: boolean;
   progress: number;
   translateX: number;
+  fontScale: number;
 };
 
 const Card: React.FC<CardProps> = ({
-  side, color, cardBg, textColor, subColor, dark, progress, translateX,
+  side, color, cardBg, textColor, subColor, dark, progress, translateX, fontScale,
 }) => {
   return (
     <div style={{
@@ -147,7 +150,7 @@ const Card: React.FC<CardProps> = ({
     }}>
       {/* Title */}
       <div style={{
-        fontSize: 52, fontWeight: 700, color,
+        fontSize: Math.round(52 * fontScale), fontWeight: 700, color,
         lineHeight: 1.2,
       }}>
         {side.title}
@@ -156,7 +159,7 @@ const Card: React.FC<CardProps> = ({
       {/* Value (big number) */}
       {side.value && (
         <div style={{
-          fontSize: 120, fontWeight: 800, color: textColor,
+          fontSize: Math.round(120 * fontScale), fontWeight: 800, color: textColor,
           lineHeight: 1.1, fontVariantNumeric: "tabular-nums",
         }}>
           {side.value}
@@ -166,7 +169,7 @@ const Card: React.FC<CardProps> = ({
       {/* Subtitle */}
       {side.subtitle && (
         <div style={{
-          fontSize: 44, color: subColor,
+          fontSize: Math.round(44 * fontScale), color: subColor,
           lineHeight: 1.3,
         }}>
           {side.subtitle}
@@ -178,10 +181,10 @@ const Card: React.FC<CardProps> = ({
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 8 }}>
           {side.items.map((item, i) => (
             <div key={i} style={{
-              fontSize: 40, color: dark ? "#cbd5e1" : "#374151",
+              fontSize: Math.round(40 * fontScale), color: dark ? "#cbd5e1" : "#374151",
               display: "flex", alignItems: "baseline", gap: 12,
             }}>
-              <span style={{ color, fontSize: 28, lineHeight: 1 }}>●</span>
+              <span style={{ color, fontSize: Math.round(28 * fontScale), lineHeight: 1 }}>●</span>
               {item}
             </div>
           ))}

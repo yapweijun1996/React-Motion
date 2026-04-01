@@ -21,9 +21,11 @@ import {
 import {
   getToolDeclarations,
   getToolExecutor,
+  resetPaletteState,
   type ToolContext,
 } from "./agentTools";
 import { runStopChecks } from "./agentHooks";
+import { evaluateScriptJson } from "./evaluate";
 import { ClassifiedError, logError } from "./errors";
 import {
   createBudgetTracker,
@@ -61,6 +63,8 @@ export async function runAgentLoop(
   context: ToolContext,
   onProgress?: (p: AgentProgress) => void,
 ): Promise<AgentLoopResult> {
+  resetPaletteState();
+
   const messages: GeminiMessage[] = [
     { role: "user", parts: [{ text: userMessage }] },
   ];
@@ -83,7 +87,9 @@ export async function runAgentLoop(
   const calledTools = new Set<string>();
   let textOnlyStreak = 0;
   let stopRetried = false;
+  let evalRetried = false;
   let storyboardAdvisoryGiven = false;
+  let visualAdvisoryGiven = false;
   const budget = createBudgetTracker(systemPrompt.length, userMessage.length);
 
   function report(iteration: number, action: string, detail?: string) {
@@ -227,6 +233,20 @@ export async function runAgentLoop(
         continue; // AI gets a chance to revise
       }
 
+      // RM-157: PostToolUse — visual direction advisory (one-time)
+      if (!calledTools.has("direct_visuals") && !visualAdvisoryGiven) {
+        visualAdvisoryGiven = true;
+        report(i, "advisory", "No visual direction before produce_script");
+        const advisory = "You produced a script without visual direction. " +
+          "Call direct_visuals to plan visual metaphors for each scene — " +
+          "decide where to use SVG diagrams, maps, progress gauges, comparisons, or timelines " +
+          "instead of defaulting to bar-chart/pie-chart for everything.";
+        messages.push({ role: "user", parts: [{ text: advisory }] });
+        recordUserMessage(budget, advisory);
+        terminalScript = null;
+        continue;
+      }
+
       // RM-143b: Stop hook — deterministic quality gate
       const checks = runStopChecks(terminalScript);
       if (!checks.pass && !stopRetried) {
@@ -241,11 +261,33 @@ export async function runAgentLoop(
         continue; // one retry
       }
 
-      // All hooks passed (or already retried) — accept and return
-      const sceneCount = (terminalScript.scenes as unknown[])?.length ?? "?";
+      // RM-155: Evaluate gate — AI quality check (one retry)
+      if (!evalRetried) {
+        try {
+          report(i, "evaluate", "Running AI quality evaluation...");
+          const evalResult = await evaluateScriptJson(context.userPrompt, terminalScript);
+          if (!evalResult.pass && evalResult.issues.length > 0) {
+            evalRetried = true;
+            report(i, "evaluate_retry", evalResult.issues.join("; "));
+            const evalMsg = "AI evaluation found issues with the script:\n" +
+              evalResult.issues.map((s) => "- " + s).join("\n") +
+              "\nPlease fix these issues and call produce_script again.";
+            messages.push({ role: "user", parts: [{ text: evalMsg }] });
+            recordUserMessage(budget, evalMsg);
+            terminalScript = null;
+            continue; // one retry
+          }
+        } catch (err) {
+          console.warn("[Agent] Evaluate failed (non-fatal), accepting script:", err);
+        }
+      }
+
+      // All gates passed — accept and return
+      const finalScript = terminalScript!;
+      const sceneCount = (finalScript.scenes as unknown[])?.length ?? "?";
       report(i, "produce_script", `Script produced — ${sceneCount} scenes`);
-      console.log("[Agent] Final script:", JSON.stringify(terminalScript).slice(0, 500) + "...");
-      return { scriptJson: terminalScript, conversationLog: log, iterations: i, budgetSummary: getBudgetSummary(budget) };
+      console.log("[Agent] Final script:", JSON.stringify(finalScript).slice(0, 500) + "...");
+      return { scriptJson: finalScript, conversationLog: log, iterations: i, budgetSummary: getBudgetSummary(budget) };
     }
   }
 

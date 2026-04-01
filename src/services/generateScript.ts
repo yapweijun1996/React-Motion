@@ -1,7 +1,6 @@
 import type { BusinessData, VideoScript } from "../types";
 import { buildAgentSystemPrompt, buildUserMessage, buildSystemPrompt } from "./prompt";
 import { parseVideoScript } from "./parseScript";
-import { evaluateScript } from "./evaluate";
 import { runAgentLoop, type AgentProgress } from "./agentLoop";
 import { callGemini, type GeminiMessage } from "./gemini";
 import { generateSceneTTS } from "./tts";
@@ -18,13 +17,15 @@ export type GenerationProgress = {
   message: string;
   percent: number;
   elapsedMs: number;
+  /** Absolute timestamp (performance.now()) when generation started — used for real-time elapsed display */
+  startTime: number;
   eta?: number;
   completedTools?: string[];
   agentDetail?: AgentProgress;
 };
 
 // --- Stage weights based on real timing data ---
-const STAGE_WEIGHTS = [27, 5, 55, 13]; // agent, evaluate, tts, bgm → sums to 100
+const STAGE_WEIGHTS = [32, 0, 55, 13]; // agent (includes evaluate), skip, tts, bgm → sums to 100
 const STAGE_LABELS = ["AI Scripting", "Quality Check", "Narration", "Background Music"];
 
 /** Lightweight progress tracker — computes percent, elapsed, ETA */
@@ -47,6 +48,7 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
       message: "",
       percent: basePercent(stageIdx),
       elapsedMs: Math.round(performance.now() - t0),
+      startTime: t0,
       completedTools: stageIdx === 0 ? [...completedTools] : undefined,
       ...overrides,
     });
@@ -147,20 +149,8 @@ export async function generateScript(
     script = parseVideoScript(JSON.stringify(scriptJson));
   }
 
-  // --- Phase 2: Evaluate ---
-  tracker.setStage(1, "Evaluating quality...");
-  console.log("[Evaluate] Starting...");
-
-  try {
-    const evalResult = await evaluateScript(userPrompt, script);
-    if (!evalResult.pass) {
-      console.warn("[Evaluate] Issues:", evalResult.issues);
-    } else {
-      console.log("[Evaluate] Passed");
-    }
-  } catch (err) {
-    console.warn("[Evaluate] Failed (non-fatal):", err);
-  }
+  // --- Phase 2: Evaluate — now runs inside agent loop (RM-155) ---
+  tracker.setStage(1, "Quality verified");
 
   // --- Phase 3: TTS ---
   tracker.setStage(2, "Generating narration audio...");
@@ -252,6 +242,8 @@ function formatAgentMessage(p: AgentProgress, completedTools: string[]): string 
     "tool:generate_palette": "Generating color palette...",
     "tool:produce_script": "Producing video script...",
     quality_gate: "Checking script quality...",
+    evaluate: "Evaluating script quality...",
+    evaluate_retry: "Fixing evaluation issues...",
     advisory: "Reviewing narrative structure...",
     budget_warn: "Optimizing token usage...",
     budget_force_finish: "Wrapping up...",

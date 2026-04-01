@@ -134,6 +134,15 @@ export async function callGeminiRaw(
   const finishReason = candidate?.finishReason ?? "UNKNOWN";
 
   if (parts.length === 0) {
+    // MALFORMED_FUNCTION_CALL is retryable — return a synthetic text part
+    // so the agent loop can inject a retry nudge instead of crashing.
+    if (finishReason === "MALFORMED_FUNCTION_CALL") {
+      console.warn("[Gemini] MALFORMED_FUNCTION_CALL — returning retry hint to agent loop");
+      return {
+        parts: [{ text: "[System: Your previous function call was malformed. Please try again with correct JSON syntax.]" }],
+        finishReason,
+      };
+    }
     logError("Gemini", "API_EMPTY_RESPONSE", "Empty parts array", { finishReason, candidateCount: data.candidates?.length });
     throw new ClassifiedError("API_EMPTY_RESPONSE", "Gemini returned empty response");
   }

@@ -1,14 +1,31 @@
 import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
+import { isDarkBg } from "../GenericScene";
 import type { SceneElement } from "../../types";
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+const LIGHT_TEXT = "#f1f5f9";
+const DARK_TEXT = "#1e293b";
+
+/**
+ * Ensure text color is readable on the current background.
+ * If AI set a dark color on a dark background (or light on light), override it.
+ */
+function readableColor(explicit: string | undefined, dark?: boolean): string {
+  if (!explicit) return dark ? LIGHT_TEXT : DARK_TEXT;
+  // Check if the explicit color clashes with the background
+  const textIsDark = isDarkBg(explicit);
+  if (dark && textIsDark) return LIGHT_TEXT;       // dark text on dark bg → force light
+  if (!dark && !textIsDark) return explicit;       // light text on light bg is fine (could be accent)
+  return explicit;
+}
+
+type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
 
 /** Build CSS textShadow from glow / shadow props. */
 function resolveTextShadow(el: SceneElement, dark?: boolean): string | undefined {
   const glow = el.glow as boolean | undefined;
   const shadow = el.shadow as boolean | undefined;
-  const color = (el.color as string) ?? (dark ? "#f1f5f9" : "#1e293b");
+  const color = readableColor(el.color as string | undefined, dark);
   const parts: string[] = [];
   if (glow) parts.push(`0 0 24px ${color}88`, `0 0 48px ${color}44`);
   if (shadow) parts.push("2px 4px 8px rgba(0,0,0,0.3)");
@@ -20,7 +37,7 @@ const CHARS_PER_FRAME = 2;
 /** Cursor blink cycle in frames (on for half, off for half). */
 const CURSOR_BLINK_FRAMES = 15;
 
-export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
+export const TextElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
   const animation = parseAnimation(el);
 
   const { progress, delay } = useStagger({
@@ -33,6 +50,7 @@ export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
   const content = (el.content as string) ?? "";
   const isTypewriter = animation === "typewriter" && content.length > 0;
   const textShadow = resolveTextShadow(el, dark);
+  const fontSize = Math.round(((el.fontSize as number) ?? 80) * fontScale);
 
   // --- Typewriter mode ---
   if (isTypewriter) {
@@ -40,8 +58,8 @@ export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
       <TypewriterText
         content={content}
         delay={delay}
-        fontSize={(el.fontSize as number) ?? 80}
-        color={(el.color as string) ?? (dark ? "#f1f5f9" : "#1e293b")}
+        fontSize={fontSize}
+        color={readableColor(el.color as string | undefined, dark)}
         fontWeight={(el.fontWeight as number) ?? 400}
         align={(el.align as "left" | "center" | "right") ?? "left"}
         letterSpacing={(el.letterSpacing as number) ?? 0}
@@ -57,8 +75,8 @@ export const TextElement: React.FC<Props> = ({ el, index, dark }) => {
   return (
     <div
       style={{
-        fontSize: (el.fontSize as number) ?? 80,
-        color: (el.color as string) ?? (dark ? "#f1f5f9" : "#1e293b"),
+        fontSize,
+        color: readableColor(el.color as string | undefined, dark),
         fontWeight: (el.fontWeight as number) ?? 400,
         textAlign: (el.align as "left" | "center" | "right") ?? "left",
         letterSpacing: (el.letterSpacing as number) ?? 0,

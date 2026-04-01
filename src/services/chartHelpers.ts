@@ -6,24 +6,34 @@
  */
 
 import { format } from "d3-format";
-import { schemeTableau10 } from "d3-scale-chromatic";
 
 // ============================================================
 // Chart color palette — single source of truth
 // ============================================================
 
 /**
- * Tableau10: 10 perceptually distinct, colorblind-friendly colors.
- * Used by all chart elements as default palette.
- * Previously: same 8-color array hardcoded in bar/pie/line/sankey.
+ * Curated fallback palette: Tableau10 minus problematic yellow (#edc949)
+ * and gray (#bab0ab) that have poor contrast on both light/dark backgrounds.
+ * Used when no AI-generated palette is available.
  */
-export const CHART_COLORS: readonly string[] = schemeTableau10;
+export const CHART_COLORS: readonly string[] = [
+  "#4e79a7", // blue
+  "#f28e2b", // orange
+  "#e15759", // red
+  "#76b7b2", // teal
+  "#59a14f", // green
+  "#af7aa1", // purple
+  "#ff9da7", // pink
+  "#9c755f", // brown
+];
 
 /**
- * Get chart color by index (cycles through palette).
+ * Get chart color by index. Uses AI-generated palette when available,
+ * falls back to curated CHART_COLORS.
  */
-export function chartColor(index: number): string {
-  return CHART_COLORS[index % CHART_COLORS.length];
+export function chartColor(index: number, palette?: readonly string[] | null): string {
+  const colors = palette?.length ? palette : CHART_COLORS;
+  return colors[index % colors.length];
 }
 
 // ============================================================

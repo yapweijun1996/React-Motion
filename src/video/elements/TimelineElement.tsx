@@ -9,6 +9,7 @@ import { useCurrentFrame, useVideoConfig } from "../VideoContext";
 import { spring } from "../animation";
 import { useStagger, parseStagger, parseAnimation, computeEntranceStyle } from "../useStagger";
 import { chartColor } from "../../services/chartHelpers";
+import { usePaletteColors } from "../PaletteContext";
 import type { SceneElement } from "../../types";
 
 type TimelineItem = {
@@ -17,12 +18,13 @@ type TimelineItem = {
   color?: string;
 };
 
-type Props = { el: SceneElement; index: number; dark?: boolean };
+type Props = { el: SceneElement; index: number; dark?: boolean; fontScale?: number };
 
 const NODE_R = 16;
 const NODE_ACTIVE_R = 20;
 
-export const TimelineElement: React.FC<Props> = ({ el, index, dark }) => {
+export const TimelineElement: React.FC<Props> = ({ el, index, dark, fontScale = 1 }) => {
+  const palette = usePaletteColors();
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -54,13 +56,17 @@ export const TimelineElement: React.FC<Props> = ({ el, index, dark }) => {
 
   if (items.length === 0) return null;
 
+  // Adaptive: shrink fonts when many items
+  const itemScale = items.length > 6 ? 0.75 : items.length > 4 ? 0.85 : 1;
+  const fs = fontScale * itemScale;
+
   if (orientation === "vertical") {
     return (
       <VerticalTimeline
         items={items} activeIndex={activeIndex} lineColor={lineColor}
         lineProgress={lineProgress} frame={frame} delay={delay} fps={fps}
         textColor={textColor} subColor={subColor} dark={dark}
-        entrance={entrance}
+        entrance={entrance} fontScale={fs} palette={palette}
       />
     );
   }
@@ -70,7 +76,7 @@ export const TimelineElement: React.FC<Props> = ({ el, index, dark }) => {
       items={items} activeIndex={activeIndex} lineColor={lineColor}
       lineProgress={lineProgress} frame={frame} delay={delay} fps={fps}
       textColor={textColor} subColor={subColor} dark={dark}
-      entrance={entrance}
+      entrance={entrance} fontScale={fs} palette={palette}
     />
   );
 };
@@ -91,15 +97,15 @@ type LayoutProps = {
   subColor: string;
   dark?: boolean;
   entrance: { opacity: number; transform: string };
+  fontScale: number;
+  palette: readonly string[] | null;
 };
 
 const HorizontalTimeline: React.FC<LayoutProps> = ({
   items, activeIndex, lineColor, lineProgress, frame, delay, fps,
-  textColor, subColor, entrance,
+  textColor, subColor, entrance, fontScale, palette,
 }) => {
   const count = items.length;
-  // Spacing: evenly distribute across available width
-  const gap = count > 1 ? 100 / (count - 1) : 50;
 
   return (
     <div style={{
@@ -119,7 +125,7 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
             x1={nodeX(0, count)} y1={30}
             x2={nodeX(0, count) + (nodeX(count - 1, count) - nodeX(0, count)) * lineProgress}
             y2={30}
-            stroke={items[0].color ?? chartColor(0)} strokeWidth={3}
+            stroke={items[0].color ?? chartColor(0, palette)} strokeWidth={3}
             strokeLinecap="round"
           />
         )}
@@ -133,7 +139,7 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
           const isActive = i === activeIndex;
           const cx = nodeX(i, count);
           const r = isActive ? NODE_ACTIVE_R : NODE_R;
-          const color = item.color ?? chartColor(i);
+          const color = item.color ?? chartColor(i, palette);
 
           return (
             <g key={i}>
@@ -175,13 +181,13 @@ const HorizontalTimeline: React.FC<LayoutProps> = ({
               transform: `translateY(${(1 - nodeProgress) * 12}px)`,
             }}>
               <div style={{
-                fontSize: 48, fontWeight: isActive ? 700 : 500,
-                color: isActive ? (item.color ?? chartColor(i)) : textColor,
+                fontSize: Math.round(48 * fontScale), fontWeight: isActive ? 700 : 500,
+                color: isActive ? (item.color ?? chartColor(i, palette)) : textColor,
               }}>
                 {item.label}
               </div>
               {item.description && (
-                <div style={{ fontSize: 36, color: subColor, marginTop: 4 }}>
+                <div style={{ fontSize: Math.round(36 * fontScale), color: subColor, marginTop: 4 }}>
                   {item.description}
                 </div>
               )}
@@ -206,7 +212,7 @@ function nodeX(i: number, count: number): number {
 
 const VerticalTimeline: React.FC<LayoutProps> = ({
   items, activeIndex, lineColor, lineProgress, frame, delay, fps,
-  textColor, subColor, entrance,
+  textColor, subColor, entrance, fontScale, palette,
 }) => {
   return (
     <div style={{
@@ -221,7 +227,7 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
           config: { damping: 14, mass: 0.5 },
         });
         const isActive = i === activeIndex;
-        const color = item.color ?? chartColor(i);
+        const color = item.color ?? chartColor(i, palette);
         const isLast = i === items.length - 1;
 
         return (
@@ -262,14 +268,14 @@ const VerticalTimeline: React.FC<LayoutProps> = ({
               transform: `translateX(${(1 - nodeProgress) * 20}px)`,
             }}>
               <div style={{
-                fontSize: 48, fontWeight: isActive ? 700 : 500,
+                fontSize: Math.round(48 * fontScale), fontWeight: isActive ? 700 : 500,
                 color: isActive ? color : textColor,
                 lineHeight: 1.2,
               }}>
                 {item.label}
               </div>
               {item.description && (
-                <div style={{ fontSize: 36, color: subColor, marginTop: 4 }}>
+                <div style={{ fontSize: Math.round(36 * fontScale), color: subColor, marginTop: 4 }}>
                   {item.description}
                 </div>
               )}
