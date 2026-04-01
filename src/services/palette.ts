@@ -134,6 +134,8 @@ export function generateSceneBgs(primary: string, count: number): string[] {
 // --- Internal ---
 
 function resolveColor(input: string): string {
+  if (!input || typeof input !== "string") return MOOD_COLORS.professional;
+
   // If it's a valid hex/color, use it directly
   if (chroma.valid(input)) return chroma(input).hex();
 
