@@ -36,7 +36,7 @@ export type VideoScene = {
 
 // Flat element — type + props at the same level for easy AI generation
 export type SceneElement = {
-  type: "text" | "metric" | "bar-chart" | "pie-chart" | "line-chart" | "sankey" | "list" | "divider" | "callout" | "kawaii" | "lottie" | "icon" | "annotation" | "svg" | "map" | "progress" | "timeline" | "comparison";
+  type: "text" | "metric" | "bar-chart" | "pie-chart" | "line-chart" | "sankey" | "list" | "divider" | "callout" | "kawaii" | "lottie" | "icon" | "annotation" | "svg" | "svg-3d" | "map" | "progress" | "timeline" | "comparison";
   delay?: number;
   stagger?: "tight" | "normal" | "relaxed" | "dramatic";
   [key: string]: unknown;

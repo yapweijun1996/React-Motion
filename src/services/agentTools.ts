@@ -1,4 +1,4 @@
-import { register, setLastPalette } from "./agentToolRegistry";
+import { register, setLastPalette, setImageHints } from "./agentToolRegistry";
 import { generatePalette, type PaletteScheme } from "./palette";
 import { ELEMENT_CATALOG, STAGGER_SYSTEM, SPOTLIGHT_SYSTEM, CAMERA_SYSTEM } from "./elementCatalog";
 
@@ -8,7 +8,7 @@ import "./agentToolRefine";
 import "./agentToolSearch";
 
 // Re-export for backward compatibility
-export { resetPaletteState, resetScriptState, getToolDeclarations, getToolExecutor } from "./agentToolRegistry";
+export { resetPaletteState, resetScriptState, resetImageHints, getImageHints, getToolDeclarations, getToolExecutor } from "./agentToolRegistry";
 export type { ToolResult, ToolExecutor, ToolContext } from "./agentToolRegistry";
 
 // ============================================================
@@ -38,13 +38,30 @@ register(
     // Data is already in the user message (buildUserMessage sends it).
     // Do NOT echo it back — that doubles payload for zero benefit.
     const hasStructuredData = !!context.data?.rows?.length;
+    // Detect inline numeric data in user prompt (numbers, percentages, currency)
+    const numericPattern = /\d[\d,.]*\s*[%$€£¥]|[$€£¥]\s*\d|\d+\s*(million|billion|thousand|M|B|K)\b/gi;
+    const hasInlineData = numericPattern.test(context.userPrompt);
+    const hasAnyData = hasStructuredData || hasInlineData;
+
+    if (!hasAnyData) {
+      return {
+        result: {
+          has_data: false,
+          analysis_instruction: args.instruction,
+          warning: "⚠ HARD CONSTRAINT: NO numeric data found in user prompt. This is a TOPIC-ONLY request. You MUST follow No-Data Mode from your system instructions. Any invented number will be flagged as a quality violation.",
+          guidance: "Build a conceptual/structural narrative. Use qualitative claims for the hook. Use process flows, categories, and principles for proof scenes. Do NOT fabricate statistics, percentages, costs, or counts. Skip draft_storyboard if you cannot do it without inventing numbers — re-read your No-Data Mode instructions first.",
+        },
+      };
+    }
+
     return {
       result: {
+        has_data: true,
         analysis_instruction: args.instruction,
         data_location: hasStructuredData
           ? "Structured data is in the user message above (rows, columns, aggregations)."
-          : "Inline data is in the user's prompt text above.",
-        note: "Perform the requested analysis on the data already in context, then use results in your storyboard.",
+          : "Inline numeric data detected in the user's prompt text above.",
+        note: "Perform the requested analysis on the data already in context, then use results in your storyboard. Use ONLY the numbers provided — do not invent additional data.",
       },
     };
   },
@@ -145,16 +162,25 @@ register(
     },
   },
   async () => {
-    // Full element schemas are already in the system prompt.
-    // Return only a lightweight index to avoid ~12KB duplication in conversation history.
-    const typeIndex = ELEMENT_CATALOG.map((e) => e.type);
+    // Return full element catalog — system prompt only has type names for brevity.
+    // AI calls this to get detailed schemas, props, and usage tips before produce_script.
+    const elements = ELEMENT_CATALOG.map((e) => {
+      const rec = e as Record<string, unknown>;
+      return {
+        type: e.type,
+        props: e.props,
+        description: e.description,
+        ...(rec.usage_tips ? { usage_tips: rec.usage_tips } : {}),
+        ...(rec.markup_example ? { markup_example: rec.markup_example } : {}),
+      };
+    });
     return {
       result: {
-        available_types: typeIndex,
-        stagger_values: Object.keys(STAGGER_SYSTEM.values),
-        spotlight: SPOTLIGHT_SYSTEM.props,
-        camera_values: Object.keys(CAMERA_SYSTEM.values),
-        note: "Full element schemas and props are in your system instructions. Refer to them directly when building scenes. Any element supports spotlight:{at,duration} for cinematic focus. Each scene supports camera prop for cinematic camera movement.",
+        elements,
+        stagger: STAGGER_SYSTEM,
+        spotlight: SPOTLIGHT_SYSTEM,
+        camera: CAMERA_SYSTEM,
+        note: "Use these schemas when building scene elements. Any element supports spotlight:{at,duration} for cinematic focus. Each scene supports camera prop for cinematic movement.",
       },
     };
   },
@@ -211,7 +237,7 @@ register(
 // ============================================================
 
 const RICH_VISUAL_TYPES = new Set([
-  "svg", "map", "annotation", "progress", "comparison", "timeline",
+  "svg", "svg-3d", "map", "annotation", "progress", "comparison", "timeline",
 ]);
 
 register(
@@ -249,6 +275,10 @@ register(
                 items: { type: "string" },
                 description: "Additional elements: annotation circles on key data, icon pairs, callout for insight, etc.",
               },
+              image_prompt: {
+                type: "string",
+                description: "Optional — AI background image prompt for this scene. Describe mood/style/lighting in 1-2 sentences (e.g. 'Soft bokeh office lighting, warm tones'). Use on 1-3 key scenes (hook, climax, close) for cinematic depth. Skip on chart-heavy scenes.",
+              },
               emotion: {
                 type: "string",
                 description: "Scene emotion: confident/alarming/celebratory/neutral/dramatic/hopeful.",
@@ -280,9 +310,24 @@ register(
       `[Tool:direct_visuals] ${directedCount} scenes directed | ${richCount} rich visuals`,
     );
 
-    const guidance = richCount < 2
+    // Capture image_prompt hints for post-injection into final script
+    const imageHints = scenes
+      .map((s, i) => ({ sceneIndex: i, imagePrompt: String(s.image_prompt ?? "") }))
+      .filter((h) => h.imagePrompt);
+    if (imageHints.length > 0) {
+      setImageHints(imageHints);
+      console.log(`[Tool:direct_visuals] Captured ${imageHints.length} image prompt hints`);
+    }
+
+    const imagePromptCount = imageHints.length;
+
+    let guidance = richCount < 2
       ? `Only ${richCount} scene(s) use rich visuals. Replace some bar-chart/pie-chart scenes with svg, map, progress, comparison, or timeline. Aim for at least 2 rich visual scenes.`
       : "visual_plan_accepted";
+
+    if (imagePromptCount === 0) {
+      guidance += " Tip: consider adding imagePrompt on 1-3 key scenes (hook, climax, close) for AI-generated background imagery. Describe mood and lighting, not content.";
+    }
 
     return {
       result: {

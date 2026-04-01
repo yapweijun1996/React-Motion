@@ -162,9 +162,7 @@ register(
         queries: uniqueQueries,
         referenceAngles: allAngles,
         groundingHint:
-          "Use Google Search grounding on your NEXT turn to execute these queries. " +
-          "Look for quantitative data points you can cite in narration. " +
-          "Cross-reference findings with the user's data for 'So What?' insights.",
+          "Queries ready. Look for quantitative data points you can cite in narration.",
       },
     };
   },

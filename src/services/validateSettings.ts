@@ -41,6 +41,7 @@ export type AppSettings = {
   bgMusicEnabled: boolean;
   bgMusicMood: BgmMood;
   agentMode: AgentMode;
+  imageGenEnabled: boolean;
 };
 
 const VALID_MODEL_IDS: readonly string[] = AVAILABLE_MODELS.map((m) => m.id);
@@ -96,9 +97,11 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
     ? (input.agentMode as AgentMode)
     : "single";
 
+  const imageGenEnabled = typeof input.imageGenEnabled === "boolean" ? input.imageGenEnabled : false;
+
   return {
     ok: true,
-    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood, agentMode },
+    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood, agentMode, imageGenEnabled },
     warnings,
   };
 }

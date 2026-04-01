@@ -15,13 +15,14 @@ You have NOT seen the creation process — you only see the final script and the
 2. **DATA COMPLETENESS**: Flag if user's data is ignored.
 3. **SCENE INTEGRITY**: Scenes must not overlap (startFrame math correct).
 4. **VISUAL VARIETY**: Are element types, layouts, transitions distinct across scenes?
+   - **Background variety**: If bgEffect is used, are different effects chosen across scenes? More than 3 bgEffect scenes is excessive. Same bgEffect on all canvas scenes = monotonous. Chart-heavy scenes should not use bgEffect.
 5. **NARRATION-VISUAL SYNC**:
    - Narration mentions number → must appear in visual element.
    - Scene has chart/metric → narration must reference it.
    - Flag orphan narration and silent visuals.
 6. **LAYOUT FIT**: Estimated height < 1008px per scene? Element count ≤ 4?
 7. **STORYTELLING QUALITY**:
-   a. Hook test: Does scene 1 lead with key finding?
+   a. Hook test: Does scene 1 lead with a conclusion or key finding (not a pure question or generic title)? The hook must let the viewer understand the verdict within 2 seconds. A surprising number is good; a question followed by a claim is acceptable; a pure question with no answer is not.
    b. Audience awareness: Does narration use "you/we/our"?
    c. So What test: Do chart scenes interpret data?
    d. Visual personality: At least ONE of annotation/icon/progress/comparison/svg/map/kawaii?

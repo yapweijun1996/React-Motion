@@ -20,8 +20,12 @@ export const VIDEO_SCRIPT_SCHEMA = `{
       "durationInFrames": number (150-270 frames = 5-9 seconds, vary per scene role),
       "bgColor": "#hex",
       "bgGradient": "linear-gradient(135deg, #hex1, #hex2)" (optional — CSS gradient, overrides bgColor. Use for cinematic depth),
+      "bgEffect": "bokeh"|"flow"|"rising" (optional — canvas background animation. EXPLICIT OPT-IN: omit this field for most scenes. Only set on 2-3 key scenes with different effects. Never on chart-heavy scenes or scenes with imagePrompt),
+      "camera": "push-in"|"pull-out"|"pan-left"|"pan-right"|"pan-up"|"zoom-center"|"drift"|"static" (optional — cinematic camera movement, default "drift"),
       "layout": "column"|"center"|"row",
       "narration": "spoken narration for TTS (2-4 sentences, 8-15 seconds per scene)",
+      "imagePrompt": "optional — AI-generated description for scene background image. Describe mood, style, lighting, composition in 1-2 sentences. Example: 'Modern office with soft blue bokeh lighting, clean and professional atmosphere'. Only set when a static bgColor/bgGradient feels plain and a photographic/illustrated background would add cinematic depth. The generated image is rendered as a subtle background layer behind all elements.",
+      "imageOpacity": 0.35 (optional — background image opacity 0.0-1.0, default 0.35. Use 0.15-0.25 for subtle texture, 0.3-0.5 for visible background, 0.6+ for dominant image. Lower values keep text readable),
       "transition": "fade"|"slide"|"wipe"|"clock-wipe"|"radial-wipe"|"diamond-wipe"|"iris"|"zoom-out"|"zoom-blur"|"slide-up"|"split"|"rotate"|"dissolve"|"pixelate" (how THIS scene enters, default "fade"),
       "elements": [ ... element objects ... ]
     }
@@ -108,10 +112,21 @@ export const AVAILABLE_ELEMENTS = `## Available elements
 { "type": "lottie", "preset": "checkmark"|"arrow-up"|"arrow-down"|"pulse"|"star"|"thumbs-up", "size": number, "loop": boolean }
 // lottie: animated icon. Use alongside metrics/callouts for visual punctuation. Place in "row" layout.
 
-{ "type": "svg", "markup": "<svg viewBox='0 0 800 400'>...</svg>" }
-// svg: custom inline SVG diagram. Use for flowcharts, org charts, mind maps, process diagrams, timelines, Venn diagrams.
+{ "type": "svg", "markup": "<svg viewBox='0 0 800 400'>...</svg>", "animation": "fade"|"zoom"|"draw", "drawSpeed": number }
+// svg: custom inline SVG diagram. Use for ANY visual that standard charts can't express: flowcharts, org charts, mind maps, process diagrams, Venn diagrams,
+// AND scientific/spatial diagrams (solar systems, orbits, atoms, ecosystems, circuits, networks, hierarchies, cycles).
+// RULE: when data is spatial or relational (not tabular), svg is BETTER than bar-chart/line-chart. Example: planetary orbits → svg with concentric circles + planet dots, NOT a bar chart.
 // AI generates the full SVG markup string. MUST include viewBox. Use palette colors (fill, not CSS color). Font-size 16+ inside SVG.
-// One svg element per scene — it auto-scales to fill available space. Great for visuals that standard chart types can't express.
+// One svg element per scene — it auto-scales to fill available space.
+// **animation "draw"**: Apple-style path drawing — each SVG stroke draws itself sequentially, then fill fades in. Cinematic storytelling for process flows, architecture diagrams. Set drawSpeed:0.5 for slow, 1 for normal, 2 for fast. Ensure SVG paths have explicit stroke colors.
+
+{ "type": "svg-3d", "markup": "<svg viewBox='0 0 800 500'><g id='bg'>...</g><g id='base'>...</g><g id='mid'>...</g><g id='front'>...</g></svg>", "layers": ["bg","base","mid","front"], "depthPreset": "subtle"|"card-stack"|"exploded", "cameraTilt": "left"|"right"|"top", "parallax": "none"|"subtle"|"medium", "float": boolean, "shadow": "soft"|"medium"|"strong", "reveal": "fade"|"rise"|"draw", "drawSpeed": number }
+// svg-3d: pseudo-3D depth SVG — premium-web spatial feel using layered groups with perspective tilt, parallax, and floating motion.
+// Author SVG with grouped <g id="..."> layers in back-to-front order. List ids in "layers" array. Export-safe (pure SVG + CSS transforms).
+// Use for: architecture exploded views, isometric cards, layered panels, product surfaces, process stacks. NOT for flat diagrams (use "svg").
+// depthPreset: "subtle" (gentle), "card-stack" (stacked), "exploded" (dramatic separation).
+// cameraTilt: wrapper perspective tilt direction. parallax: per-layer horizontal drift. float: gentle floating motion.
+// reveal "draw": Apple-style stroke drawing for linework-heavy diagrams. Keep text sparse. Avoid foreignObject.
 
 { "type": "map", "countries": [{ "name": "China", "value": "45K", "color": hex }, { "name": "USA", "value": "32K" }], "showLabels": true }
 // map: world map with country highlighting. Use for geographic data (market share, user distribution, regional revenue).
@@ -149,6 +164,7 @@ The canvas is 1920×1080. Elements must fill the space — do NOT cram too many 
   - **Metric values**: fontSize is controlled internally (160px), just keep value strings concise ("2.5M" not "2,500,000").
 - **Prefer fewer, bigger elements** over many small elements. Each scene should have one clear focal point.
 - Scene backgrounds should alternate light/dark for visual rhythm. Use high-contrast text colors.
+- **bgEffect** (canvas animation — EXPLICIT OPT-IN ONLY): "bokeh" for dreamy/corporate (soft light orbs), "flow" for tech/science (drifting particles), "rising" for warm/celebratory (floating fireflies). **Rules:** Only set bgEffect on 2-3 dark/gradient scenes max. If multiple scenes use bgEffect, they MUST use different effects. Do NOT set bgEffect on chart-heavy scenes. Do NOT set bgEffect when imagePrompt is set. If a scene has no bgEffect field, NO canvas animation will render — this is the desired default.
 - **NEVER use a chart element without data.** bar-chart needs bars[], pie-chart needs slices[], line-chart needs series[], sankey needs nodes[]+links[]. If the scene has no numeric data to chart, use text, callout, list, metric, or comparison instead.
 - **Non-chart scenes still fill space.** Use layout "center" with a large metric, callout, comparison, or progress element as the focal point. Avoid scenes with only small text floating in empty space.
 - **When NOT to use chart elements:**
@@ -183,4 +199,53 @@ export const HARD_CONSTRAINTS = `## Hard Constraints
 - If data is incomplete, flag gaps using a list element with "warning" icon.
 - Match the language of the user's prompt (Chinese prompt → Chinese narration).
 - Every scene MUST have a "narration" field with natural spoken narration (1-3 sentences, 5-15 seconds per scene).
-- Narration and visual elements MUST be synchronized (see Narration ↔ Visual Sync above).`;
+- Narration and visual elements MUST be synchronized (see Narration ↔ Visual Sync above).
+- **Background Images (AI decision)**: You may set \`imagePrompt\` on scenes where a photographic/illustrated background would add cinematic depth. This is YOUR creative decision — use it when a plain bgColor feels insufficient for the scene's mood. Describe mood, style, and lighting in 1-2 sentences (e.g. "Soft blue bokeh office lighting, professional atmosphere"). Set \`imageOpacity\` (0.0-1.0, default 0.35) to control visibility. Skip on chart-heavy scenes. Typical use: 1-3 scenes per video (hook, climax, close). If the video doesn't need it, don't use it.`;
+
+/** Cinematic storytelling tools — camera, spotlight, SVG draw. */
+export const CINEMATIC_TOOLS = `## Cinematic Storytelling Tools
+
+Three powerful tools for Apple-style narrative presentation. Use them together for maximum impact.
+
+### 1. Camera Movement (scene-level: scene.camera)
+Controls virtual camera motion during the scene. Match camera to narrative role:
+- **"push-in"**: Zoom 1.0→1.15 + upward drift. USE FOR: building tension, focusing attention, hook scenes.
+- **"pull-out"**: Zoom 1.15→1.0 + downward drift. USE FOR: revealing big picture, conclusion, resolution.
+- **"pan-left" / "pan-right"**: Horizontal sweep. USE FOR: timelines, sequences, before→after flow.
+- **"pan-up"**: Vertical upward sweep. USE FOR: growth narratives, rising trends, aspiration.
+- **"zoom-center"**: Strong center zoom 1.0→1.2. USE FOR: climax scene, maximum emphasis moment.
+- **"drift"**: Subtle Ken Burns (default). USE FOR: most scenes — keeps alive without distraction.
+- **"static"**: No motion. USE FOR: dense data scenes, reading-heavy content.
+
+**Narrative-Camera mapping:**
+| Scene Role | Recommended Camera | Why |
+|---|---|---|
+| Hook | push-in | Draw viewer in immediately |
+| Context/Why | drift | Neutral, let content speak |
+| Evidence | drift or pan-right | Steady, data-focused |
+| Climax | zoom-center | Maximum dramatic emphasis |
+| Resolution | pull-out | Step back, see the big picture |
+
+### 2. Spotlight (element-level: element.spotlight)
+Dims + blurs all other elements while scaling up the spotlit element. Like a stage spotlight.
+- Props: \`spotlight: { at: frameNumber, duration: frameCount }\`
+- "at" = scene-local frame when spotlight activates (e.g. 30 = 1s at 30fps)
+- "duration" = how long spotlight lasts (e.g. 45 = 1.5s)
+- Only ONE element per scene should have spotlight at any time.
+- USE FOR: climax scenes — spotlight the key metric or chart that delivers the insight.
+- COMBINE WITH: camera "zoom-center" for double emphasis.
+- Don't overuse — 1-2 spotlight moments per video.
+
+### 3. SVG Path Drawing (element-level: svg element animation:"draw")
+Apple-style stroke animation — each SVG path draws itself sequentially, then fill fades in.
+- Set animation:"draw" on svg element, optionally drawSpeed (0.5=slow, 1=normal, 2=fast)
+- USE FOR: explaining processes, architecture, cause-and-effect, system diagrams.
+- BEST ON: scenes with camera "drift" or "push-in" — let the drawing be the focus.
+- Ensure SVG paths have explicit stroke attributes for best effect.
+
+### Combining All Three (Example)
+A climax scene that reveals the key architecture diagram:
+- camera: "zoom-center" (viewer zooms in)
+- svg element with animation: "draw" (diagram draws itself)
+- After drawing completes, spotlight the key node
+This creates an Apple Keynote-quality reveal sequence.`;

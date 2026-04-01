@@ -151,10 +151,11 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
           }}
         />
       )}
-      {canvasEffects && (
+      {canvasEffects && scene.bgEffect && (
         <ParticleBg
           color={primaryColor}
           bgColor={scene.bgColor}
+          bgGradient={scene.bgGradient}
           effect={scene.bgEffect}
         />
       )}

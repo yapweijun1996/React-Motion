@@ -171,6 +171,19 @@ Fastest declining: China (-3%).
 Create a 7-scene video, each scene using a DIFFERENT transition effect. Use these transitions: radial-wipe, diamond-wipe, iris, split, zoom-blur, dissolve, slide-up. Dark and light backgrounds alternating. Keep each scene short (5s). This is a showcase of visual variety.`,
   },
   {
+    id: "tech-svg3d-demo",
+    icon: "\u{1F4D0}",
+    label: "3D Architecture",
+    category: "Technology",
+    desc: "Test svg-3d pseudo-3D layered diagram with depth and parallax",
+    prompt: `Modern cloud application architecture:
+Layer 1 (Frontend): React SPA, Next.js SSR, CDN edge cache — 3 components serving 12M monthly users.
+Layer 2 (API Gateway): Kong gateway handling authentication, rate limiting (10K req/s), request routing.
+Layer 3 (Microservices): User Service, Payment Service ($2.8M/month processed), Notification Service (850K emails/day), Search Service (400ms p99 latency).
+Layer 4 (Data): PostgreSQL primary (2TB), Redis cache (hit rate 94%), Elasticsearch (180M documents), S3 object storage (45TB).
+Create a 4-scene video. For the architecture overview scene, use svg-3d element with 4 grouped layers (frontend, gateway, services, data) to show the stack as a layered 3D diagram with depth separation. Use depthPreset "card-stack", cameraTilt "left", parallax "subtle", float true. Dark background for the architecture scene.`,
+  },
+  {
     id: "tech-webgl-demo",
     icon: "\u{1F52E}",
     label: "WebGL Effects Demo",
@@ -216,12 +229,12 @@ Create a clean energy progress report video highlighting the solar revolution.`,
     icon: "\u{1FA90}",
     label: "Solar System",
     category: "Science",
-    desc: "Planet distances and orbital periods",
+    desc: "Planet distances and orbital periods with orbital diagram",
     prompt: `Solar System planet data:
 Mercury: 0.39 AU, 88 days orbit. Venus: 0.72 AU, 225 days. Earth: 1.0 AU, 365 days.
 Mars: 1.52 AU, 687 days. Jupiter: 5.2 AU, 4333 days. Saturn: 9.5 AU, 10759 days.
 Uranus: 19.2 AU, 30687 days. Neptune: 30.1 AU, 60190 days.
-Create an educational video presenting the solar system distances and orbital periods.`,
+Create an educational video showing the solar system. Use an SVG orbital diagram with concentric circles for orbits and colored dots for planets — this data is spatial, not tabular. Show the exponential relationship between distance and orbital period.`,
   },
   {
     id: "geography-population",

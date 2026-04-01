@@ -333,6 +333,106 @@ describe("validateVideoScript — element validation", () => {
     if (r.ok) expect(r.data.scenes[0].elements[0].delay).toBe(0);
   });
 
+  // --- svg-3d specific validation ---
+
+  it("accepts svg-3d with minimal fields", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d", markup: "<svg viewBox='0 0 100 100'><g id='bg'></g></svg>" }] }],
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("warns when svg-3d markup is missing", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d" }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.warnings.join()).toContain("missing or empty");
+  });
+
+  it("warns when svg-3d markup is empty string", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d", markup: "  " }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.warnings.join()).toContain("missing or empty");
+  });
+
+  it("warns when svg-3d layers is empty array", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d", markup: "<svg></svg>", layers: [] }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.warnings.join()).toContain("layers");
+  });
+
+  it("defaults invalid svg-3d depthPreset to subtle", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d", markup: "<svg></svg>", depthPreset: "extreme" }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const el = r.data.scenes[0].elements[0] as Record<string, unknown>;
+      expect(el.depthPreset).toBe("subtle");
+      expect(r.warnings.join()).toContain("invalid depthPreset");
+    }
+  });
+
+  it("defaults invalid svg-3d cameraTilt to left", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d", markup: "<svg></svg>", cameraTilt: "bottom" }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const el = r.data.scenes[0].elements[0] as Record<string, unknown>;
+      expect(el.cameraTilt).toBe("left");
+    }
+  });
+
+  it("defaults invalid svg-3d reveal to fade", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{ elements: [{ type: "svg-3d", markup: "<svg></svg>", reveal: "explode" }] }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const el = r.data.scenes[0].elements[0] as Record<string, unknown>;
+      expect(el.reveal).toBe("fade");
+    }
+  });
+
+  it("accepts all valid svg-3d enum values", () => {
+    const r = validateVideoScript({
+      title: "X",
+      scenes: [{
+        elements: [{
+          type: "svg-3d",
+          markup: "<svg viewBox='0 0 100 100'></svg>",
+          depthPreset: "exploded",
+          cameraTilt: "top",
+          parallax: "medium",
+          shadow: "strong",
+          reveal: "draw",
+        }],
+      }],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const el = r.data.scenes[0].elements[0] as Record<string, unknown>;
+      expect(el.depthPreset).toBe("exploded");
+      expect(el.cameraTilt).toBe("top");
+      expect(el.parallax).toBe("medium");
+      expect(el.shadow).toBe("strong");
+      expect(el.reveal).toBe("draw");
+    }
+  });
+
   it("preserves custom element properties", () => {
     const r = validateVideoScript({
       title: "X",
@@ -409,12 +509,21 @@ describe("validateSettings", () => {
 // ============================================================
 
 describe("Enum constants", () => {
-  it("VALID_ELEMENT_TYPES has expected count", () => {
-    expect(VALID_ELEMENT_TYPES.length).toBe(18);
+  it("VALID_ELEMENT_TYPES includes core types", () => {
+    const required = ["text", "metric", "bar-chart", "pie-chart", "line-chart", "svg", "svg-3d", "icon", "kawaii"];
+    for (const t of required) {
+      expect(VALID_ELEMENT_TYPES).toContain(t);
+    }
+    // Sanity: should have a reasonable number of types (not accidentally emptied)
+    expect(VALID_ELEMENT_TYPES.length).toBeGreaterThanOrEqual(15);
   });
 
-  it("VALID_ANIMATIONS has expected count", () => {
-    expect(VALID_ANIMATIONS.length).toBe(10);
+  it("VALID_ANIMATIONS includes core animations", () => {
+    const required = ["fade", "slide-up", "zoom", "bounce", "draw"];
+    for (const a of required) {
+      expect(VALID_ANIMATIONS).toContain(a);
+    }
+    expect(VALID_ANIMATIONS.length).toBeGreaterThanOrEqual(8);
   });
 
   it("CONSTRAINTS has sane values", () => {

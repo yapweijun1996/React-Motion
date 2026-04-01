@@ -9,6 +9,7 @@ export const GEMINI_API_BASE =
 export const AVAILABLE_MODELS = [
   { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
   { id: "gemini-2.5-flash-preview-05-20", label: "Gemini 2.5 Flash" },
+  { id: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite (Preview)" },
   { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (Preview)" },
   { id: "gemini-2.5-pro-preview-05-06", label: "Gemini 2.5 Pro" },
   { id: "gemini-3-pro-preview", label: "Gemini 3 Pro (Preview)" },
@@ -34,3 +35,5 @@ export const BGM_MOODS = [
 export type BgmMood = (typeof BGM_MOODS)[number];
 
 export const DEFAULT_BGM_MOOD: BgmMood = "ambient";
+
+export const IMAGE_GEN_MODEL = "gemini-2.5-flash-image" as const;

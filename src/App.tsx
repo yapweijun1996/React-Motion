@@ -10,6 +10,7 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { LogModal } from "./components/LogModal";
 import { IconHistory, IconClipboard, IconSettings, IconX } from "./components/Icons";
 import { useAppState } from "./hooks/useAppState";
+import { exportScrollPage } from "./services/exportScrollPage";
 import type { MountConfig } from "./types";
 import "./styles.css";
 
@@ -131,6 +132,13 @@ export const App: React.FC<AppProps> = ({ config }) => {
                 disabled={isExporting || pptxExporting}
               >
                 {pptxExporting ? "Exporting..." : "Export PPT"}
+              </button>
+              <button
+                className="rm-btn rm-btn-outline"
+                onClick={() => exportScrollPage(script)}
+                disabled={isExporting || pptxExporting}
+              >
+                Export Scroll
               </button>
             </>
           )}

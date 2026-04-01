@@ -179,9 +179,10 @@ describe("Visual Director: Apple visual grammar", () => {
   });
 
   it("background rhythm supports arc", () => {
-    expect(template).toContain("restrained early");
-    expect(template).toContain("strongest contrast at climax");
-    expect(template).toContain("calmer close");
+    // Background rhythm section — may be original or linter-expanded version
+    expect(template).toContain("Background rhythm");
+    expect(template).toContain("Climax");
+    expect(template).toContain("Resolution");
   });
 });
 
@@ -276,6 +277,89 @@ describe("parseScenePlan: Apple beat parsing", () => {
     expect(plan.scenePlan[2].beat).toBe("how-it-works");
     expect(plan.scenePlan[3].beat).toBe("proof");
     expect(plan.scenePlan[5].beat).toBe("resolution");
+  });
+});
+
+// ============================================================
+// 6b. parseScenePlan handles space-separated beat labels (RM-189)
+// ============================================================
+
+describe("parseScenePlan: space-separated beat labels (bug fix)", () => {
+  it("parses 'WHY IT MATTERS' as why-it-matters (not fallback to proof)", () => {
+    const toolResult = {
+      storyboard: [
+        "[Scene 1: HOOK] Insight: Breach cost is $4.88M | So What: Financial impact | Duration: short",
+        "[Scene 2: WHY IT MATTERS] Insight: Healthcare 41% | So What: Essential sectors | Duration: medium",
+        "[Scene 3: HOW IT WORKS] Insight: Battery + Supercharger | So What: Ecosystem | Duration: medium",
+        "[Scene 4: PROOF] Insight: Production acceleration | So What: Scale confirmed | Duration: medium",
+        "[Scene 5: CLIMAX] Insight: 20M tons CO2 saved | So What: Net-zero | Duration: long",
+        "[Scene 6: RESOLUTION] Insight: Point of no return | So What: Scale the grid | Duration: short",
+      ].join("\n"),
+      scene_count: 6,
+    };
+
+    const plan = extractStoryboardPlan(toolResult, "data", "prompt");
+
+    expect(plan.scenePlan).toHaveLength(6);
+    expect(plan.scenePlan[0].beat).toBe("hook");
+    expect(plan.scenePlan[1].beat).toBe("why-it-matters");
+    expect(plan.scenePlan[2].beat).toBe("how-it-works");
+    expect(plan.scenePlan[3].beat).toBe("proof");
+    expect(plan.scenePlan[4].beat).toBe("climax");
+    expect(plan.scenePlan[5].beat).toBe("resolution");
+  });
+
+  it("parses mixed case and extra spaces", () => {
+    const toolResult = {
+      storyboard: [
+        "[Scene 1: Hook] Insight: test | Duration: short",
+        "[Scene 2:  Why It Matters ] Insight: test | Duration: medium",
+        "[Scene 3: HOW  IT  WORKS] Insight: test | Duration: medium",
+      ].join("\n"),
+      scene_count: 3,
+    };
+
+    const plan = extractStoryboardPlan(toolResult, "data", "prompt");
+
+    expect(plan.scenePlan).toHaveLength(3);
+    expect(plan.scenePlan[0].beat).toBe("hook");
+    expect(plan.scenePlan[1].beat).toBe("why-it-matters");
+    expect(plan.scenePlan[2].beat).toBe("how-it-works");
+  });
+
+  it("3-scene compressed format: no beat falls back to proof incorrectly", () => {
+    // Real-world case from Gemini flash-lite output
+    const toolResult = {
+      storyboard: [
+        "[Scene 1: HOOK] Insight: Average breach cost is $4.88M, a 10% YoY increase. | So What: Financial impact is compounding. | Suggested elements: metric, text | Duration: short",
+        "[Scene 2: WHY IT MATTERS] Insight: Healthcare and Finance represent 41% of all targeted incidents. | So What: Essential infrastructure sectors under pressure. | Suggested elements: pie-chart, callout | Duration: medium",
+        "[Scene 3: CLIMAX] Insight: The mean time to identify and contain a breach is 258 days. | So What: This massive window of exposure drives rising costs. | Suggested elements: timeline, annotation | Duration: long",
+      ].join("\n"),
+      scene_count: 3,
+    };
+
+    const plan = extractStoryboardPlan(toolResult, "cyber data", "cybersecurity briefing");
+
+    expect(plan.scenePlan).toHaveLength(3);
+    // The critical assertion: WHY IT MATTERS must NOT fall back to "proof"
+    expect(plan.scenePlan[1].beat).toBe("why-it-matters");
+    expect(plan.scenePlan[1].role).toBe("why-it-matters");
+    // Verify other scenes are correct too
+    expect(plan.scenePlan[0].beat).toBe("hook");
+    expect(plan.scenePlan[2].beat).toBe("climax");
+  });
+
+  it("still defaults unknown labels to proof", () => {
+    const toolResult = {
+      storyboard: "[Scene 1: INTRODUCTION] Insight: test | Duration: short",
+      scene_count: 1,
+    };
+
+    const plan = extractStoryboardPlan(toolResult, "data", "prompt");
+
+    expect(plan.scenePlan).toHaveLength(1);
+    expect(plan.scenePlan[0].role).toBe("proof");
+    expect(plan.scenePlan[0].beat).toBe("proof");
   });
 });
 

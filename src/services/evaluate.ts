@@ -16,6 +16,7 @@ Your job: diagnose issues. Do NOT return a corrected script — only list proble
 2. DATA COMPLETENESS: If the user's prompt contains data that the script ignores, flag it.
 3. SCENE INTEGRITY: Scenes must not overlap (startFrame math must be correct).
 4. VISUAL VARIETY: Are scenes visually distinct? Check element types, layouts, and transitions across scenes.
+   - Background variety: If bgEffect is set on multiple scenes, are different effects used? More than 3 bgEffect scenes is excessive. Chart-heavy scenes should not use bgEffect. If all scenes only use plain bgColor (no gradient, no image, no canvas), the video lacks visual rhythm.
 5. NARRATION-VISUAL SYNC: For each scene, check that narration and elements tell the same story:
    - If narration mentions a number/percentage/trend, it MUST appear in a visual element in that scene.
    - If a scene has a chart or metric, the narration MUST reference what it shows.
@@ -24,7 +25,7 @@ Your job: diagnose issues. Do NOT return a corrected script — only list proble
    Height estimates: text title ~140px, subtitle ~100px, body ~80px, metric ~220px, bar-chart ~80px/bar+40px, pie/sankey ~500px, line-chart ~450px, list ~80px/item, callout ~120px, divider ~30px, icon/kawaii/lottie ~160px, gap ~20px.
    Flag any scene where estimated total > 1008px or element count > 4.
 7. STORYTELLING QUALITY:
-   a. **Hook test**: Does scene 1 lead with a key finding or question? Flag generic openers like "Q1 Report", "Let's look at...", or topic-only titles.
+   a. **Hook test**: Does scene 1 lead with a conclusion or key finding within the first sentence? The hook must let the viewer understand the verdict within 2 seconds. It can be a surprising number, but must NOT be a pure question with no answer, or a generic title like "Q1 Report" or "Let's look at...". A question followed immediately by a concrete claim is acceptable.
    b. **Audience awareness**: Does narration use "you/we/our"? Flag impersonal-only narration.
    c. **So What test**: Do chart/metric scenes interpret the data, not just read numbers?
    d. **Visual variety**: At least ONE of: annotation, icon, progress, comparison, SVG, map, or kawaii?
@@ -32,7 +33,7 @@ Your job: diagnose issues. Do NOT return a corrected script — only list proble
    f. **Narrative arc**: Is there at least one challenge AND one resolution across scenes?
 
 8. APPLE NARRATIVE DISCIPLINE (Perception → Proof → Consequence):
-   a. **2-second test**: Can the viewer understand the point of scene 1 within 2 seconds? The hook must state a conclusion, not introduce a topic.
+   a. **2-second test**: Can the viewer understand the point of scene 1 within 2 seconds? The hook must state a conclusion or verdict, not introduce a topic. A surprising number is good; a pure question with no follow-up claim is not.
    b. **Single message test**: Does each scene have exactly ONE dominant message? Flag scenes that try to make multiple unrelated points.
    c. **Narration interprets, not duplicates**: Narration should explain WHY the visual matters, not read the visual verbatim. Flag scenes where narration just lists the same numbers shown in charts.
    d. **Claim → Evidence → Implication flow**: Does the script progress from stating a claim (hook) to showing evidence (proof) to drawing implication (resolution)? Flag scripts that jump randomly between unrelated points.
@@ -74,7 +75,7 @@ function buildEvalSummary(script: VideoScript): Record<string, unknown> {
 }
 
 function summarizeScene(scene: VideoScene): Record<string, unknown> {
-  return {
+  const out: Record<string, unknown> = {
     id: scene.id,
     startFrame: scene.startFrame,
     durationInFrames: scene.durationInFrames,
@@ -83,6 +84,11 @@ function summarizeScene(scene: VideoScene): Record<string, unknown> {
     narration: scene.narration,
     elements: scene.elements.map(summarizeElement),
   };
+  // Include background fields so evaluator can check variety
+  if (scene.bgGradient) out.bgGradient = scene.bgGradient;
+  if (scene.bgEffect) out.bgEffect = scene.bgEffect;
+  if (scene.imagePrompt) out.imagePrompt = scene.imagePrompt;
+  return out;
 }
 
 function summarizeElement(el: SceneElement): Record<string, unknown> {
@@ -218,7 +224,7 @@ export async function evaluateScriptJson(
     sceneCount: scenes.length,
     scenes: scenes.map((s) => {
       const elements = (s.elements as Record<string, unknown>[]) ?? [];
-      return {
+      const out: Record<string, unknown> = {
         id: s.id,
         startFrame: s.startFrame,
         durationInFrames: s.durationInFrames,
@@ -227,6 +233,10 @@ export async function evaluateScriptJson(
         narration: s.narration,
         elements: elements.map(summarizeElement as (el: Record<string, unknown>) => Record<string, unknown>),
       };
+      if (s.bgGradient) out.bgGradient = s.bgGradient;
+      if (s.bgEffect) out.bgEffect = s.bgEffect;
+      if (s.imagePrompt) out.imagePrompt = s.imagePrompt;
+      return out;
     }),
   };
   return runEval(userPrompt, summary, JSON.stringify(scriptJson).length);

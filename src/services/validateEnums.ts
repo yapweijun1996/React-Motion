@@ -24,7 +24,7 @@ export type ValidationResult<T> = {
 
 export const VALID_ELEMENT_TYPES = [
   "text", "metric", "bar-chart", "pie-chart", "line-chart",
-  "sankey", "list", "divider", "callout", "kawaii", "lottie", "icon", "annotation", "svg", "map",
+  "sankey", "list", "divider", "callout", "kawaii", "lottie", "icon", "annotation", "svg", "svg-3d", "map",
   "progress", "timeline", "comparison",
 ] as const;
 
@@ -40,10 +40,27 @@ export const VALID_TRANSITIONS = [
 export const VALID_ANIMATIONS = [
   "fade", "slide-up", "slide-left", "slide-right",
   "zoom", "bounce", "rubber-band", "scale-rotate", "flip",
-  "typewriter",
+  "typewriter", "draw",
 ] as const;
 
 export const VALID_STAGGER_SPEEDS = ["tight", "normal", "relaxed", "dramatic"] as const;
+
+export const VALID_CAMERAS = [
+  "push-in", "pull-out", "pan-left", "pan-right",
+  "pan-up", "zoom-center", "drift", "static",
+] as const;
+
+export const VALID_BG_EFFECTS = ["bokeh", "flow", "rising"] as const;
+
+// ============================================================
+// svg-3d element enums
+// ============================================================
+
+export const VALID_DEPTH_PRESETS = ["subtle", "card-stack", "exploded"] as const;
+export const VALID_CAMERA_TILTS = ["left", "right", "top"] as const;
+export const VALID_PARALLAX = ["none", "subtle", "medium"] as const;
+export const VALID_SVG3D_SHADOW = ["soft", "medium", "strong"] as const;
+export const VALID_SVG3D_REVEAL = ["fade", "rise", "draw"] as const;
 
 export const VALID_THEME_STYLES = ["corporate", "modern", "minimal"] as const;
 

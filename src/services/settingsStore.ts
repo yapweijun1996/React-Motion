@@ -40,6 +40,7 @@ export function loadSettings(): AppSettings {
       bgMusicEnabled: stored.bgMusicEnabled ?? false,
       bgMusicMood: stored.bgMusicMood ?? DEFAULT_BGM_MOOD,
       agentMode: stored.agentMode ?? "single",
+      imageGenEnabled: stored.imageGenEnabled ?? false,
     };
 
     const result = validateSettings(merged);
@@ -75,6 +76,7 @@ export function saveSettings(settings: AppSettings): void {
       bgMusicEnabled: result.data.bgMusicEnabled,
       bgMusicMood: result.data.bgMusicMood,
       agentMode: result.data.agentMode,
+      imageGenEnabled: result.data.imageGenEnabled,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch (err) {
@@ -110,6 +112,7 @@ type StoredSettings = {
   bgMusicEnabled?: boolean;
   bgMusicMood?: BgmMood;
   agentMode?: AgentMode;
+  imageGenEnabled?: boolean;
   // Legacy field — read for migration then discard
   geminiApiKey?: string;
 };
@@ -131,6 +134,7 @@ function getDefaults(): AppSettings {
     bgMusicEnabled: false,
     bgMusicMood: DEFAULT_BGM_MOOD,
     agentMode: "single",
+    imageGenEnabled: false,
   };
 }
 

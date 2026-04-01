@@ -5,13 +5,15 @@ import { runAgentLoop, type AgentProgress } from "./agentLoop";
 import { callGemini, type GeminiMessage } from "./gemini";
 import { generateSceneTTS } from "./tts";
 import { generateBgMusic } from "./bgMusic";
+import { generateImage } from "./imageGen";
 import { adjustSceneTimings } from "./adjustTiming";
 import { loadSettings } from "./settingsStore";
 import { trackEvent } from "./metrics";
+import { getImageHints } from "./agentToolRegistry";
 import { JSON_PARSE_MAX_RETRIES } from "./agentConfig";
 
 export type GenerationProgress = {
-  stage: "agent" | "evaluate" | "tts" | "bgm" | "done";
+  stage: "agent" | "evaluate" | "tts" | "bgm" | "imageGen" | "done";
   stageIndex: number;
   stageCount: number;
   stageLabel: string;
@@ -26,8 +28,8 @@ export type GenerationProgress = {
 };
 
 // --- Stage weights based on real timing data ---
-const STAGE_WEIGHTS = [32, 0, 55, 13]; // agent (includes evaluate), skip, tts, bgm → sums to 100
-const STAGE_LABELS = ["AI Scripting", "Quality Check", "Narration", "Background Music"];
+const STAGE_WEIGHTS = [28, 0, 47, 13, 12]; // agent (includes evaluate), skip, tts, bgm, imageGen → sums to 100
+const STAGE_LABELS = ["AI Scripting", "Quality Check", "Narration", "Background Music", "Image Generation"];
 
 /** Lightweight progress tracker — computes percent, elapsed, ETA */
 function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
@@ -42,9 +44,9 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
   function emit(overrides: Partial<GenerationProgress>) {
     if (!onProgress) return;
     onProgress({
-      stage: (["agent", "evaluate", "tts", "bgm"] as const)[stageIdx],
+      stage: (["agent", "evaluate", "tts", "bgm", "imageGen"] as const)[stageIdx],
       stageIndex: stageIdx,
-      stageCount: 4,
+      stageCount: 5,
       stageLabel: STAGE_LABELS[stageIdx],
       message: "",
       percent: basePercent(stageIdx),
@@ -96,7 +98,7 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
     },
 
     done() {
-      emit({ stage: "done", stageIndex: 4, stageLabel: "Done", message: "Done", percent: 100 });
+      emit({ stage: "done", stageIndex: 5, stageLabel: "Done", message: "Done", percent: 100 });
     },
   };
 }
@@ -150,6 +152,22 @@ export async function generateScript(
     script = parseVideoScript(JSON.stringify(scriptJson));
   }
 
+  // --- Inject imagePrompt from direct_visuals if AI didn't include them ---
+  const imageHints = getImageHints();
+  if (imageHints.length > 0) {
+    let injected = 0;
+    for (const hint of imageHints) {
+      const scene = script.scenes[hint.sceneIndex];
+      if (scene && !scene.imagePrompt) {
+        scene.imagePrompt = hint.imagePrompt;
+        injected++;
+      }
+    }
+    if (injected > 0) {
+      console.log(`[ImageGen] Injected ${injected} imagePrompt(s) from direct_visuals plan`);
+    }
+  }
+
   // --- Phase 2: Evaluate — now runs inside agent loop (RM-155) ---
   tracker.setStage(1, "Quality verified");
 
@@ -182,6 +200,34 @@ export async function generateScript(
       console.log(`[BGM] Done. Duration: ${bgm.durationMs}ms`);
     } catch (err) {
       console.warn("[BGM] Failed (non-fatal):", err);
+    }
+  }
+
+  // --- Phase 5: Image Generation (AI-driven) ---
+  const { imageGenEnabled } = loadSettings();
+  const imageScenes = script.scenes.filter((s) => s.imagePrompt?.trim());
+  console.log(`[ImageGen] enabled=${imageGenEnabled}, scenes with imagePrompt=${imageScenes.length}`);
+  if (imageGenEnabled) {
+    if (imageScenes.length > 0) {
+      tracker.setStage(4, "Generating scene images...");
+      const imgTotal = imageScenes.length;
+      console.log(`[ImageGen] Generating images for ${imgTotal} scenes (concurrency: 2)`);
+
+      let imgProcessed = 0;
+      const processScene = async (scene: typeof imageScenes[number]) => {
+        try {
+          const result = await generateImage(scene.imagePrompt!);
+          scene.imageUrl = result.blobUrl;
+          console.log(`[ImageGen] Scene "${scene.id}" done`);
+        } catch (err) {
+          console.warn(`[ImageGen] Scene "${scene.id}" failed (non-fatal):`, err);
+        }
+        imgProcessed++;
+        tracker.reportSimple(`Generating images (${imgProcessed}/${imgTotal})...`);
+      };
+
+      // Concurrent pool — limit to 2 parallel requests to avoid rate limits
+      await imageGenPool(imageScenes, processScene, 2);
     }
   }
 
@@ -264,4 +310,21 @@ function formatAgentMessage(p: AgentProgress, completedTools: string[]): string 
   if (p.action.startsWith("tool_error:")) return "Retrying...";
 
   return LABELS[p.action] ?? `${p.action}`;
+}
+
+/** Simple concurrency pool — runs tasks with at most `limit` in flight. */
+async function imageGenPool<T>(
+  items: T[],
+  fn: (item: T) => Promise<void>,
+  limit: number,
+): Promise<void> {
+  let idx = 0;
+  const next = async (): Promise<void> => {
+    while (idx < items.length) {
+      const i = idx++;
+      await fn(items[i]);
+    }
+  };
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => next());
+  await Promise.all(workers);
 }

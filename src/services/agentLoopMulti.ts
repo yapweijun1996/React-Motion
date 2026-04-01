@@ -12,6 +12,7 @@ import {
 import {
   resetPaletteState,
   resetScriptState,
+  resetImageHints,
   type ToolContext,
 } from "./agentTools";
 import {
@@ -52,6 +53,7 @@ export async function runMultiAgentLoop(
 ): Promise<AgentLoopResult> {
   resetPaletteState();
   resetScriptState();
+  resetImageHints();
 
   const log: AgentProgress[] = [];
   let totalIterations = 0;
@@ -131,9 +133,9 @@ export async function runMultiAgentLoop(
   }
 
   // ═══════════════════════════════════════════════════════════
-  // Phase 2.5: Deterministic quality gate (same 8 checks)
+  // Phase 2.5: Deterministic quality gate (9 checks incl. data accuracy)
   // ═══════════════════════════════════════════════════════════
-  const checks = runStopChecks(terminalScript);
+  const checks = runStopChecks(terminalScript, context.userPrompt);
   if (!checks.pass) {
     report("quality_gate", checks.issues.join("; "));
     const qualityMsg = "Quality check found issues:\n" +

@@ -193,6 +193,22 @@ Supports two formats: multi-series (array of series) or flat (single data array)
 |------|------|---------|-------|
 | markup | string | required | Full SVG string with viewBox. AI-generated. |
 
+#### SVG Direction for Premium-Web Pseudo-3D
+
+Current `svg` scenes should be authored with an export-safe pseudo-3D mindset:
+
+- Prefer isometric or layered diagrams over flat icon dumps
+- Separate background, body, shadow, and highlight into distinct `<g>` groups when possible
+- Use gradients and overlapping planes to imply depth
+- Keep text embedded as SVG text only when it remains readable at export size
+- Prefer wrapper-level motion and scene-level camera/parallax over deeply nested CSS 3D tricks
+
+Not recommended for the current render path:
+
+- True 3D scene descriptions
+- `foreignObject` (removed from sanitizer whitelist — embedded XHTML is a security risk)
+- Effects that rely on browser-only 3D composition semantics
+
 ### map
 
 | Prop | Type | Default | Notes |

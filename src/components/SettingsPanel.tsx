@@ -55,7 +55,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
   const handleSave = () => {
     saveSettings(settings);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setTimeout(() => { setSaved(false); onClose(); }, 600);
   };
 
   if (!open) return null;
@@ -241,6 +241,25 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
           </div>
         </div>
 
+        {/* Image Generation */}
+        <div className="rm-field">
+          <label className="rm-label" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            Image Generation
+            <input
+              type="checkbox"
+              checked={settings.imageGenEnabled}
+              onChange={(e) => setSettings({ ...settings, imageGenEnabled: e.target.checked })}
+              style={{ width: 18, height: 18, cursor: "pointer" }}
+            />
+            <span style={{ fontSize: 12, fontWeight: 400, color: settings.imageGenEnabled ? "#16a34a" : "#9ca3af" }}>
+              {settings.imageGenEnabled ? "ON" : "OFF"}
+            </span>
+          </label>
+          <div className="rm-hint">
+            Enable AI image generation for scenes via Gemini. Uses a dedicated image model and incurs additional API cost. Default: off to save money.
+          </div>
+        </div>
+
         {/* Agent Mode */}
         <div className="rm-field">
           <label className="rm-label">
@@ -271,7 +290,7 @@ export const SettingsPanel: React.FC<Props> = ({ open, onClose }) => {
               onClick={() => {
                 if (!confirm("This will remove your API key and all cached data. Continue?")) return;
                 clearSettings(); clearCache();
-                setSettings({ geminiApiKey: "", geminiModel: DEFAULT_MODEL, ttsVoice: DEFAULT_TTS_VOICE, ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: DEFAULT_BGM_MOOD, agentMode: "single" });
+                setSettings({ geminiApiKey: "", geminiModel: DEFAULT_MODEL, ttsVoice: DEFAULT_TTS_VOICE, ttsConcurrency: 2, exportQuality: "standard", canvasEffects: false, bgMusicEnabled: false, bgMusicMood: DEFAULT_BGM_MOOD, agentMode: "single", imageGenEnabled: false });
                 alert("All local data cleared.");
               }}>Clear All Data</button>
           </div>

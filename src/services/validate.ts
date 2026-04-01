@@ -7,7 +7,13 @@ import {
   VALID_TRANSITIONS,
   VALID_ANIMATIONS,
   VALID_STAGGER_SPEEDS,
+  VALID_BG_EFFECTS,
   VALID_THEME_STYLES,
+  VALID_DEPTH_PRESETS,
+  VALID_CAMERA_TILTS,
+  VALID_PARALLAX,
+  VALID_SVG3D_SHADOW,
+  VALID_SVG3D_REVEAL,
   CONSTRAINTS,
 } from "./validateEnums";
 import type { ValidationResult } from "./validateEnums";
@@ -191,11 +197,14 @@ function validateScene(input: unknown, index: number): ValidationResult<VideoSce
     ),
     bgColor: isStr(s.bgColor) ? s.bgColor : undefined,
     bgGradient: isStr(s.bgGradient) ? s.bgGradient : undefined,
+    bgEffect: isStr(s.bgEffect) && VALID_BG_EFFECTS.includes(s.bgEffect as typeof VALID_BG_EFFECTS[number]) ? s.bgEffect as typeof VALID_BG_EFFECTS[number] : undefined,
     layout,
     padding: isStr(s.padding) ? s.padding : undefined,
     elements,
     transition,
     narration: isStr(s.narration) ? s.narration : undefined,
+    imagePrompt: isStr(s.imagePrompt) ? s.imagePrompt : undefined,
+    imageOpacity: isNum(s.imageOpacity) ? clamp(s.imageOpacity, 0, 1) : undefined,
   };
 
   return { ok: true, data: scene, warnings };
@@ -260,6 +269,37 @@ function validateElement(
   if (e.delay !== undefined) {
     const d = toNum(e.delay, 0);
     el.delay = Math.max(0, d);
+  }
+
+  // --- svg-3d specific validation (permissive — defaults for missing) ---
+  if (type === "svg-3d") {
+    const r = el as Record<string, unknown>;
+    if (!isStr(r.markup) || (r.markup as string).trim() === "") {
+      warnings.push(`${prefix}: svg-3d missing or empty "markup" — will render nothing`);
+    }
+    if (Array.isArray(r.layers) && (r.layers as unknown[]).length === 0) {
+      warnings.push(`${prefix}: svg-3d "layers" is empty — wrapper motion only`);
+    }
+    if (r.depthPreset !== undefined && !inEnum(r.depthPreset, VALID_DEPTH_PRESETS)) {
+      warnings.push(`${prefix}: invalid depthPreset "${r.depthPreset}", defaulting to "subtle"`);
+      r.depthPreset = "subtle";
+    }
+    if (r.cameraTilt !== undefined && !inEnum(r.cameraTilt, VALID_CAMERA_TILTS)) {
+      warnings.push(`${prefix}: invalid cameraTilt "${r.cameraTilt}", defaulting to "left"`);
+      r.cameraTilt = "left";
+    }
+    if (r.parallax !== undefined && !inEnum(r.parallax, VALID_PARALLAX)) {
+      warnings.push(`${prefix}: invalid parallax "${r.parallax}", defaulting to "subtle"`);
+      r.parallax = "subtle";
+    }
+    if (r.shadow !== undefined && !inEnum(r.shadow, VALID_SVG3D_SHADOW)) {
+      warnings.push(`${prefix}: invalid shadow "${r.shadow}", defaulting to "soft"`);
+      r.shadow = "soft";
+    }
+    if (r.reveal !== undefined && !inEnum(r.reveal, VALID_SVG3D_REVEAL)) {
+      warnings.push(`${prefix}: invalid reveal "${r.reveal}", defaulting to "fade"`);
+      r.reveal = "fade";
+    }
   }
 
   return { ok: true, data: el, warnings };

@@ -158,9 +158,16 @@ const LEGACY_TO_BEAT: Record<string, string> = {
 function parseScenePlan(storyboard: string): StoryboardPlan["scenePlan"] {
   const scenes: StoryboardPlan["scenePlan"] = [];
 
+  // Pre-normalize: convert space-separated beat labels inside brackets to kebab-case
+  // e.g. [Scene 2: WHY IT MATTERS] → [Scene 2: WHY-IT-MATTERS]
+  const normalized = storyboard.replace(
+    /\[Scene\s*(\d+)\s*:\s*([^\]]+)\]/gi,
+    (_, num, beat) => `[Scene ${num}: ${beat.trim().replace(/\s+/g, "-")}]`,
+  );
+
   const scenePattern = /\[?Scene\s*(\d+)[:\s]*([A-Za-z-]+)\]?[:\s]*(.*?)(?=\[?Scene\s*\d+|$)/gis;
   let match;
-  while ((match = scenePattern.exec(storyboard)) !== null) {
+  while ((match = scenePattern.exec(normalized)) !== null) {
     const num = parseInt(match[1], 10);
     const rawRole = match[2].toLowerCase();
     const block = match[3].trim();

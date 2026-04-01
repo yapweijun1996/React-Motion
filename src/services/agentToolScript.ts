@@ -17,7 +17,10 @@ register(
       "Output the final VideoScript JSON. This ENDS the agent loop. " +
       "Only call this after you have analyzed data, drafted a storyboard, and reviewed the element catalog. " +
       "The script must follow the VideoScript schema exactly. " +
-      "Pass the entire VideoScript as a JSON **string** (not an object).",
+      "Pass the entire VideoScript as a JSON **string** (not an object). " +
+      "If Image Generation is appropriate for cinematic depth, include 'imagePrompt' (1-2 sentences describing mood/style/lighting) " +
+      "and optional 'imageOpacity' (0.0-1.0, default 0.35) on 1-3 key scenes (hook, climax, close). " +
+      "Only use imagePrompt where a photographic background adds value — skip on chart-heavy scenes.",
     parameters: {
       type: "object",
       properties: {

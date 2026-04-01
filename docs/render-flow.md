@@ -16,6 +16,16 @@ VideoScript
     → Progress bar (bottom, theme color)
 ```
 
+### SVG and Pseudo-3D Scenes
+
+Premium-web "3D SVG" scenes should stay on this same render path:
+
+- Render as inline SVG in the DOM
+- Animate with DOM/CSS transforms, path drawing, parallax, spotlight, and camera motion
+- Simulate depth with layered SVG groups, gradients, shadows, and occlusion
+
+This path is preferred because export captures the same DOM/SVG scene tree through `html-to-image`, preserving preview/export parity.
+
 ### Transitions
 
 Configured per scene via `scene.transition` field:
@@ -64,6 +74,23 @@ Step 4: Mux Audio (if TTS exists)
 Step 5: Download
   ff.readFile("output.mp4") → Blob → URL.createObjectURL → <a download>
 ```
+
+### Export-Safe Boundary for Pseudo-3D SVG
+
+Recommended:
+
+- Layered SVG groups
+- Isometric geometry
+- Wrapper-level `scale`, `translate`, and restrained `rotateX` / `rotateY`
+- SVG gradients, masks, and lightweight filters
+
+Use carefully or avoid:
+
+- `foreignObject` (blocked by sanitizer since RM-189)
+- Complex nested CSS 3D scenes
+- True 3D runtime content with its own camera/light/material stack
+
+The more a scene depends on browser-specific 3D composition instead of plain SVG/DOM, the higher the risk of preview/export mismatch.
 
 ### FFmpeg Configuration
 

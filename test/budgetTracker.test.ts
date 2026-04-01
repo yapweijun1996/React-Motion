@@ -50,12 +50,14 @@ describe("recordModelOutput", () => {
     expect(t.turnSnapshots[0].modelTokensDelta).toBe(20);
   });
 
-  it("accumulates model tokens from functionCall parts", () => {
+  it("accumulates model tokens from functionCall parts but skips snapshot", () => {
     const t = createBudgetTracker(0, 0, 10000);
     recordModelOutput(t, 1, [{
       functionCall: { name: "produce_script", args: { key: "value" } },
     }]);
     expect(t.breakdown.model).toBeGreaterThan(0);
+    // Tool-call turns are excluded from diminishing returns tracking
+    expect(t.turnSnapshots).toHaveLength(0);
   });
 
   it("accumulates across multiple calls", () => {
@@ -117,6 +119,23 @@ describe("checkBudget", () => {
     if (d.action === "force_finish") {
       expect(d.pctUsed).toBe(95);
     }
+  });
+
+  it("tool-call-only turns do NOT trigger diminishing returns (RM-190)", () => {
+    const t = createBudgetTracker(0, 0, 100000);
+    // Simulate Visual Director: generate_palette → get_element_catalog → produce_script
+    // All are tool calls — model output is just tool name + args, very low tokens
+    recordModelOutput(t, 1, [{
+      functionCall: { name: "generate_palette", args: { color_or_mood: "#000" } },
+    }]);
+    recordModelOutput(t, 2, [{
+      functionCall: { name: "get_element_catalog", args: {} },
+    }]);
+    // Tool-call turns produce no snapshots → no diminishing detection
+    expect(t.turnSnapshots).toHaveLength(0);
+    t.breakdown.model = 25; // low total, but that's expected for tool dispatching
+    const d = checkBudget(t);
+    expect(d.action).toBe("continue"); // NOT force_finish
   });
 
   it("detects diminishing returns — 2 consecutive low-output turns", () => {

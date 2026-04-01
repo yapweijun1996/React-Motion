@@ -79,24 +79,35 @@ export function createBudgetTracker(
 
 // --- Recording functions ---
 
-/** Record model response tokens (text + function calls). Call once per iteration. */
+/**
+ * Record model response tokens (text + function calls). Call once per iteration.
+ * Tool-call turns are excluded from diminishing returns tracking because their
+ * model output is inherently small (just tool name + args). Only text-only turns
+ * are meaningful for detecting "the model keeps producing nothing useful".
+ */
 export function recordModelOutput(
   tracker: BudgetTracker,
   iteration: number,
   parts: Array<{ text?: string; functionCall?: { name: string; args: Record<string, unknown> } }>,
 ): void {
   let chars = 0;
+  let hasToolCall = false;
   for (const p of parts) {
     if (p.text) {
       chars += p.text.length;
     } else if (p.functionCall) {
+      hasToolCall = true;
       chars += p.functionCall.name.length;
       chars += JSON.stringify(p.functionCall.args).length;
     }
   }
   const tokens = Math.ceil(chars / 4);
   tracker.breakdown.model += tokens;
-  tracker.turnSnapshots.push({ iteration, modelTokensDelta: tokens });
+  // Only track text-only turns for diminishing returns detection.
+  // Tool-call turns have small model output by design — not a signal of stalling.
+  if (!hasToolCall) {
+    tracker.turnSnapshots.push({ iteration, modelTokensDelta: tokens });
+  }
 }
 
 /** Record tool result tokens (JSON payloads at /2). */

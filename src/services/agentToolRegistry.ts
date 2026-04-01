@@ -21,6 +21,23 @@ export function resetPaletteState(): void {
   lastGeneratedPalette = null;
 }
 
+// --- Image prompt state (captured by direct_visuals, injected after produce_script) ---
+
+export type SceneImageHint = { sceneIndex: number; imagePrompt: string };
+let lastImageHints: SceneImageHint[] = [];
+
+export function getImageHints(): SceneImageHint[] {
+  return lastImageHints;
+}
+
+export function setImageHints(hints: SceneImageHint[]): void {
+  lastImageHints = hints;
+}
+
+export function resetImageHints(): void {
+  lastImageHints = [];
+}
+
 // --- Last script state (captured by produce_script, patched by refine_scene) ---
 
 let lastProducedScript: Record<string, unknown> | null = null;

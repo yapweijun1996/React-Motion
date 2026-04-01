@@ -32,18 +32,16 @@ import type { VideoScene } from "../src/types";
 
 // Mock canvas 2D context — jsdom has no real canvas
 function createMockCtx() {
+  const gradientObj = { addColorStop: vi.fn() };
   return {
     clearRect: vi.fn(),
     beginPath: vi.fn(),
-    moveTo: vi.fn(),
-    lineTo: vi.fn(),
     arc: vi.fn(),
-    stroke: vi.fn(),
     fill: vi.fn(),
     globalAlpha: 1,
-    strokeStyle: "",
-    fillStyle: "",
-    lineWidth: 1,
+    fillStyle: "" as string | object,
+    createRadialGradient: vi.fn(() => gradientObj),
+    _gradient: gradientObj,
   };
 }
 
@@ -67,7 +65,7 @@ function withVideo(ui: React.ReactElement, frame = 30) {
   );
 }
 
-describe("ParticleBg", () => {
+describe("ParticleBg (Bokeh)", () => {
   it("renders a canvas element with correct dimensions", () => {
     const { container } = render(withVideo(<ParticleBg />));
     const canvas = container.querySelector("canvas");
@@ -76,34 +74,20 @@ describe("ParticleBg", () => {
     expect(canvas!.height).toBe(1080);
   });
 
-  it("draws particles on the canvas context", () => {
+  it("draws bokeh orbs using radial gradients", () => {
     render(withVideo(<ParticleBg />));
-    // Should have called arc() for each particle (40 particles)
+    // 20 orbs, each creates a radial gradient + arc + fill
+    expect(mockCtx.createRadialGradient).toHaveBeenCalled();
     expect(mockCtx.arc).toHaveBeenCalled();
     expect(mockCtx.fill).toHaveBeenCalled();
-    // 50 particles × 2 arcs each (glow + core)
-    expect(mockCtx.arc.mock.calls.length).toBe(100);
-  });
-
-  it("draws connection lines between nearby particles", () => {
-    // Use a larger frame so particles have moved and some are close
-    render(withVideo(<ParticleBg />, 100));
-    // With 40 particles on 1920x1080, statistically some will be within 160px
-    const lineCount = mockCtx.lineTo.mock.calls.length;
-    // If no lines at frame 100, the golden ratio spread just has no neighbours
-    // within 160px at this snapshot — that's OK, just verify draws happened
-    // 50 particles × 2 arcs each (glow + core)
-    expect(mockCtx.arc.mock.calls.length).toBe(100);
-    expect(mockCtx.clearRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
-    // Lines are a bonus; the test validates the rendering pipeline works
-    expect(lineCount).toBeGreaterThanOrEqual(0);
+    // Each gradient should have color stops
+    expect(mockCtx._gradient.addColorStop).toHaveBeenCalled();
   });
 
   it("is deterministic — same frame produces same draw calls", () => {
     render(withVideo(<ParticleBg />, 60));
     const firstArcCalls = mockCtx.arc.mock.calls.map((c) => [...c]);
 
-    // Reset and render again at same frame
     mockCtx.arc.mockClear();
     render(withVideo(<ParticleBg />, 60));
     const secondArcCalls = mockCtx.arc.mock.calls.map((c) => [...c]);
@@ -111,16 +95,11 @@ describe("ParticleBg", () => {
     expect(firstArcCalls).toEqual(secondArcCalls);
   });
 
-  it("applies fade-in during first 0.5s (15 frames at 30fps)", () => {
+  it("applies fade-in — frame 0 draws nothing", () => {
     render(withVideo(<ParticleBg />, 0));
-    // At frame 0, fadeIn = 0, so nothing should be drawn with visible alpha
+    // At frame 0, fadeIn = 0, so clearRect runs but no orbs drawn
     expect(mockCtx.clearRect).toHaveBeenCalledWith(0, 0, 1920, 1080);
-  });
-
-  it("uses custom color prop", () => {
-    render(withVideo(<ParticleBg color="#ff0000" />));
-    expect(mockCtx.fillStyle).toBe("#ff0000");
-    expect(mockCtx.strokeStyle).toBe("#ff0000");
+    expect(mockCtx.arc).not.toHaveBeenCalled();
   });
 
   it("has pointer-events:none so DOM content is clickable", () => {
@@ -129,10 +108,54 @@ describe("ParticleBg", () => {
     expect(canvas.style.pointerEvents).toBe("none");
     expect(canvas.style.position).toBe("absolute");
   });
+
+  it("resolves bright color on dark backgrounds", () => {
+    render(withVideo(<ParticleBg bgColor="#0f172a" />));
+    // On dark bg, should use light blue (#93c5fd → rgb "147,197,253")
+    const gradCalls = mockCtx._gradient.addColorStop.mock.calls;
+    const hasLightBlue = gradCalls.some(
+      (c: [number, string]) => typeof c[1] === "string" && c[1].includes("147,197,253"),
+    );
+    expect(hasLightBlue).toBe(true);
+  });
+
+  it("resolves color from bgGradient before bgColor", () => {
+    // bgGradient has dark first color (#0f172a), bgColor is light (#ffffff)
+    // Should use bright particle color from gradient, not from bgColor
+    render(withVideo(<ParticleBg bgColor="#ffffff" bgGradient="linear-gradient(135deg, #0f172a, #1e3a5f)" />));
+    const gradCalls = mockCtx._gradient.addColorStop.mock.calls;
+    const hasLightBlue = gradCalls.some(
+      (c: [number, string]) => typeof c[1] === "string" && c[1].includes("147,197,253"),
+    );
+    expect(hasLightBlue).toBe(true);
+  });
+
+  it("resolves deeper color on light gradient", () => {
+    render(withVideo(<ParticleBg bgGradient="linear-gradient(135deg, #f8fafc, #e2e8f0)" />));
+    const gradCalls = mockCtx._gradient.addColorStop.mock.calls;
+    // Light bg → deeper blue (#3b82f6 → rgb "59,130,246")
+    const hasDeeperBlue = gradCalls.some(
+      (c: [number, string]) => typeof c[1] === "string" && c[1].includes("59,130,246"),
+    );
+    expect(hasDeeperBlue).toBe(true);
+  });
+
+  it("renders with explicit effect prop (flow)", () => {
+    render(withVideo(<ParticleBg effect="flow" />));
+    // Flow effect also draws arcs and fills
+    expect(mockCtx.arc).toHaveBeenCalled();
+    expect(mockCtx.fill).toHaveBeenCalled();
+  });
+
+  it("renders with explicit effect prop (rising)", () => {
+    render(withVideo(<ParticleBg effect="rising" />));
+    expect(mockCtx.arc).toHaveBeenCalled();
+    expect(mockCtx.fill).toHaveBeenCalled();
+  });
 });
 
 describe("GenericScene + canvasEffects setting", () => {
-  const scene: VideoScene = {
+  const baseScene: VideoScene = {
     id: "test-scene",
     startFrame: 0,
     durationInFrames: 150,
@@ -140,31 +163,33 @@ describe("GenericScene + canvasEffects setting", () => {
     elements: [{ type: "text", content: "Hello", role: "title" }],
   };
 
-  it("does NOT render ParticleBg when canvasEffects is false (default)", () => {
-    vi.spyOn(settingsModule, "loadSettings").mockReturnValue({
-      geminiApiKey: "",
-      geminiModel: "gemini-2.0-flash",
-      ttsConcurrency: 1,
-      exportQuality: "standard",
-      canvasEffects: false,
-    });
+  const settingsOn = {
+    geminiApiKey: "",
+    geminiModel: "gemini-2.0-flash" as const,
+    ttsConcurrency: 1,
+    exportQuality: "standard" as const,
+    canvasEffects: true,
+  };
 
-    const { container } = render(withVideo(<GenericScene scene={scene} />));
-    const canvas = container.querySelector("canvas");
-    expect(canvas).toBeNull();
+  const settingsOff = { ...settingsOn, canvasEffects: false };
+
+  it("does NOT render ParticleBg when canvasEffects is false (default)", () => {
+    vi.spyOn(settingsModule, "loadSettings").mockReturnValue(settingsOff);
+    const { container } = render(withVideo(<GenericScene scene={baseScene} />));
+    expect(container.querySelector("canvas")).toBeNull();
   });
 
-  it("renders ParticleBg when canvasEffects is true", () => {
-    vi.spyOn(settingsModule, "loadSettings").mockReturnValue({
-      geminiApiKey: "",
-      geminiModel: "gemini-2.0-flash",
-      ttsConcurrency: 1,
-      exportQuality: "standard",
-      canvasEffects: true,
-    });
+  it("does NOT render ParticleBg when canvasEffects=true but scene has no bgEffect", () => {
+    vi.spyOn(settingsModule, "loadSettings").mockReturnValue(settingsOn);
+    const { container } = render(withVideo(<GenericScene scene={baseScene} />));
+    // No bgEffect set → no canvas rendered even with canvasEffects ON
+    expect(container.querySelector("canvas")).toBeNull();
+  });
 
-    const { container } = render(withVideo(<GenericScene scene={scene} />));
-    const canvas = container.querySelector("canvas");
-    expect(canvas).toBeTruthy();
+  it("renders ParticleBg when canvasEffects=true AND scene has bgEffect", () => {
+    vi.spyOn(settingsModule, "loadSettings").mockReturnValue(settingsOn);
+    const sceneWithEffect: VideoScene = { ...baseScene, bgEffect: "bokeh" };
+    const { container } = render(withVideo(<GenericScene scene={sceneWithEffect} />));
+    expect(container.querySelector("canvas")).toBeTruthy();
   });
 });

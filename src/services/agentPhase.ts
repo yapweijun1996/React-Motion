@@ -143,6 +143,7 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
         // Check for terminal tool
         if (toolName === terminalTool) {
           terminalResult = toolResult.result;
+          console.log(`[${name}] ✔ Terminal tool "${terminalTool}" detected at iteration ${i}, will exit after processing`);
         }
 
         responseParts.push({
@@ -165,18 +166,22 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
     if (budgetDecision.action === "force_finish") {
       report(i, "budget_force", `${budgetDecision.pctUsed}%`);
       if (!terminalResult) {
+        console.log(`[${name}] Budget force at iteration ${i} but terminal not yet reached — nudging model`);
         const forceMsg = `Budget pressure — please call \`${terminalTool}\` now.`;
         messages.push({ role: "user", parts: [{ text: forceMsg }] });
         recordUserMessage(budget, forceMsg);
         continue;
       }
+      console.log(`[${name}] Budget force at iteration ${i} AND terminal reached — exiting`);
     }
 
     // Phase complete when terminal tool returned
     if (terminalResult) {
+      console.log(`[${name}] Exiting phase at iteration ${i}/${maxIterations} — terminal tool "${terminalTool}" result received`);
       report(i, "complete", `${terminalTool} returned`);
       return { terminalResult, toolResults, iterations: i, messages };
     }
+    console.log(`[${name}] Iteration ${i} done, terminalResult=null — continuing to next iteration`);
   }
 
   // Max iterations reached without terminal tool

@@ -12,6 +12,7 @@ import {
   getToolExecutor,
   resetPaletteState,
   resetScriptState,
+  resetImageHints,
   type ToolContext,
 } from "./agentTools";
 import { runStopChecks } from "./agentHooks";
@@ -43,6 +44,7 @@ export async function runSingleAgentLoop(
 ): Promise<AgentLoopResult> {
   resetPaletteState();
   resetScriptState();
+  resetImageHints();
 
   const messages: GeminiMessage[] = [
     { role: "user", parts: [{ text: userMessage }] },
@@ -227,7 +229,7 @@ export async function runSingleAgentLoop(
       }
 
       // RM-143b: Stop hook — deterministic quality gate
-      const checks = runStopChecks(terminalScript);
+      const checks = runStopChecks(terminalScript, context.userPrompt);
       if (!checks.pass && !stopRetried) {
         stopRetried = true;
         report(i, "quality_gate", checks.issues.join("; "));

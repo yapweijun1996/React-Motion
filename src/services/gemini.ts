@@ -129,9 +129,10 @@ export async function callGeminiRaw(
     const errBody = await res.text();
     const code = classifyHttpStatus(res.status);
     logError("Gemini", code, errBody, { status: res.status, model });
+    const errSnapshot = JSON.parse(JSON.stringify(body));
     addLogEntry({
       timestamp: Date.now(), model, systemPrompt, messageCount: messages.length,
-      tools: toolNames, temperature: options.temperature ?? 0.7, requestBody: body,
+      tools: toolNames, temperature: options.temperature ?? 0.7, requestBody: errSnapshot,
       status: "error", httpStatus: res.status, responseSummary: `HTTP ${res.status}`,
       responseData: errBody, durationMs: Math.round(performance.now() - t0), error: errBody,
     });
@@ -170,9 +171,14 @@ export async function callGeminiRaw(
     console.warn("[Gemini] Response was blocked by safety filters");
   }
 
+  // Snapshot requestBody to avoid reference mutation — messages array is
+  // modified in-place by agentPhase after this call returns, which would
+  // corrupt the logged request body for earlier iterations.
+  const requestSnapshot = JSON.parse(JSON.stringify(body));
+
   addLogEntry({
     timestamp: Date.now(), model, systemPrompt, messageCount: messages.length,
-    tools: toolNames, temperature: options.temperature ?? 0.7, requestBody: body,
+    tools: toolNames, temperature: options.temperature ?? 0.7, requestBody: requestSnapshot,
     status: "ok", httpStatus: res.status,
     responseSummary: `${textLen} chars, ${fnCalls.length} tools [${fnCalls.join(",")}], ${finishReason}`,
     responseData: data, durationMs: Math.round(performance.now() - t0),

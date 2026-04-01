@@ -11,7 +11,6 @@ import {
   SCENE_TRANSITIONS,
   ELEMENT_STAGGER,
   ENTRANCE_ANIMATIONS,
-  AVAILABLE_ELEMENTS,
   SCENE_LAYOUT_RULES,
   NARRATION_VISUAL_SYNC,
   HARD_CONSTRAINTS,
@@ -31,10 +30,9 @@ Transform the narrative plan below into a polished VideoScript with precise visu
 ## Workflow
 
 1. **Palette**: Call \`generate_palette\` with the mood from the storyboard. You MUST use the returned palette for ALL colors.
-2. **Visual Direction**: Call \`direct_visuals\` to plan visual approach for EACH scene. At least 2 scenes must use rich visuals (svg, map, progress, comparison, timeline, annotation).
-3. **Produce**: Call \`produce_script\` with the final VideoScript JSON.
-
-You may call \`get_element_catalog\` to see available element types and their properties.
+2. **Catalog**: Call \`get_element_catalog\` to get full element schemas and props. You MUST call this before producing the script.
+3. **Visual Direction**: Call \`direct_visuals\` to plan visual approach for EACH scene. At least 2 scenes must use rich visuals (svg, map, progress, comparison, timeline, annotation).
+4. **Produce**: Call \`produce_script\` with the final VideoScript JSON.
 
 ## Apple-Style Visual Grammar (MANDATORY)
 
@@ -90,11 +88,17 @@ Each narrative beat has a visual job. Match your element choices and layout to t
 - **Decoration must never compete**: annotation, icon, kawaii, lottie are accents only
 - **Spotlight usage**: ONLY in climax or ONE proof scene — never in hook/resolution
 - **Draw animation**: Only when it clarifies structure (svg flowcharts, timeline), not as decoration
-- **Background rhythm**: restrained early → strongest contrast at climax → calmer close
-  - Hook/Why It Matters: clean background (solid or subtle gradient)
-  - How It Works/Proof: alternate light/dark for rhythm
-  - Climax: strongest contrast (deep dark bg + bright focal element, or bold gradient)
-  - Resolution: calm, clean background matching hook mood
+- **Background rhythm** (HARD CONSTRAINT):
+  - Only 2-3 scenes may use \`bgEffect\` (canvas animation) per video — NOT every scene.
+  - When multiple scenes use \`bgEffect\`, they MUST use different effects (not all bokeh).
+  - Chart-heavy scenes (bar-chart, pie-chart, line-chart, sankey as primary element) must NOT use \`bgEffect\` — use \`bgColor\` or \`bgGradient\` only.
+  - If a scene has \`imagePrompt\`, do NOT also set \`bgEffect\` — avoid competing visual layers.
+  - **Background strategy by beat:**
+    - Hook: \`bgGradient\` or light \`imagePrompt\`, may use \`bokeh\`
+    - How It Works: \`flow\` or pure gradient, NO canvas on chart scenes
+    - Climax: deep dark gradient, may use \`rising\` or \`flow\`
+    - Resolution: clean background (solid or light gradient), do NOT repeat climax effect
+  - Default path: most scenes use \`bgColor\` or \`bgGradient\` only. Canvas effects are deliberate accent, not wallpaper.
 
 ## Visual Metaphor Rule (CRITICAL)
 
@@ -141,7 +145,9 @@ ${ELEMENT_STAGGER}
 
 ${ENTRANCE_ANIMATIONS}
 
-${AVAILABLE_ELEMENTS}
+## Available Element Types (call \`get_element_catalog\` for full schemas)
+
+text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, svg-3d, map, progress, timeline, comparison
 
 ${SCENE_LAYOUT_RULES}
 

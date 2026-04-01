@@ -2,6 +2,8 @@
 
 React-Motion is an AI-powered data-to-video report generator. Users paste business data and a natural language prompt; the AI agent analyzes the data, plans a story, and produces a structured video script. A custom video engine renders it as an animated presentation, and FFmpeg.wasm encodes the final MP4.
 
+The current visual direction for high-end diagrammatic scenes is **Apple / premium-web inspired pseudo-3D SVG**, not a true 3D runtime. Spatial feel should come from layered SVG, gradients, shadows, depth grouping, parallax, and restrained camera motion that remain compatible with the existing preview/export pipeline.
+
 ## System Layers
 
 ```
@@ -109,8 +111,26 @@ type VideoScript = {
 | `lottie` | Animated icons (lottie-web) |
 | `icon` | 45 curated SVG icons (lucide-react) |
 | `annotation` | Hand-drawn sketch marks (roughjs) |
-| `svg` | AI-generated inline SVG diagrams |
+| `svg` | AI-generated inline SVG diagrams; primary path for pseudo-3D/isometric diagram scenes |
 | `map` | World map with country highlighting (d3-geo) |
+
+### Pseudo-3D SVG Boundary
+
+Supported direction:
+
+- Inline SVG with layered `<g>` groups
+- Isometric cards, stacks, panels, process blocks, and architectural diagrams
+- Gradients, highlights, shadows, and occlusion for depth illusion
+- Wrapper-level perspective-like motion, parallax, and subtle float
+
+Not the current direction:
+
+- True 3D mesh rendering
+- Three.js scene graph as a default render path
+- Camera/light/material systems in the core composition layer
+- `foreignObject` is blocked by the SVG sanitizer (RM-189) — embedded XHTML inside SVG is a security and export-stability risk
+
+This boundary preserves the core invariant: preview and export stay on the same DOM/SVG render path.
 
 ### Text Contrast
 

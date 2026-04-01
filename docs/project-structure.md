@@ -119,10 +119,19 @@ React-Motion/
 | `LottieElement.tsx` | `lottie` | lottie-web animated icons (frame-synced) |
 | `IconElement.tsx` | `icon` | lucide-react SVG icons + bounce |
 | `AnnotationElement.tsx` | `annotation` | roughjs hand-drawn + stroke-draw |
-| `SvgElement.tsx` | `svg` | AI-generated inline SVG diagrams |
+| `SvgElement.tsx` | `svg` | AI-generated inline SVG diagrams; current foundation for pseudo-3D/isometric visuals |
 | `MapElement.tsx` | `map` | d3-geo world map + country highlight |
 
 All elements accept a `dark` prop from `GenericScene` for text contrast auto-adaptation.
+
+### Pseudo-3D SVG Direction
+
+The repo's premium-web visual direction should build on `SvgElement.tsx` and the existing DOM/SVG render path:
+
+- Prefer pseudo-3D SVG over true 3D runtime features
+- Compose depth with layered groups, gradients, shadows, and subtle wrapper transforms
+- Keep any future `svg-3d` style element in the same export-safe DOM/SVG pipeline
+- Treat Three.js/WebGL scene content as a separate future experiment, not the default path for story scenes
 
 ## Public (`public/`)
 

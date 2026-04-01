@@ -58,6 +58,8 @@ const TYPE_SPRING: Record<string, SpringPreset> = {
   progress: "data",
   timeline: "support",
   comparison: "hero",
+  svg: "data",
+  "svg-3d": "data",
 };
 
 // --- Hook ---
@@ -248,6 +250,10 @@ export function computeEntranceStyle(
 
     case "typewriter":
       // Per-character reveal handled inside TextElement — container stays fully visible
+      return { opacity: 1, transform: "none" };
+
+    case "draw":
+      // Path drawing handled inside SvgElement via DOM stroke-dashoffset — container stays visible
       return { opacity: 1, transform: "none" };
 
     default:
