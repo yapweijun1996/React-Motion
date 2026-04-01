@@ -155,187 +155,135 @@ export async function exportToMp4(
   const quality = loadSettings().exportQuality;
   console.log(`[Export] Encoding path: ${useWebCodecs ? "WebCodecs (HW)" : "FFmpeg.wasm (SW)"}, quality: ${quality}`);
 
-  // --- Step 2: Load FFmpeg (only for legacy path — WebCodecs defers until audio mux) ---
-  let ff: FFmpeg | null = null;
-  if (!useWebCodecs) {
-    onProgress({ stage: "writing", percent: 0, message: "Loading FFmpeg..." });
-    const encodeEtaStart = performance.now();
-    ff = await getFFmpeg((p) => {
-      const pct = Math.round(p * 100);
-      let eta: number | undefined;
-      if (p > 0.01) {
-        const encElapsed = (performance.now() - encodeEtaStart) / 1000;
-        eta = Math.round(encElapsed * (1 - p) / p);
-      }
-      onProgress({ stage: "encoding", percent: pct, message: `Encoding MP4 (${pct}%)...`, eta });
-    });
-  }
+  // --- Common capture options ---
+  const captureOpts = {
+    width, height, canvasWidth: width, canvasHeight: height,
+    skipFonts: true,
+    filter: (node: HTMLElement) => {
+      const tag = node.tagName;
+      return tag !== "AUDIO" && tag !== "VIDEO";
+    },
+  };
 
-  // --- Step 3: Capture frames ---
-  onProgress({ stage: "capturing", percent: 0, message: "Capturing frames..." });
-  playerRef.pause();
-
-  console.log("[Export] Frame plan:", { frameStep: 1, framesToCapture: totalFrames, totalFrames });
   const captureStart = performance.now();
-
   let capturedCount = 0;
   let failedCount = 0;
-  let totalBytes = 0;
-  const capturedFrames: Uint8Array[] = []; // WebCodecs path accumulates here
-
-  for (let i = 0; i < totalFrames; i++) {
-    playerRef.seekTo(i);
-    await waitFrame();
-
-    try {
-      const dataUrl = await toPng(captureTarget, {
-        width,
-        height,
-        canvasWidth: width,
-        canvasHeight: height,
-        skipFonts: true,
-        filter: (node: HTMLElement) => {
-          const tag = node.tagName;
-          return tag !== "AUDIO" && tag !== "VIDEO";
-        },
-      });
-
-      const pngData = await fetchFile(dataUrl);
-      totalBytes += pngData.byteLength;
-
-      if (useWebCodecs) {
-        capturedFrames.push(pngData);
-      } else {
-        await ff!.writeFile(`frame${String(capturedCount).padStart(5, "0")}.png`, pngData);
-      }
-      capturedCount++;
-    } catch (err) {
-      logWarn("Export", "EXPORT_TOO_MANY_FAILED", `Frame ${i} capture failed`, { error: err });
-      failedCount++;
-      continue;
-    }
-
-    const pct = Math.round(((i + 1) / totalFrames) * 100);
-    const elapsed = (performance.now() - captureStart) / 1000;
-    const avgPerFrame = elapsed / (i + 1);
-    const remaining = totalFrames - (i + 1);
-    const etaSec = Math.round(avgPerFrame * remaining);
-
-    onProgress({
-      stage: "capturing",
-      percent: pct,
-      message: `Capturing frame ${capturedCount} / ${totalFrames}`,
-      eta: etaSec,
-    });
-
-    await new Promise<void>((r) => setTimeout(r, 0));
-  }
-
-  const captureDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
-  const avgFrameTime = capturedCount > 0 ? ((performance.now() - captureStart) / capturedCount).toFixed(0) : "N/A";
-  console.log(`[Export] Captured ${capturedCount} frames in ${captureDuration}s (avg ${avgFrameTime}ms/frame)`);
-
-  if (capturedCount === 0) {
-    console.groupEnd();
-    throw new ClassifiedError("EXPORT_NO_FRAMES", "No frames captured — html-to-image failed for all frames");
-  }
-  if (failedCount > totalFrames * 0.2) {
-    logWarn("Export", "EXPORT_TOO_MANY_FAILED", `${failedCount}/${totalFrames} frames failed (>${20}%) — continuing with available frames`);
-  }
-
-  // --- Step 4: Encode video ---
   let mp4Blob: Blob;
-  let encodeDuration: string;
-  let encoder: "webcodecs" | "ffmpeg";
+  let encoderUsed: "webcodecs" | "ffmpeg";
 
   if (useWebCodecs) {
-    // === WebCodecs path (GPU hardware encoding) ===
+    // ================================================================
+    // WebCodecs path: toCanvas → streaming encode (no PNG, no memory buffer)
+    // ================================================================
     const { bitrate } = WEBCODECS_QUALITY[quality];
-    onProgress({ stage: "encoding", percent: 0, message: "Encoding MP4 (WebCodecs HW)..." });
-    const encodeStart = performance.now();
+    const streamEnc = createStreamingEncoder(width, height, fps, bitrate);
+
+    onProgress({ stage: "capturing", percent: 0, message: "Capturing + encoding (WebCodecs HW)..." });
+    playerRef.pause();
+    console.log("[Export] WebCodecs streaming: capture + encode in one pass");
 
     try {
-      mp4Blob = await encodeVideoWithWebCodecs(
-        capturedFrames, width, height, fps, bitrate, onProgress,
-      );
-      encoder = "webcodecs";
-      encodeDuration = ((performance.now() - encodeStart) / 1000).toFixed(1);
-      console.log(`[Export] WebCodecs encoding completed in ${encodeDuration}s`);
-    } catch (wcErr) {
-      // Fallback: WebCodecs failed → use FFmpeg
-      logWarn("Export", "EXPORT_WEBCODECS_ENCODE", "WebCodecs encoding failed, falling back to FFmpeg", { error: wcErr });
-      onProgress({ stage: "writing", percent: 0, message: "Falling back to FFmpeg..." });
+      for (let i = 0; i < totalFrames; i++) {
+        playerRef.seekTo(i);
+        await waitFrame();
 
-      ff = await getFFmpeg(() => {});
-      for (let i = 0; i < capturedFrames.length; i++) {
-        await ff.writeFile(`frame${String(i).padStart(5, "0")}.png`, capturedFrames[i]);
+        try {
+          const canvas = await toCanvas(captureTarget, captureOpts);
+          await streamEnc.feedFrame(canvas, capturedCount);
+          capturedCount++;
+        } catch (err) {
+          logWarn("Export", "EXPORT_TOO_MANY_FAILED", `Frame ${i} capture failed`, { error: err });
+          failedCount++;
+          continue;
+        }
+
+        const pct = Math.round(((i + 1) / totalFrames) * 100);
+        const elapsed = (performance.now() - captureStart) / 1000;
+        const etaSec = Math.round((elapsed / (i + 1)) * (totalFrames - i - 1));
+
+        onProgress({
+          stage: "capturing",
+          percent: pct,
+          message: `Frame ${capturedCount}/${totalFrames} (WebCodecs HW)`,
+          eta: etaSec,
+        });
+
+        // Yield every 4 frames
+        if (i % 4 === 0) await new Promise<void>((r) => setTimeout(r, 0));
       }
-      // Continue to FFmpeg encode below
-      mp4Blob = await ffmpegEncode(ff, fps, quality, onProgress);
-      encoder = "ffmpeg";
-      encodeDuration = ((performance.now() - encodeStart) / 1000).toFixed(1);
+
+      if (capturedCount === 0) {
+        streamEnc.close();
+        console.groupEnd();
+        throw new ClassifiedError("EXPORT_NO_FRAMES", "No frames captured");
+      }
+
+      mp4Blob = await streamEnc.finalize();
+      encoderUsed = "webcodecs";
+    } catch (wcErr) {
+      streamEnc.close();
+
+      // If it's our own ClassifiedError (no frames), just rethrow
+      if (wcErr instanceof ClassifiedError) throw wcErr;
+
+      // Fallback to FFmpeg full path
+      logWarn("Export", "EXPORT_WEBCODECS_ENCODE", "WebCodecs failed, falling back to FFmpeg", { error: wcErr });
+      const result = await ffmpegFullExport(
+        playerRef, captureTarget, width, height, totalFrames, fps, quality, onProgress, captureOpts,
+      );
+      mp4Blob = result.blob;
+      capturedCount = result.capturedCount;
+      failedCount = result.failedCount;
+      encoderUsed = "ffmpeg";
     }
 
-    // Free captured frames from memory
-    capturedFrames.length = 0;
-
-    // Audio mux: load FFmpeg only if needed
+    // Audio mux (load FFmpeg only if needed)
     const hasAudio = (scenes && scenes.some((s) => s.ttsAudioUrl)) || bgMusicUrl;
-    if (hasAudio && scenes) {
+    if (hasAudio && scenes && encoderUsed === "webcodecs") {
       onProgress({ stage: "muxing", percent: 0, message: "Mixing audio..." });
-      if (!ff) ff = await getFFmpeg(() => {});
-
-      // Write video-only MP4 to FFmpeg FS for audio muxing
+      const ff = await getFFmpeg(() => {});
       const mp4Data = new Uint8Array(await mp4Blob.arrayBuffer());
       await ff.writeFile("output.mp4", mp4Data);
       await muxAudioIntoVideo(ff, scenes, fps, bgMusicUrl);
-
-      // Read back the muxed result
       const muxedData = await ff.readFile("output.mp4");
       mp4Blob = new Blob([new Uint8Array(muxedData as Uint8Array)], { type: "video/mp4" });
       await ff.deleteFile("output.mp4").catch(() => undefined);
     }
   } else {
-    // === FFmpeg legacy path (software encoding) ===
-    console.log(`[Export] Streamed ${(totalBytes / 1024 / 1024).toFixed(1)}MB to FFmpeg FS`);
-    const encodeStart = performance.now();
-    mp4Blob = await ffmpegEncode(ff!, fps, quality, onProgress);
-    encoder = "ffmpeg";
-    encodeDuration = ((performance.now() - encodeStart) / 1000).toFixed(1);
-    console.log(`[Export] FFmpeg encoding completed in ${encodeDuration}s`);
+    // ================================================================
+    // FFmpeg legacy path (unchanged)
+    // ================================================================
+    const result = await ffmpegFullExport(
+      playerRef, captureTarget, width, height, totalFrames, fps, quality, onProgress, captureOpts,
+    );
+    mp4Blob = result.blob;
+    capturedCount = result.capturedCount;
+    failedCount = result.failedCount;
+    encoderUsed = "ffmpeg";
 
     // Audio mux
     const hasAudio = (scenes && scenes.some((s) => s.ttsAudioUrl)) || bgMusicUrl;
     if (hasAudio && scenes) {
       onProgress({ stage: "muxing", percent: 0, message: "Mixing audio..." });
-      await muxAudioIntoVideo(ff!, scenes, fps, bgMusicUrl);
-    }
-
-    // Read final result
-    try {
-      const data = await ff!.readFile("output.mp4");
+      const ff = await getFFmpeg(() => {});
+      await muxAudioIntoVideo(ff, scenes, fps, bgMusicUrl);
+      const data = await ff.readFile("output.mp4");
       mp4Blob = new Blob([new Uint8Array(data as Uint8Array)], { type: "video/mp4" });
-    } catch (error) {
-      throw normalizeError(error);
-    } finally {
-      for (let i = 0; i < capturedCount; i++) {
-        await ff!.deleteFile(`frame${String(i).padStart(5, "0")}.png`).catch(() => undefined);
-      }
-      await ff!.deleteFile("output.mp4").catch(() => undefined);
     }
+  }
+
+  if (failedCount > totalFrames * 0.2) {
+    logWarn("Export", "EXPORT_TOO_MANY_FAILED", `${failedCount}/${totalFrames} frames failed (>20%)`);
   }
 
   // --- Done ---
   const totalDuration = ((performance.now() - captureStart) / 1000).toFixed(1);
   console.log("[Export] === DONE ===");
-  console.log(`[Export] Encoder: ${encoder}, MP4 size: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB`);
-  console.log(`[Export] Total time: ${totalDuration}s (capture: ${captureDuration}s, encode: ${encodeDuration}s)`);
+  console.log(`[Export] Encoder: ${encoderUsed}, MP4: ${(mp4Blob.size / 1024 / 1024).toFixed(2)} MB, time: ${totalDuration}s`);
 
   onProgress({ stage: "done", percent: 100, message: "Export complete!" });
   trackEvent("export", true, Math.round(performance.now() - captureStart), {
-    frames: capturedCount,
-    totalFrames,
-    encoder,
+    frames: capturedCount, totalFrames, encoder: encoderUsed,
     multiThread: ffmpegIsMultiThread,
     sizeMB: +(mp4Blob.size / 1024 / 1024).toFixed(2),
   });
@@ -356,6 +304,64 @@ export function _resetFFmpegForTest(): void {
 /** Expose ffmpegIsMultiThread for test assertions. */
 export function _isMultiThread(): boolean {
   return ffmpegIsMultiThread;
+}
+
+/** Complete FFmpeg path: capture frames + encode. Used as legacy path and WebCodecs fallback. */
+async function ffmpegFullExport(
+  playerRef: PlayerHandle,
+  captureTarget: HTMLElement,
+  _width: number,
+  _height: number,
+  totalFrames: number,
+  fps: number,
+  quality: ExportQuality,
+  onProgress: (p: ExportProgress) => void,
+  captureOpts: Record<string, unknown>,
+): Promise<{ blob: Blob; capturedCount: number; failedCount: number }> {
+  onProgress({ stage: "writing", percent: 0, message: "Loading FFmpeg..." });
+  const ff = await getFFmpeg(() => {});
+  const captureStart = performance.now();
+
+  onProgress({ stage: "capturing", percent: 0, message: "Capturing frames..." });
+  playerRef.pause();
+
+  let capturedCount = 0;
+  let failedCount = 0;
+
+  for (let i = 0; i < totalFrames; i++) {
+    playerRef.seekTo(i);
+    await waitFrame();
+
+    try {
+      const dataUrl = await toPng(captureTarget, captureOpts);
+      const pngData = await fetchFile(dataUrl);
+      await ff.writeFile(`frame${String(capturedCount).padStart(5, "0")}.png`, pngData);
+      capturedCount++;
+    } catch (err) {
+      logWarn("Export", "EXPORT_TOO_MANY_FAILED", `Frame ${i} capture failed`, { error: err });
+      failedCount++;
+      continue;
+    }
+
+    const pct = Math.round(((i + 1) / totalFrames) * 100);
+    const elapsed = (performance.now() - captureStart) / 1000;
+    const etaSec = Math.round((elapsed / (i + 1)) * (totalFrames - i - 1));
+    onProgress({ stage: "capturing", percent: pct, message: `Capturing frame ${capturedCount}/${totalFrames}`, eta: etaSec });
+    await new Promise<void>((r) => setTimeout(r, 0));
+  }
+
+  if (capturedCount === 0) {
+    throw new ClassifiedError("EXPORT_NO_FRAMES", "No frames captured");
+  }
+
+  const blob = await ffmpegEncode(ff, fps, quality, onProgress);
+
+  // Clean up frame files
+  for (let i = 0; i < capturedCount; i++) {
+    await ff.deleteFile(`frame${String(i).padStart(5, "0")}.png`).catch(() => undefined);
+  }
+
+  return { blob, capturedCount, failedCount };
 }
 
 /** Run FFmpeg libx264 encoding on frames already in the virtual FS. */
