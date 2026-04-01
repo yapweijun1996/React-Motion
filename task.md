@@ -145,8 +145,19 @@
 | RM-175 | Refactor | 集中管理 API 端点 & 模型名 — 消除硬编码重复 | Done | 新建 apiConfig.ts 作为唯一真相源 (Single Source of Truth): GEMINI_API_BASE (3处→1处)、AVAILABLE_MODELS (2处→1处)、DEFAULT_MODEL/DEFAULT_TTS_VOICE/DEFAULT_BGM_MOOD (散落5+处→1处)、BGM_MOODS+BgmMood type (2处→1处). 零循环依赖 (纯叶子模块). 修改 6 文件, 新增 1 文件. |
 | RM-176 | Refactor | SVG icon 统一化 — 消除全部 emoji/unicode 硬编码 | Done | 新建 Icons.tsx (18 个 SVG icon 组件, inline SVG, 零外部依赖). 替换 5 个文件 20+ 处硬编码: GenerationProgressBar (🧠🔍🔧💬📝🎬✅🛠⚠▶), SettingsPanel (🙈👁⏹✓), App (↻📋⚙✕), PlayerControls (⏸▶⊡⛶), TimelineElement (✓×2). 所有 icon 统一管理, size/color prop 可控. |
 | RM-177 | Refactor | Agent 行为参数集中管理 — agentConfig.ts 唯一真相源 | Done | 新建 agentConfig.ts (纯叶子模块, 零 import): 27 个参数分 5 区块 (迭代上限/预算阈值/温度控制/重试配置/行为阈值)。消除 8 文件散落 hardcode: budgetTracker (5 const)、agentLoopSingle (MAX_ITERATIONS+temp+nudge)、agentLoopMulti (budget 150K+iter 12/4/6/2+temp 0.3)、agentPhase (temp×3+nudge)、tts (retry×3)、bgMusic (retry×3)、generateScript (parse retry)、gemini (temp 0.7×2)。RETRYABLE_CODES 2处→1处。测试 import agentConfig 断言 (不再硬编码期望值)。tsc 零错误, 326 tests pass。新增 1 文件, 修改 9 文件。 |
+| RM-178 | Feature | Bokeh 背景效果系统 — 3 种 Canvas 背景动画替换旧粒子连线 | Done | 旧 ParticleBg (50 粒子+连线) 替换为 3 种电影级效果: bokeh (柔焦散景光斑, 3 层景深+呼吸脉动), flow (noise flow field 曲线粒子流动), rising (萤火虫上升+横向摇摆+闪烁)。拆分架构: ParticleBg.tsx 路由层 (124 行) + effects/ 目录 3 个独立效果文件 (BokehEffect 83 行, FlowEffect 123 行, RisingEffect 105 行)。VideoScene 新增 bgEffect 字段。GenericScene 传 effect prop。测试更新 8 pass。GPU 负担更低 (无连线距离计算)。新增 3 文件, 修改 4 文件。 |
+| RM-179 | Feature | bgEffect AI prompt 整合 — AI 自动选择场景背景动画效果 | Done | 3 处更新: (1) promptBlocks.ts VIDEO_SCRIPT_SCHEMA 加 bgEffect 字段说明 + SCENE_LAYOUT_RULES 加使用指导 (bokeh=梦幻/企业, flow=科技/科学, rising=温暖/庆祝, 建议 2-3 个深色 scene 使用, chart 密集场景跳过); (2) validateEnums.ts 新增 VALID_BG_EFFECTS enum; (3) validate.ts 验证 bgEffect 合法性 (非法值→undefined fallback)。修改 3 文件。 |
+| RM-180 | Feature | Export Scroll Page — VideoScript 导出为独立自动滚动 HTML 页面 | Done | 新建 exportScrollPage.ts (217 行): VideoScript → 自包含 HTML 文件。rAF 时间驱动自动滚动 (非用户滚动控制), 每个 scene 一个全屏 section, translateY 自动推进。含进度条+场景圆点+Pause/Play/Replay 按钮。用户滚动被 preventDefault 阻止。深色背景自动检测。文字/指标/列表/callout/分隔线渲染, chart 类型显示占位符。零外部依赖, 单文件可分享。App.tsx 新增 "Export Scroll" 按钮与 MP4/PPT 并列。新增 1 文件, 修改 1 文件。 |
+| RM-188 | Arch | Apple 风格 6-beat 叙事系统 — 替代 Duarte Sparkline 7-beat 成为叙事主干 | Done | 核心改造: 叙事结构从 Hook→Context→Tension→Evidence→Climax→Resolution→Close 升级为 Apple 6-beat: Hook→Why It Matters→How It Works→Proof→Climax→Resolution。(1) video.ts: 新增 AppleBeat/LegacySceneRole 类型, StoryboardPlan 加 audienceMode/storyMode/coreTakeaway/hookStatement, StoryboardScenePlan 加 beat 字段; (2) promptStoryboard.ts: 完全重写 — 6-beat 合约+tone ladder (default/elevated/launch)+narration 句子纪律+scene count 6-9; (3) promptVisualDirector.ts: 新增 Visual Grammar — 每个 beat 的视觉映射 (hook→center/single focal, climax→spotlight+dramatic), hero element 上限 1, content element 上限 3, background rhythm 支持弧线; (4) evaluate.ts: 新增第 8 项 Apple Narrative Discipline 检查 (2 秒测试/单一信息/climax 强度/compressed close); (5) promptAgents.ts: parseScenePlan 支持新 beats+legacy→beat 映射, handoff 格式含新字段; (6) agentTools.ts: draft_storyboard 新增 audience_mode/core_takeaway/hook_statement 参数, direct_visuals scene_role 枚举更新。27 个新测试全通过, tsc 零错误。修改 6 文件, 新增 1 测试文件。 |
 
 ### To Do — Remaining
+
+**Direction Decision — Pseudo-3D SVG**
+
+- Product direction is **Apple / premium-web inspired pseudo-3D SVG**, not a true 3D engine.
+- Use inline SVG + layered depth + gradients/shadows + parallax/camera motion for spatial feel.
+- Keep preview/export on the existing DOM/SVG → html-to-image → video pipeline.
+- Avoid introducing mesh/camera/light 3D runtimes (Three.js/WebGL scene graph) into the main render path unless a future isolated feature proves export-safe.
 
 **Visual Enhancement Layer 1 & 2: ✅ ALL DONE** (RM-68~75: spring, transitions, noise, stagger, kawaii, lottie, chroma-js, 9 entrance animations)
 
@@ -158,7 +169,7 @@
 | Phase 3.2 | 2 WebGL transitions (dissolve + pixelate, 14 total) | ✅ Done (RM-136) |
 | Phase 3.3 | Agentic loop refactor — Claude Code patterns (hooks, stop validation, storyboard enforcement) | ✅ Done (RM-143) |
 | Phase 3.4 | Agent payload optimization — tool response 精简 + compact JSON + evaluate summary mode | ✅ Done (RM-152) |
-| Phase 4 | Three.js 3D elements (3D charts, globe, 3D text) | Future |
+| Phase 4 | Pseudo-3D SVG elements (isometric diagrams, layered cards, parallax SVG scenes) | Planned |
 
 **Cinematic Enhancement Layer: ✅ ALL DONE (RM-144~150)**
 
@@ -247,6 +258,125 @@ Goal: Raise output quality from "internal demo" to "client-facing". Biggest bang
 | RM-122 | Task | Export quality presets — CRF/preset dynamic by settings | High | ✅ Done | 3 presets: draft (CRF 28/ultrafast), standard (CRF 24/fast), high (CRF 20/medium). AppSettings.exportQuality + validate.ts + SettingsPanel dropdown + exportVideo.ts QUALITY_PROFILES. Default: standard. |
 | RM-123 | Task | TTS voice selection UI — expose Gemini 30 voices + preview in Settings | High | ✅ Done | 30 Gemini TTS voices in Settings dropdown. Preview button (▶/⏹) calls API with short sample text for instant audition. Voice persisted in localStorage, passed through full TTS pipeline (`callGeminiTTSWithRetry` → `callGeminiTTS`). Default: Kore. 5 files changed. tsc zero errors. |
 | RM-124 | Task | Background music — ambient audio layer with auto-ducking during narration | Medium | ✅ Done | Lyria 3 Clip API (`bgMusic.ts`). Settings toggle (default OFF). 8 mood presets. Preview: AudioTrack global + useMemo ducking (0.35/0.1). Export: FFmpeg volume `between()` ducking filter. Full pipeline: Settings→Lyria→script.bgMusicUrl→preview→MP4. |
+
+### To Do — Priority 4A (Pseudo-3D SVG, Apple/Web Storytelling Visuals)
+
+**Epic: RM-EPIC-07 — Apple-Style Pseudo-3D SVG Layer**
+
+Goal: Add premium-web pseudo-3D SVG visuals that look spatial and cinematic while staying compatible with the current SVG/DOM export pipeline.
+
+| Key | Type | Summary | Priority | Status | Notes |
+|-----|------|---------|----------|--------|-------|
+| RM-181 | Bug | Harden `SvgElement` sanitization — sanitize root `<svg>` attributes as well as descendants before `dangerouslySetInnerHTML` | Highest | To Do | Current sanitize pass only strips dangerous attrs from child nodes. Must close root-node event handler gap before expanding SVG generation capability. |
+| RM-182 | Arch | Define pseudo-3D SVG boundary — officially support 2.5D/isometric/layered SVG, reject true 3D runtime scope in core render path | High | To Do | Document allowed techniques: layered `<g>`, gradients, shadows, parallax, perspective-like wrapper transforms. Disallow mesh/camera/light scene graph in MVP path. |
+| RM-183 | Arch | Define v1 `svg-3d` element contract for `VideoScript` | High | To Do | New element built on inline SVG markup + structured depth controls. Must stay AI-friendly (flat props) and backward compatible with existing `svg`. |
+| RM-184 | Feature | Build pseudo-3D SVG wrapper renderer | High | To Do | Wrapper applies stable container transforms, per-layer depth offsets, parallax, subtle float, and Apple-style restrained motion. Must remain export-safe via html-to-image. |
+| RM-185 | Task | Prompt + element catalog guidance for Apple/web pseudo-3D SVG scenes | High | To Do | Teach AI when to use pseudo-3D SVG: hook, how-it-works, proof, climax. Emphasize structure/flow/layering over decorative 3D. |
+| RM-186 | Task | Add pseudo-3D SVG templates/examples | Medium | To Do | Seed examples: isometric stack, floating product cards, layered process diagram, exploded architecture blocks, premium KPI platform scene. |
+| RM-187 | Test | Verify preview/export parity for pseudo-3D SVG | High | To Do | Snapshot/behavior tests for wrapper transforms, sanitization, and html-to-image capture compatibility. |
+
+**RM-EPIC-07 v1 Spec Snapshot**
+
+Goal: introduce a premium-web pseudo-3D SVG path that feels spatial like Apple marketing pages while preserving the repo's core invariant: preview and export use the same DOM/SVG render path.
+
+**VideoScript v1 element design**
+
+- New element name: `svg-3d`
+- Keep existing `svg` element for flat or draw-first diagrams
+- `svg-3d` is for isometric/layered/panel-style scenes only
+- v1 stays flat and AI-friendly; no nested scene graph or matrix math in the contract
+
+Suggested v1 props:
+
+```ts
+{
+  type: "svg-3d",
+  markup: "<svg viewBox='0 0 1200 700'>...</svg>",
+  layers: ["bg", "base", "mid", "front"],
+  depthPreset: "subtle" | "card-stack" | "exploded",
+  cameraTilt: "left" | "right" | "top",
+  parallax: "none" | "subtle" | "medium",
+  float: boolean,
+  shadow: "soft" | "medium" | "strong",
+  reveal: "fade" | "rise" | "draw",
+  spotlight: { at: number, duration: number }?,
+  delay?: number,
+  stagger?: "tight" | "normal" | "relaxed" | "dramatic"
+}
+```
+
+Notes:
+
+- `markup` remains the source of truth; no secondary geometry model
+- `layers` maps to SVG groups by id or `data-layer`
+- `depthPreset` controls default z-like offsets and scale bias
+- `cameraTilt` controls wrapper perspective direction only
+- `parallax` moves layers at different rates based on frame progress
+- `reveal:"draw"` reuses the existing path-draw behavior where compatible
+
+**Renderer v1 approach**
+
+- Reuse `SvgElement` sanitization as the base, then add a dedicated `Svg3dElement`
+- Parse SVG and target grouped layers via `id` / `data-layer`
+- Apply transforms at the `<g>` layer level, not path-by-path, to keep performance stable
+- Use DOM/CSS transforms for wrapper motion and SVG transform attributes/styles for inner layers
+- Motion vocabulary:
+  - wrapper: perspective-like `rotateX/rotateY`, `translate`, `scale`
+  - layers: parallax translate, slight scale separation, float oscillation
+  - shadows/highlights: authored inside SVG, not runtime-generated geometry
+- Keep motion restrained: 1 hero movement system per scene
+
+**Prompt v1 rules**
+
+- Use `svg-3d` only for scenes that explain structure, layers, process, product surfaces, or system relationships
+- Best-fit beats: `hook`, `how-it-works`, `proof`, `climax`
+- Do not use `svg-3d` for simple labels, plain charts, or decorative filler
+- Prefer isometric cards, stacked panels, exploded modules, floating surfaces
+- Require grouped SVG markup:
+  - `<g id="bg">`
+  - `<g id="base">`
+  - `<g id="mid">`
+  - `<g id="front">`
+- Avoid `foreignObject`, external assets, and browser-dependent 3D tricks
+- Keep text readable and sparse; let the spatial structure do the explanatory work
+
+**Export compatibility strategy**
+
+- Keep `svg-3d` on the same DOM/SVG render path as all current elements
+- No separate canvas/WebGL/Three export branch in v1
+- Favor transforms already known to survive `html-to-image`
+- Treat these as safe-by-default:
+  - inline SVG
+  - grouped layers
+  - gradients
+  - shadows authored inside SVG
+  - subtle wrapper transforms
+- Treat these as out of scope for v1:
+  - heavy `foreignObject`
+  - CSS 3D scene trees with many nested transformed HTML nodes
+  - real-time 3D meshes / lighting / materials
+
+**First implementation slice**
+
+1. Fix sanitize gap in `SvgElement`
+2. Add `svg-3d` to `SceneElement.type` and validation enums
+3. Add `Svg3dElement.tsx`
+4. Route it from `GenericScene`
+5. Extend prompt schema + element catalog
+6. Add 2-3 focused tests for parse/render/export safety
+
+**Likely v1 file touch list**
+
+- `src/types/video.ts`
+- `src/services/validateEnums.ts`
+- `src/services/validate.ts`
+- `src/services/parseScript.ts` (only if element-specific warnings are added)
+- `src/services/promptBlocks.ts`
+- `src/services/elementCatalog.ts`
+- `src/video/GenericScene.tsx`
+- `src/video/elements/SvgElement.tsx`
+- `src/video/elements/Svg3dElement.tsx` (new)
+- `test/*` for validation/render/export coverage
 
 ### To Do — Priority 4 (Phase 4B — User Experience, retention)
 

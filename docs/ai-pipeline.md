@@ -57,13 +57,17 @@ Built-in Gemini grounding tool. The AI can search the web for context about comp
 
 ### `draft_storyboard` (Decide)
 
-The AI writes a natural-language story outline:
-- Opening hook
-- Data highlights to emphasize
-- Story arc (intro → analysis → insight → conclusion)
-- Scene count, color mood, pacing
+The AI writes a natural-language story outline using the **Apple 6-beat narrative contract**:
+- **Hook**: state the most important conclusion immediately (not a topic title)
+- **Why It Matters**: connect to audience consequence
+- **How It Works**: explain the driver/mechanism/structure
+- **Proof**: show evidence (1-3 scenes depending on complexity)
+- **Climax**: isolate the single strongest insight
+- **Resolution**: compress to one takeaway + one implication
 
-**Why this matters**: Without a storyboard, the AI produces mechanical data dumps. With it, the video has narrative flow.
+Additional planning fields: `audience_mode` (business/product/education/mixed), `core_takeaway` (one sentence verdict), `hook_statement` (bold opening claim), scene count (6-9), color mood, pacing.
+
+**Why this matters**: Without a storyboard, the AI produces mechanical data dumps. The Apple-style discipline ensures every scene has a single clear message and the narrative progresses from perception to proof to consequence.
 
 ### `get_element_catalog` (Decide)
 
@@ -87,32 +91,44 @@ The AI outputs the complete VideoScript JSON. This **terminates the agent loop**
 
 The agent system prompt (`prompt.ts`) embeds a structured creative framework that guides AI output quality:
 
-### Duarte Sparkline Narrative Arc
-Every video follows a 7-beat story structure:
-1. **Hook** — surprising number or dramatic visual (scale-rotate/rubber-band animation)
-2. **Context** — establish background (relaxed stagger)
-3. **Tension** — present the conflict/interesting data
-4. **Evidence** — charts, metrics, comparisons (1 insight per scene + "So What?")
-5. **Climax** — most important finding (clock-wipe + dramatic stagger)
-6. **Resolution** — takeaway or recommendation
-7. **Close** — one memorable statement
+### Apple 6-Beat Narrative Contract (RM-188)
+Every video follows the Apple-inspired 6-beat structure:
+1. **Hook** — state the most important conclusion immediately (not a topic title)
+2. **Why It Matters** — connect to audience consequence ("Why should I care?")
+3. **How It Works** — explain the driver, mechanism, or structure ("Because...")
+4. **Proof** — show evidence with interpretation (1-3 scenes by complexity)
+5. **Climax** — isolate the single strongest insight (maximum visual impact)
+6. **Resolution** — compress to one takeaway + one implication (no recap dump)
+
+Scene count: 6 (compact) → 7-8 (moderate) → 9 max (complex). No title cards, no "thank you" endings.
+
+### Tone Ladder
+- **default** (business/mixed): precise, calm, premium
+- **elevated** (education/product): more cinematic but disciplined
+- **launch** (product/marketing): stronger reveal language for hook/climax only
 
 ### "So What?" Rule
 Every chart/metric must INTERPRET data, not just display it. Narration explains significance, not raw numbers.
 
-### Pacing & Visual Variety
-- Scene durations vary by role (hook=3s, data=6-8s, climax=7-9s)
-- Breathing scenes inserted every 2-3 data-heavy scenes
-- Mandatory diversity: 4+ element types, alternating layouts, alternating dark/light backgrounds
-- No same transition 3× in a row
+### Apple Visual Grammar
+Each beat maps to a visual job:
+- **Hook**: center layout, 1 dominant element, viewer knows the point in 2 seconds
+- **Why It Matters**: metric + callout, or comparison with one key contrast
+- **How It Works**: svg/timeline/sankey, complex visuals earn their place here
+- **Proof**: bar-chart/line-chart/comparison/map, 1 chart per scene + title
+- **Climax**: center layout, 1 dominant element + optional spotlight, strongest contrast
+- **Resolution**: clean text/callout/progress, low clutter, calm animation
+
+Constraints: max 1 hero element per scene, max 3 content elements, spotlight only in climax or 1 proof scene, background rhythm restrained→peak→calm.
 
 ### Narration ↔ Visual Sync
 - Every data point in narration must be visible in the same scene's elements
 - Every chart/metric must be referenced in narration
-- Evaluator enforces this as check #5
+- Narration interprets visuals, not duplicates them
+- Evaluator enforces this as checks #5 and #8
 
 ### Emotional Engagement
-- Kawaii characters (1-2 per video) as emotional anchors
+- Kawaii characters (1-2 per video) as emotional anchors (conversational tone only)
 - Annotation elements for hand-drawn emphasis
 - Icon elements alongside metrics for visual richness
 
@@ -123,7 +139,10 @@ Every chart/metric must INTERPRET data, not just display it. Narration explains 
 | `services/agentLoop.ts` | OODAE loop engine (max 12 iterations) |
 | `services/agentTools.ts` | Tool registry: declarations + executors |
 | `services/gemini.ts` | Gemini API client with function calling support |
-| `services/prompt.ts` | Agent system prompt (OODAE-aware, Duarte arc, "So What?" rule, narration↔visual sync) |
+| `services/prompt.ts` | Legacy unified agent system prompt (OODAE-aware, "So What?" rule, narration↔visual sync) |
+| `services/promptStoryboard.ts` | Storyboard Agent prompt — Apple 6-beat narrative contract |
+| `services/promptVisualDirector.ts` | Visual Director Agent prompt — Apple visual grammar per beat |
+| `services/promptAgents.ts` | Multi-agent prompt builders, handoff formatting, scene plan parsing |
 | `services/generateScript.ts` | Orchestrator: agent loop → evaluate → TTS |
 | `services/evaluate.ts` | 1+1 AI self-check (data accuracy + narration↔visual sync) |
 | `services/parseScript.ts` | VideoScript JSON validation |

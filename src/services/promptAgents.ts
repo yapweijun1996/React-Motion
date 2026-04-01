@@ -55,15 +55,20 @@ export function extractStoryboardPlan(
   userPrompt: string,
 ): StoryboardPlan {
   const storyboard = String(toolResult.storyboard ?? "");
+  const audienceMode = toolResult.audience_mode as StoryboardPlan["audienceMode"] | undefined;
   return {
     storyboard,
-    sceneCount: Number(toolResult.scene_count ?? 8),
+    sceneCount: Number(toolResult.scene_count ?? 7),
     colorMood: String(toolResult.color_mood ?? "professional"),
     pacing: String(toolResult.pacing ?? "steady"),
     climaxScene: toolResult.climax_scene as number | undefined,
     scenePlan: parseScenePlan(storyboard),
     userPrompt,
     dataContext: userMessage,
+    audienceMode: audienceMode ?? "mixed",
+    storyMode: "adapted-apple",
+    coreTakeaway: toolResult.core_takeaway ? String(toolResult.core_takeaway) : undefined,
+    hookStatement: toolResult.hook_statement ? String(toolResult.hook_statement) : undefined,
   };
 }
 
@@ -109,19 +114,24 @@ export function buildDefaultStoryboardPlan(
 
 function formatStoryboardForPrompt(plan: StoryboardPlan): string {
   const lines = [
+    `Story mode: ${plan.storyMode ?? "adapted-apple"}`,
+    `Audience: ${plan.audienceMode ?? "mixed"}`,
     `Scenes: ${plan.sceneCount}`,
     `Color mood: ${plan.colorMood}`,
     `Pacing: ${plan.pacing}`,
     plan.climaxScene != null ? `Climax scene: ${plan.climaxScene}` : "",
+    plan.coreTakeaway ? `Core takeaway: ${plan.coreTakeaway}` : "",
+    plan.hookStatement ? `Hook statement: ${plan.hookStatement}` : "",
     "",
     "## Narrative Plan",
     plan.storyboard,
   ];
   if (plan.scenePlan.length > 0) {
-    lines.push("", "## Scene-by-Scene Breakdown");
+    lines.push("", "## Scene-by-Scene Breakdown (Apple 6-Beat)");
     for (const s of plan.scenePlan) {
+      const beatLabel = s.beat ?? s.role;
       lines.push(
-        `Scene ${s.sceneNumber} [${s.role}]: ${s.insight}`,
+        `Scene ${s.sceneNumber} [${beatLabel}]: ${s.insight}`,
         `  So What: ${s.soWhat}`,
         `  Suggested elements: ${s.elementHints.join(", ")}`,
         `  Duration: ${s.duration}`,
@@ -131,12 +141,24 @@ function formatStoryboardForPrompt(plan: StoryboardPlan): string {
   return lines.filter(Boolean).join("\n");
 }
 
+/** Apple 6-beat values (source of truth) */
+const APPLE_BEATS = new Set(["hook", "why-it-matters", "how-it-works", "proof", "climax", "resolution"]);
+/** Legacy roles kept for backward compatibility */
+const LEGACY_ROLES = new Set(["context", "tension", "evidence", "breathing", "close"]);
+/** Map legacy roles to nearest Apple beat for the `beat` field */
+const LEGACY_TO_BEAT: Record<string, string> = {
+  context: "why-it-matters",
+  tension: "how-it-works",
+  evidence: "proof",
+  breathing: "proof",
+  close: "resolution",
+};
+
 /** Best-effort parse of scene plan from storyboard text. */
 function parseScenePlan(storyboard: string): StoryboardPlan["scenePlan"] {
   const scenes: StoryboardPlan["scenePlan"] = [];
-  const validRoles = new Set(["hook", "context", "tension", "evidence", "climax", "resolution", "breathing", "close"]);
 
-  const scenePattern = /\[?Scene\s*(\d+)[:\s]*([A-Za-z]+)\]?[:\s]*(.*?)(?=\[?Scene\s*\d+|$)/gis;
+  const scenePattern = /\[?Scene\s*(\d+)[:\s]*([A-Za-z-]+)\]?[:\s]*(.*?)(?=\[?Scene\s*\d+|$)/gis;
   let match;
   while ((match = scenePattern.exec(storyboard)) !== null) {
     const num = parseInt(match[1], 10);
@@ -148,9 +170,25 @@ function parseScenePlan(storyboard: string): StoryboardPlan["scenePlan"] {
     const elemMatch = block.match(/Suggested elements?:\s*(.+?)(?:\||$)/i);
     const durMatch = block.match(/Duration:\s*(short|medium|long)/i);
 
+    // Determine role: prefer Apple beat, fallback to legacy, default to "proof"
+    let role: StoryboardPlan["scenePlan"][0]["role"];
+    if (APPLE_BEATS.has(rawRole)) {
+      role = rawRole as StoryboardPlan["scenePlan"][0]["role"];
+    } else if (LEGACY_ROLES.has(rawRole)) {
+      role = rawRole as StoryboardPlan["scenePlan"][0]["role"];
+    } else {
+      role = "proof";
+    }
+
+    // Derive Apple beat — source of truth for visual grammar mapping
+    const beat = APPLE_BEATS.has(rawRole)
+      ? rawRole as StoryboardPlan["scenePlan"][0]["beat"]
+      : (LEGACY_TO_BEAT[rawRole] as StoryboardPlan["scenePlan"][0]["beat"]) ?? "proof";
+
     scenes.push({
       sceneNumber: num,
-      role: validRoles.has(rawRole) ? rawRole as StoryboardPlan["scenePlan"][0]["role"] : "evidence",
+      role,
+      beat,
       insight: insightMatch?.[1]?.trim() ?? block.slice(0, 120),
       soWhat: soWhatMatch?.[1]?.trim() ?? "",
       elementHints: elemMatch?.[1]?.split(",").map((s) => s.trim()) ?? [],

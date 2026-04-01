@@ -24,12 +24,20 @@ Your job: diagnose issues. Do NOT return a corrected script — only list proble
    Height estimates: text title ~140px, subtitle ~100px, body ~80px, metric ~220px, bar-chart ~80px/bar+40px, pie/sankey ~500px, line-chart ~450px, list ~80px/item, callout ~120px, divider ~30px, icon/kawaii/lottie ~160px, gap ~20px.
    Flag any scene where estimated total > 1008px or element count > 4.
 7. STORYTELLING QUALITY:
-   a. **Hook test**: Does scene 1 lead with a key finding or question? Flag generic openers like "Q1 Report".
+   a. **Hook test**: Does scene 1 lead with a key finding or question? Flag generic openers like "Q1 Report", "Let's look at...", or topic-only titles.
    b. **Audience awareness**: Does narration use "you/we/our"? Flag impersonal-only narration.
    c. **So What test**: Do chart/metric scenes interpret the data, not just read numbers?
    d. **Visual variety**: At least ONE of: annotation, icon, progress, comparison, SVG, map, or kawaii?
-   e. **Action close**: Does the last scene have a recommendation or call-to-action?
+   e. **Action close**: Does the last scene have a recommendation or call-to-action? Flag recap dumps or "thank you" endings.
    f. **Narrative arc**: Is there at least one challenge AND one resolution across scenes?
+
+8. APPLE NARRATIVE DISCIPLINE (Perception → Proof → Consequence):
+   a. **2-second test**: Can the viewer understand the point of scene 1 within 2 seconds? The hook must state a conclusion, not introduce a topic.
+   b. **Single message test**: Does each scene have exactly ONE dominant message? Flag scenes that try to make multiple unrelated points.
+   c. **Narration interprets, not duplicates**: Narration should explain WHY the visual matters, not read the visual verbatim. Flag scenes where narration just lists the same numbers shown in charts.
+   d. **Claim → Evidence → Implication flow**: Does the script progress from stating a claim (hook) to showing evidence (proof) to drawing implication (resolution)? Flag scripts that jump randomly between unrelated points.
+   e. **Climax strength test**: Is the climax scene clearly stronger than surrounding scenes? Check for: strongest data point, highest contrast element, most impactful visual. Flag scripts where climax is indistinguishable from proof scenes.
+   f. **Compressed close test**: Does the last scene compress to ONE takeaway and ONE action/implication? Flag endings with 3+ bullet points, multiple charts, or recap-style summaries.
 
 ## Output JSON
 

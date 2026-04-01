@@ -21,6 +21,7 @@ export type VideoScene = {
   durationInFrames: number;
   bgColor?: string;
   bgGradient?: string;  // CSS gradient string, e.g. "linear-gradient(135deg, #0f172a, #1e3a5f)"
+  bgEffect?: "bokeh" | "flow" | "rising"; // Canvas background effect mode
   layout?: "column" | "center" | "row";
   padding?: string;
   elements: SceneElement[];
@@ -28,6 +29,9 @@ export type VideoScene = {
   narration?: string;
   ttsAudioUrl?: string;        // blob: URL to WAV (runtime only, not persisted)
   ttsAudioDurationMs?: number; // audio duration in ms (used for timing adjustment)
+  imagePrompt?: string;        // AI-generated prompt for scene background image
+  imageOpacity?: number;       // background image opacity 0.0-1.0 (default 0.35)
+  imageUrl?: string;           // blob: URL to generated image (runtime only)
 };
 
 // Flat element — type + props at the same level for easy AI generation
@@ -58,11 +62,24 @@ export type StoryboardPlan = {
   scenePlan: StoryboardScenePlan[];
   userPrompt: string;
   dataContext: string;
+  /** Apple-style planning fields (v2) */
+  audienceMode?: "business" | "product" | "education" | "mixed";
+  storyMode?: "adapted-apple";
+  coreTakeaway?: string;
+  hookStatement?: string;
 };
+
+/** Apple 6-beat narrative system + legacy role compat */
+export type AppleBeat = "hook" | "why-it-matters" | "how-it-works" | "proof" | "climax" | "resolution";
+
+/** Legacy scene roles kept for backward compatibility */
+export type LegacySceneRole = "context" | "tension" | "evidence" | "breathing" | "close";
 
 export type StoryboardScenePlan = {
   sceneNumber: number;
-  role: "hook" | "context" | "tension" | "evidence" | "climax" | "resolution" | "breathing" | "close";
+  role: AppleBeat | LegacySceneRole;
+  /** Explicit Apple 6-beat assignment (source of truth when present) */
+  beat?: AppleBeat;
   insight: string;
   soWhat: string;
   elementHints: string[];
