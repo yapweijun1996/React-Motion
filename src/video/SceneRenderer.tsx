@@ -107,7 +107,7 @@ export const SceneRenderer: React.FC<SceneRendererProps> = ({
             ref={setSceneRef(v.scene.id)}
             style={{ ...FILL_STYLE, zIndex, ...sceneBg, ...transRest }}
           >
-            <ErrorBoundary level="scene" label={v.scene.title ?? v.scene.id}>
+            <ErrorBoundary level="scene" label={v.scene.id}>
               <div style={hasOpacity ? { ...FILL_STYLE, opacity: transOpacity as number } : FILL_STYLE}>
                 {renderScene(v.scene, v.localFrame)}
               </div>

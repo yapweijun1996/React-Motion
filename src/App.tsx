@@ -1,5 +1,6 @@
 import { VideoPlayer } from "./video/VideoPlayer";
 import { ReportComposition } from "./video/ReportComposition";
+import { ErrorBoundary } from "./video/ErrorBoundary";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { PromptTemplates } from "./components/PromptTemplates";
 import { ExportStage, ExportOverlay } from "./components/ExportStage";
@@ -169,17 +170,19 @@ export const App: React.FC<AppProps> = ({ config }) => {
       {script && !loading && (
         <>
           <div className="rm-player-wrap">
-            <VideoPlayer
-              ref={playerRef}
-              component={ReportComposition}
-              inputProps={{ script }}
-              durationInFrames={script.durationInFrames}
-              fps={script.fps}
-              compositionWidth={script.width}
-              compositionHeight={script.height}
-              style={{ width: "100%" }}
-              controls
-            />
+            <ErrorBoundary level="player" label="VideoPlayer">
+              <VideoPlayer
+                ref={playerRef}
+                component={ReportComposition}
+                inputProps={{ script }}
+                durationInFrames={script.durationInFrames}
+                fps={script.fps}
+                compositionWidth={script.width}
+                compositionHeight={script.height}
+                style={{ width: "100%" }}
+                controls
+              />
+            </ErrorBoundary>
           </div>
           {showExportStage && (
             <ExportStage script={script} playerRef={exportPlayerRef} surfaceRef={exportSurfaceRef} />

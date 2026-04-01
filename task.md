@@ -119,6 +119,7 @@
 | RM-154 | Perf | ParticleBg 性能优化 — Grid 空间分区 (CONNECTION_DIST cell，只查自身+4 邻居 cell，O(n²)→~O(n))、Alpha 分桶批量 stroke (5 桶，100+ stroke→5 stroke)、粒子批量 fill (100 fill→2 fill)。总 draw call 减少 ~90%。 | Done |
 | RM-154a | Bug | WebGLTransitionOverlay unmount 安全 — async init 3 层 abort guard (toPng/loadImage/createRenderer 后各检查 `aborted` flag)、已 unmount 时立即 dispose 新建 renderer 防止 WebGL context 泄漏、WeakMap 截图缓存 (同一 DOM element 跳过重复 toPng)、移除 useCallback 包装简化闭包层。 | Done |
 | RM-158 | Refactor | 拆分 6 个超 300 行文件 — SceneRenderer(439→117) + sceneTimeline.ts(142) + transitionStyles.ts(176)；validate(422→296) + validateEnums.ts(65) + validateSettings.ts(97)；VideoPlayer(390→288) + playerStyles.ts(53) + PlayerControls.tsx(94)；agentTools(366→265) + agentToolRegistry.ts(61) + agentToolScript.ts(64)；App(347→207) + useAppState.ts(182)；agentLoop(328→300) + agentLoopTypes.ts(23)。+10 新文件，所有文件 ≤300 行。re-export 保持向后兼容，零 import 破坏。tsc 零新增错误。 | Done |
+| RM-159 | Resilience | 3 层 React Error Boundary — L1 Element (GenericScene 每个 element 独立包裹，崩溃显示占位符)、L2 Scene (SceneRenderer 每个 scene 独立包裹，崩溃显示遮罩)、L3 Player (App.tsx VideoPlayer 外层包裹，崩溃显示 Retry)。新建 ErrorBoundary.tsx (class component, 138行)。errors.ts 新增 RENDER_ELEMENT_CRASH / RENDER_SCENE_CRASH / RENDER_PLAYER_CRASH 错误码。所有崩溃自动 logError→trackError 上报 metrics。零性能开销，仅异常时触发。tsc 零错误。 | Done |
 
 ### In Progress / Testing
 

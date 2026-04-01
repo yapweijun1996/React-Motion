@@ -18,6 +18,7 @@ import { ProgressElement } from "./elements/ProgressElement";
 import { TimelineElement } from "./elements/TimelineElement";
 import { ComparisonElement } from "./elements/ComparisonElement";
 import { ParticleBg } from "./ParticleBg";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { getLayoutTokens, type LayoutTokens } from "./sceneLayout";
 import { loadSettings } from "../services/settingsStore";
 import type { VideoScene, SceneElement } from "../types";
@@ -70,10 +71,51 @@ function extractFirstColor(gradient: string): string | undefined {
 
 /** Determine if scene background is dark — works with bgColor or bgGradient. */
 function isSceneDark(scene: { bgColor?: string; bgGradient?: string }): boolean {
+  let result = false;
+
   if (scene.bgGradient) {
-    return isDarkBg(extractFirstColor(scene.bgGradient));
+    const extracted = extractFirstColor(scene.bgGradient);
+    result = isDarkBg(extracted);
+    // Gradient set but color extraction failed → try bgColor as fallback
+    if (!extracted && scene.bgColor) result = isDarkBg(scene.bgColor);
+  } else if (scene.bgColor) {
+    result = isDarkBg(scene.bgColor);
   }
-  return isDarkBg(scene.bgColor);
+  // else: no bgColor, no bgGradient → default white (#fff) → dark=false
+
+  // Only log on first render (avoid 60fps spam)
+  const w = typeof window !== "undefined" ? (window as unknown as Record<string, unknown>) : null;
+  if (w && !w.__sceneDarkLogged) {
+    w.__sceneDarkLogged = true;
+    setTimeout(() => { if (w) w.__sceneDarkLogged = false; }, 2000);
+    console.warn(`[Scene] dark=${result} | bg=${scene.bgColor ?? "NONE"} | grad=${scene.bgGradient?.slice(0, 80) ?? "NONE"}`);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Ken Burns — subtle camera motion for cinematic feel
+// ---------------------------------------------------------------------------
+
+const KB_PRESETS = [
+  { sf: 1.00, st: 1.03, xf: 0, xt: -8, yf: 0, yt: -5 },  // zoom in + drift left-up
+  { sf: 1.03, st: 1.00, xf: -5, xt: 3, yf: -3, yt: 2 },   // zoom out + drift right-down
+  { sf: 1.00, st: 1.02, xf: 0, xt: 6, yf: 0, yt: -4 },    // zoom in + drift right-up
+  { sf: 1.02, st: 1.00, xf: 4, xt: -4, yf: 2, yt: -2 },   // zoom out + drift left
+  { sf: 1.00, st: 1.03, xf: 0, xt: 0, yf: 0, yt: -6 },    // pure zoom in + drift up
+  { sf: 1.02, st: 1.00, xf: 0, xt: 0, yf: -4, yt: 4 },    // zoom out + drift down
+];
+
+/** Simple hash from scene id → stable preset index */
+function sceneHash(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = ((h << 5) - h + id.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+/** Smooth ease-in-out cubic */
+function easeInOut(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
 type GenericSceneProps = {
@@ -85,10 +127,19 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
   scene,
   primaryColor,
 }) => {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
   const layout = scene.layout ?? "column";
   const dark = isSceneDark(scene);
   const canvasEffects = loadSettings().canvasEffects;
   const tokens = getLayoutTokens(scene.elements);
+
+  // Ken Burns — subtle camera motion
+  const kb = KB_PRESETS[sceneHash(scene.id) % KB_PRESETS.length];
+  const t = easeInOut(Math.min(frame / Math.max(durationInFrames - 1, 1), 1));
+  const kbScale = kb.sf + (kb.st - kb.sf) * t;
+  const kbX = kb.xf + (kb.xt - kb.xf) * t;
+  const kbY = kb.yf + (kb.yt - kb.yf) * t;
 
   const rowGap = Math.round(40 * tokens.fontScale);
   const flexProps: React.CSSProperties =
@@ -103,6 +154,17 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
       style={{
         backgroundColor: scene.bgGradient ? undefined : (scene.bgColor ?? "#ffffff"),
         background: scene.bgGradient ?? undefined,
+      }}
+    >
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        transform: `scale(${kbScale}) translate(${kbX}px, ${kbY}px)`,
+        transformOrigin: "center center",
+        display: "flex",
+        flexDirection: "column",
+        boxSizing: "border-box",
         padding: scene.padding ?? tokens.padding,
         fontFamily: "Arial, sans-serif",
         ...flexProps,
@@ -112,15 +174,17 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
     >
       {canvasEffects && <ParticleBg color={primaryColor} bgColor={scene.bgColor} />}
       {scene.elements.map((el, i) => (
-        <ElementRenderer
-          key={i}
-          el={el}
-          index={i}
-          primaryColor={primaryColor}
-          dark={dark}
-          tokens={tokens}
-        />
+        <ErrorBoundary key={i} level="element" label={el.type}>
+          <ElementRenderer
+            el={el}
+            index={i}
+            primaryColor={primaryColor}
+            dark={dark}
+            tokens={tokens}
+          />
+        </ErrorBoundary>
       ))}
+    </div>
     </AbsoluteFill>
   );
 };
@@ -134,6 +198,7 @@ type ElementRendererProps = {
 };
 
 const CHART_TYPES = new Set(["bar-chart", "pie-chart", "line-chart", "sankey", "svg", "map"]);
+const DECOR_TYPES = new Set(["annotation", "kawaii", "icon", "lottie"]);
 
 const chartWrapStyle: React.CSSProperties = {
   width: "100%",
@@ -180,7 +245,7 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
       case "icon":
         return <IconElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
       case "annotation":
-        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} dark={dark} />;
+        return <AnnotationElement el={el} index={index} primaryColor={primaryColor} dark={dark} fontScale={fs} />;
       case "svg":
         return <SvgElement el={el} index={index} />;
       case "map":
@@ -200,6 +265,16 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
   if (CHART_TYPES.has(el.type)) {
     if (!inner) return null;
     return <div style={chartWrapStyle}>{inner}</div>;
+  }
+  // Decoration elements: shrink vertical footprint by absorbing scene gap
+  if (DECOR_TYPES.has(el.type)) {
+    if (!inner) return null;
+    const halfGap = Math.round(tokens.gap / 2);
+    return (
+      <div style={{ marginTop: -halfGap, marginBottom: -halfGap, alignSelf: "center" }}>
+        {inner}
+      </div>
+    );
   }
   return inner;
 };

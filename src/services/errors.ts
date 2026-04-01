@@ -33,6 +33,9 @@ export type ErrorCode =
   | "PPTX_EXPORT_FAILED"
   | "BGM_GENERATION_FAILED"
   | "EXPORT_WEBCODECS_ENCODE"
+  | "RENDER_ELEMENT_CRASH"
+  | "RENDER_SCENE_CRASH"
+  | "RENDER_PLAYER_CRASH"
   | "UNKNOWN";
 
 // --- User-friendly messages ---
