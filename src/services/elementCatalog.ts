@@ -103,6 +103,12 @@ export const ELEMENT_CATALOG = [
     description: "Milestone timeline with animated line draw + staggered node pop-in. Perfect for project phases, chronological events, process steps, roadmaps.",
     usage_tips: "Use 'horizontal' for 3-5 milestones (best fit for 1920px width). Use 'vertical' for 4-7 items with longer descriptions. Set activeIndex to highlight current/key milestone. Great for storytelling scenes — shows progression, before/after, phase transitions. One timeline per scene.",
   },
+  {
+    type: "comparison",
+    props: "left: { title, value?, subtitle?, color?, items?: [string] }, right: { title, value?, subtitle?, color?, items?: [string] }, label (string, default 'VS'), animation, stagger",
+    description: "Side-by-side comparison cards with VS divider. Left card slides from left, right from right, then VS pops in center. Cinematic reveal for contrasts.",
+    usage_tips: "Use for: before/after, A vs B, old vs new, plan comparison, winner vs loser. Set value for big numbers (e.g. '$4.2M'). Use items array for bullet point features. Use contrasting colors (left blue, right red). One comparison per scene with layout 'center'.",
+  },
 ];
 
 export const STAGGER_SYSTEM = {
@@ -146,4 +152,5 @@ export const ELEMENT_TIPS = [
   "MAP: Use 'map' element for geographic data — country comparisons, regional revenue, user distribution, supply chains. Highlight 3-8 countries with palette.chart colors. One map per scene.",
   "PROGRESS: Use 'progress' for KPIs that are percentages, scores, or completion rates. The circular arc fill is inherently cinematic — much more visual than plain metric numbers. Use variant 'circular' on dark backgrounds for maximum drama.",
   "TIMELINE: Use 'timeline' for chronological storytelling — project phases, event sequences, roadmaps. The staggered node pop-in creates natural pacing. Set activeIndex to draw attention to the current/key milestone.",
+  "COMPARISON: Use 'comparison' for side-by-side contrasts — before/after, A vs B, old vs new, plan options. Cards slide in from opposite sides for dramatic reveal. Use with layout 'center'. One comparison per scene.",
 ];

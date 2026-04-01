@@ -16,6 +16,7 @@ import { SvgElement } from "./elements/SvgElement";
 import { MapElement } from "./elements/MapElement";
 import { ProgressElement } from "./elements/ProgressElement";
 import { TimelineElement } from "./elements/TimelineElement";
+import { ComparisonElement } from "./elements/ComparisonElement";
 import { NoiseBackground } from "./NoiseBackground";
 import { ParticleBg } from "./ParticleBg";
 import { loadSettings } from "../services/settingsStore";
@@ -143,6 +144,8 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
         return <ProgressElement el={el} index={index} dark={dark} />;
       case "timeline":
         return <TimelineElement el={el} index={index} dark={dark} />;
+      case "comparison":
+        return <ComparisonElement el={el} index={index} dark={dark} />;
       default:
         console.warn(`[GenericScene] Unknown element type: "${el.type}"`);
         return null;

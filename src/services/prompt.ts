@@ -286,6 +286,10 @@ You have atomic elements to compose scenes. There are no fixed templates. You de
 // timeline: milestone timeline with animated line draw + staggered node pop-in. Use "horizontal" for 3-5 milestones, "vertical" for 4-7 with longer descriptions.
 // Set activeIndex to highlight current milestone. Great for: project phases, chronological events, roadmaps, process steps. One timeline per scene.
 
+{ "type": "comparison", "left": { "title": "Before", "value": "$2.1M", "subtitle": "Manual process", "color": "#ef4444", "items": ["Slow", "Error-prone"] }, "right": { "title": "After", "value": "$4.2M", "subtitle": "Automated", "color": "#22c55e", "items": ["2x faster", "99.9% accurate"] }, "label": "VS" }
+// comparison: side-by-side cards. Left slides from left, right from right, VS pops in center. Use for before/after, A vs B, winner vs loser.
+// Use contrasting colors. Set value for big headline numbers. items[] for bullet features. One comparison per scene, layout "center".
+
 ## Scene Layout Rules (IMPORTANT)
 
 The canvas is 1920×1080. Elements must fill the space — do NOT cram too many elements into one scene.

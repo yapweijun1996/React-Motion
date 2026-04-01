@@ -52,6 +52,7 @@ const TYPE_SPRING: Record<string, SpringPreset> = {
   annotation: "support",
   progress: "data",
   timeline: "support",
+  comparison: "hero",
 };
 
 // --- Hook ---
