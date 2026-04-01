@@ -132,6 +132,7 @@
 | RM-168 | UX | 文字对比度安全网 — readableColor() 共享工具 (chartHelpers.ts)，TextElement/ListElement/CalloutElement 使用。dark 背景上 AI 设的暗色文字强制覆盖为亮色。ListElement body text 不再使用 AI textColor，直接用 dark-aware 默认值。 | Done |
 | RM-169 | UX | Palette 背景色现代化 — palette.ts bgDark desaturate 1.5→0.5 (保留主色调色相，不再出脏灰)。prompt.ts 强制 bgColor 只用 palette.background.dark/light，禁止随机 hex。 | Done |
 | RM-170 | Bug | 场景高度溢出修复 — PieChartElement SVG maxHeight 从 100% 改为 60vh (防止 1:1 viewBox 按宽度膨胀到 912px)。GenericScene Ken Burns 内层容器增加 overflow:hidden 兜底。根因：row-wrap 布局下 pie-chart + callout 总高度 1158px 超出 1008px 可用高度。 | Done |
+| RM-171 | Feature | `search_reference` 工具 — OODAE Orient 阶段搜索规划工具。AI 调用时传入 topic/industry/region/focus，Executor 生成 3-5 个精准搜索查询 + 参考角度，AI 下一轮用 Google Search grounding 执行。参数容错 (subject→topic, vertical→industry 等别名)。4 种 focus 模式 (benchmark/case_study/trend/comparison)，未指定时默认 3 种。prompt.ts OODAE 步骤更新。24 个单元测试。 | Done |
 
 ### In Progress / Testing
 
@@ -238,7 +239,7 @@ Goal: Raise output quality from "internal demo" to "client-facing". Biggest bang
 |-----|------|---------|----------|--------|-------|
 | RM-121 | Task | Full-frame capture — frameStep 3→1 + streaming write | Highest | ✅ Done | frameStep 3→1 (full-frame). Streaming: toPng→writeFile→discard (O(1) memory). waitFrame 2→1. FFmpeg pre-loaded. inputFps=fps (no interpolation). |
 | RM-122 | Task | Export quality presets — CRF/preset dynamic by settings | High | ✅ Done | 3 presets: draft (CRF 28/ultrafast), standard (CRF 24/fast), high (CRF 20/medium). AppSettings.exportQuality + validate.ts + SettingsPanel dropdown + exportVideo.ts QUALITY_PROFILES. Default: standard. |
-| RM-123 | Task | TTS voice selection UI — expose Gemini 30+ voices + language picker | High | To Do | Currently hardcoded single voice "Kore". Gemini supports 30+ voices across languages. Settings panel voice dropdown + per-video language. |
+| RM-123 | Task | TTS voice selection UI — expose Gemini 30 voices + preview in Settings | High | ✅ Done | 30 Gemini TTS voices in Settings dropdown. Preview button (▶/⏹) calls API with short sample text for instant audition. Voice persisted in localStorage, passed through full TTS pipeline (`callGeminiTTSWithRetry` → `callGeminiTTS`). Default: Kore. 5 files changed. tsc zero errors. |
 | RM-124 | Task | Background music — ambient audio layer with auto-ducking during narration | Medium | ✅ Done | Lyria 3 Clip API (`bgMusic.ts`). Settings toggle (default OFF). 8 mood presets. Preview: AudioTrack global + useMemo ducking (0.35/0.1). Export: FFmpeg volume `between()` ducking filter. Full pipeline: Settings→Lyria→script.bgMusicUrl→preview→MP4. |
 
 ### To Do — Priority 4 (Phase 4B — User Experience, retention)

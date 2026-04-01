@@ -2,11 +2,13 @@ import { register, setLastPalette } from "./agentToolRegistry";
 import { generatePalette, type PaletteScheme } from "./palette";
 import { ELEMENT_CATALOG, STAGGER_SYSTEM } from "./elementCatalog";
 
-// Side-effect import: ensure produce_script tool is registered
+// Side-effect imports: ensure tools are registered
 import "./agentToolScript";
+import "./agentToolRefine";
+import "./agentToolSearch";
 
 // Re-export for backward compatibility
-export { resetPaletteState, getToolDeclarations, getToolExecutor } from "./agentToolRegistry";
+export { resetPaletteState, resetScriptState, getToolDeclarations, getToolExecutor } from "./agentToolRegistry";
 export type { ToolResult, ToolExecutor, ToolContext } from "./agentToolRegistry";
 
 // ============================================================

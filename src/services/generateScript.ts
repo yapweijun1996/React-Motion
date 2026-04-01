@@ -229,6 +229,8 @@ function formatAgentMessage(p: AgentProgress, completedTools: string[]): string 
   // Context-aware "thinking" labels
   if (p.action === "thinking") {
     if (completedTools.length === 0) return "Analyzing your data...";
+    if (completedTools.includes("search_reference") && !completedTools.includes("draft_storyboard"))
+      return "Incorporating research...";
     if (!completedTools.includes("draft_storyboard")) return "Planning storyboard...";
     if (!completedTools.includes("generate_palette")) return "Designing color palette...";
     if (!completedTools.includes("direct_visuals")) return "Directing visual approach...";
@@ -238,6 +240,7 @@ function formatAgentMessage(p: AgentProgress, completedTools: string[]): string 
 
   const LABELS: Record<string, string> = {
     "tool:analyze_data": "Analyzing data...",
+    "tool:search_reference": "Researching context...",
     "tool:draft_storyboard": "Writing storyboard...",
     "tool:get_element_catalog": "Reviewing elements...",
     "tool:generate_palette": "Generating color palette...",
