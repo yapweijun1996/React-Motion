@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { VideoPlayer } from "./video/VideoPlayer";
 import { ReportComposition } from "./video/ReportComposition";
 import { ErrorBoundary } from "./video/ErrorBoundary";
@@ -6,6 +7,7 @@ import { PromptTemplates } from "./components/PromptTemplates";
 import { ExportStage, ExportOverlay } from "./components/ExportStage";
 import { GenerationProgressBar } from "./components/GenerationProgressBar";
 import { HistoryPanel } from "./components/HistoryPanel";
+import { LogModal } from "./components/LogModal";
 import { useAppState } from "./hooks/useAppState";
 import type { MountConfig } from "./types";
 import "./styles.css";
@@ -38,6 +40,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
     handleRestore,
   } = useAppState(config);
 
+  const [logOpen, setLogOpen] = useState(false);
+
   return (
     <div className="rm-app">
       {/* Header */}
@@ -64,6 +68,14 @@ export const App: React.FC<AppProps> = ({ config }) => {
           </button>
           <button
             className="rm-btn-gear"
+            onClick={() => setLogOpen(true)}
+            title="API Log"
+            aria-label="Open API log"
+          >
+            &#x1F4CB;
+          </button>
+          <button
+            className="rm-btn-gear"
             onClick={() => setSettingsOpen(true)}
             title="Settings"
             aria-label="Open settings"
@@ -74,6 +86,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
       </header>
 
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <LogModal open={logOpen} onClose={() => setLogOpen(false)} />
 
       <HistoryPanel
         open={historyOpen}

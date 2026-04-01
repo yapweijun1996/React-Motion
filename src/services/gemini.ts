@@ -1,5 +1,6 @@
 import { loadSettings } from "./settingsStore";
 import { ClassifiedError, classifyHttpStatus, logError } from "./errors";
+import { addLogEntry } from "./geminiLog";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 
@@ -115,6 +116,9 @@ export async function callGeminiRaw(
 
   console.log("[Gemini] Model:", model, "| Tools:", options.tools?.length ?? 0);
 
+  const toolNames = (options.tools ?? []).flatMap((t) => t.function_declarations?.map((d) => d.name) ?? (t.google_search ? ["google_search"] : []));
+  const t0 = performance.now();
+
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -125,6 +129,12 @@ export async function callGeminiRaw(
     const errBody = await res.text();
     const code = classifyHttpStatus(res.status);
     logError("Gemini", code, errBody, { status: res.status, model });
+    addLogEntry({
+      timestamp: Date.now(), model, systemPrompt, messageCount: messages.length,
+      tools: toolNames, temperature: options.temperature ?? 0.7, requestBody: body,
+      status: "error", httpStatus: res.status, responseSummary: `HTTP ${res.status}`,
+      responseData: errBody, durationMs: Math.round(performance.now() - t0), error: errBody,
+    });
     throw new ClassifiedError(code, `Gemini API error (${res.status}): ${errBody}`);
   }
 
@@ -159,6 +169,14 @@ export async function callGeminiRaw(
   } else if (finishReason === "SAFETY") {
     console.warn("[Gemini] Response was blocked by safety filters");
   }
+
+  addLogEntry({
+    timestamp: Date.now(), model, systemPrompt, messageCount: messages.length,
+    tools: toolNames, temperature: options.temperature ?? 0.7, requestBody: body,
+    status: "ok", httpStatus: res.status,
+    responseSummary: `${textLen} chars, ${fnCalls.length} tools [${fnCalls.join(",")}], ${finishReason}`,
+    responseData: data, durationMs: Math.round(performance.now() - t0),
+  });
 
   return { parts, finishReason };
 }

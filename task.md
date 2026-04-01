@@ -141,6 +141,7 @@
 |-----|------|---------|--------|-------|
 | RM-155 | Story | Phase 4B Step 2 — 功能/体验改进 (SceneEditor + TTS Voice + Element Editing) | In Progress | 3 任务: 2-A SceneEditor 面板+删除排序 (RM-125a+b), 2-B TTS 语音选择 (RM-123), 2-C 场景属性+元素编辑 (RM-125c+d) |
 | RM-173 | Arch | 多 Agent 协作架构 — 编剧/导演/审核三角色分离 | Done | 零架构风险 Phase 1: 拆分 prompt 为 3 个角色 (Storyboard + Visual Director + Quality Reviewer), StoryboardPlan 中间类型通信, agentPhase 通用执行器, feature flag 切换 (默认 single), 三层降级保护. 新增 7 文件, 修改 6 文件. |
+| RM-174 | Feature | 增强生成进度指示器 + Gemini API Log Modal | Done | 进度条新增: Turn X/Y iteration 显示, action 图标+详情, 动作历史(最近5条). Log 系统: geminiLog.ts 环形缓冲区(50条)拦截所有 API 调用, LogModal 可展开查看完整 request/response JSON, Copy All 一键复制调试. Header 新增 📋 Log 按钮. |
 
 ### To Do — Remaining
 

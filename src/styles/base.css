@@ -147,6 +147,59 @@
   color: #1e40af;
 }
 
+/* Generation detail section */
+.rm-gen-detail {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: rgba(30, 64, 175, 0.06);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.rm-gen-detail-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.rm-gen-iter {
+  font-weight: 600;
+  color: #1e40af;
+  white-space: nowrap;
+}
+.rm-gen-action {
+  color: #374151;
+}
+.rm-gen-action-detail {
+  margin-top: 2px;
+  color: #6b7280;
+  font-size: 11px;
+  word-break: break-all;
+}
+/* Generation action log */
+.rm-gen-log {
+  margin-top: 4px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(30, 64, 175, 0.1);
+  max-height: 80px;
+  overflow-y: auto;
+}
+.rm-gen-log-entry {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 1px 0;
+}
+.rm-gen-log-icon { font-size: 10px; flex-shrink: 0; }
+.rm-gen-log-detail {
+  color: #d1d5db;
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
 /* Player area */
 .rm-player-wrap {
   border-radius: var(--rm-radius-lg);
