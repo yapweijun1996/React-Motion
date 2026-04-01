@@ -14,6 +14,11 @@ function getModel(): string {
   return loadSettings().geminiModel;
 }
 
+/** Get the SVG-specific model from settings (for svg/svg-3d generation) */
+export function getSvgModel(): string {
+  return loadSettings().svgModel;
+}
+
 // --- Message types ---
 
 export type TextPart = { text: string };
@@ -66,6 +71,8 @@ export type CallGeminiOptions = {
   tools?: GeminiTool[];
   temperature?: number;
   jsonOutput?: boolean;
+  /** Override the model for this call (e.g. Pro model for SVG generation) */
+  modelOverride?: string;
 };
 
 // --- Original simple call (backward compatible) ---
@@ -91,7 +98,7 @@ export async function callGeminiRaw(
   options: CallGeminiOptions = {},
 ): Promise<GeminiCallResult> {
   const apiKey = getApiKey();
-  const model = getModel();
+  const model = options.modelOverride || getModel();
   const url = `${GEMINI_API_BASE}/models/${model}:generateContent?key=${apiKey}`;
 
   const body: Record<string, unknown> = {

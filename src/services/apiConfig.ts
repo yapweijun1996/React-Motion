@@ -13,11 +13,22 @@ export const AVAILABLE_MODELS = [
   { id: "gemini-3-flash-preview", label: "Gemini 3 Flash (Preview)" },
   { id: "gemini-2.5-pro-preview-05-06", label: "Gemini 2.5 Pro" },
   { id: "gemini-3-pro-preview", label: "Gemini 3 Pro (Preview)" },
+  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (Preview)" },
 ] as const;
 
 export type ModelId = (typeof AVAILABLE_MODELS)[number]["id"];
 
 export const DEFAULT_MODEL: ModelId = "gemini-2.0-flash";
+
+/** Default model for SVG generation — Pro models produce richer SVG markup */
+export const DEFAULT_SVG_MODEL: ModelId = "gemini-3.1-pro-preview";
+
+/** Models considered "Pro" tier — shown with a label in settings */
+export const PRO_MODEL_IDS = new Set<string>([
+  "gemini-2.5-pro-preview-05-06",
+  "gemini-3-pro-preview",
+  "gemini-3.1-pro-preview",
+]);
 
 export const DEFAULT_TTS_VOICE = "Kore";
 

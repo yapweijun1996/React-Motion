@@ -114,21 +114,29 @@ type VideoScript = {
 | `svg` | AI-generated inline SVG diagrams; primary path for pseudo-3D/isometric diagram scenes |
 | `map` | World map with country highlighting (d3-geo) |
 
-### Pseudo-3D SVG Boundary
+### Pseudo-3D SVG Boundary (RM-190)
 
-Supported direction:
+**Implemented** via the `svg-3d` element type (19th atomic element). Renderer: `Svg3dElement.tsx`.
 
-- Inline SVG with layered `<g>` groups
-- Isometric cards, stacks, panels, process blocks, and architectural diagrams
-- Gradients, highlights, shadows, and occlusion for depth illusion
-- Wrapper-level perspective-like motion, parallax, and subtle float
+Supported effects (v1):
+
+- Inline SVG with layered `<g id="...">` groups — targeted by `layers` array
+- Deterministic per-layer depth separation via `depthPreset` (subtle / card-stack / exploded)
+- Wrapper perspective tilt via `cameraTilt` (left / right / top)
+- Per-layer sinusoidal parallax drift via `parallax` (none / subtle / medium)
+- Gentle floating motion via `float: true`
+- Shadow depth via CSS filter drop-shadow (`shadow`: soft / medium / strong)
+- Three reveal modes: `fade`, `rise`, `draw` (reuses DrawingSvg)
+- Shared SVG sanitization module (`svgSanitize.ts`) — root `<svg>` attrs also cleaned
+- SVG quality rules in element catalog (10 rules: gradients, badges, min 15 elements, etc.)
+- Settings: `svgModel` selector — Pro model for richer SVG generation (default: gemini-3.1-pro-preview)
+- Multi-Agent auto-switches Visual Director to svgModel when storyboard mentions svg-3d
 
 Not the current direction:
 
 - True 3D mesh rendering
 - Three.js scene graph as a default render path
 - Camera/light/material systems in the core composition layer
-- `foreignObject` is blocked by the SVG sanitizer (RM-189) — embedded XHTML inside SVG is a security and export-stability risk
 
 This boundary preserves the core invariant: preview and export stay on the same DOM/SVG render path.
 

@@ -12,6 +12,9 @@
  * data-accuracy, background-variety.
  */
 
+import { checkDataAccuracy, extractHardNumbers } from "./agentHooksData";
+export { checkDataAccuracy, extractHardNumbers };
+
 export type StopCheckResult = {
   pass: boolean;
   issues: string[];
@@ -30,8 +33,8 @@ const RICH_VISUAL_TYPES = new Set([
 // Action words indicating a call-to-action in the closing scene
 const ACTION_PATTERN = /\b(should|must|need|recommend|action|next|start|focus|prioriti|consider|implement|review|ensure)\b/i;
 
-/** Numeric patterns that represent hard data claims (not ordinals like "3 steps") */
-const HARD_DATA_PATTERN = /(?:\$[\d,.]+[BMKTbmkt]?|\d+(?:\.\d+)?%|\d{4}(?:\s*[-–]\s*\d{4})?(?=\s|$|,|\.)|\d+(?:\.\d+)?x\b|\d[\d,.]*\s*(?:billion|million|trillion|thousand|percent|bps|basis\s*points))/gi;
+/** Numeric patterns for hook claim detection (not the data accuracy check) */
+const HARD_DATA_PATTERN = /(?:\$[\d,.]+[BMKTbmkt]?|\d+(?:\.\d+)?%|\d{4}(?:\s*[-–]\s*\d{4})?(?=\s|$|,|\.)|\d+(?:\.\d+)?x\b|\d[\d,.]*[BMKTbmkt]\+?(?=\s|$|,|\.|\))|\d[\d,.]*\s*(?:billion|million|trillion|thousand|percent|bps|basis\s*points))/gi;
 
 // Verdict verbs/adjectives — signal a conclusion or key finding (not a topic intro)
 const VERDICT_PATTERN = /\b(improv|increas|decreas|grew|growth|drop|fell|rise|rose|reach|hit|exceed|surpass|doubl|tripl|record|strongest|weakest|highest|lowest|fastest|slowest|largest|smallest|leading|declining|outperform|underperform|dominat|signal|indicat|driv|achiev|deliver|gain|lost|cut|sav|reduc|surge|spike|plummet|soar|crash|recover|transform|eliminat|generat|accelerat|decelerat)\b/i;
@@ -318,96 +321,5 @@ export function checkBackgroundVariety(
   return issues;
 }
 
-// ---------------------------------------------------------------------------
-// Data accuracy helpers
-// ---------------------------------------------------------------------------
-
-/** Small ordinal/count numbers (1-20) that are structural, not data claims */
-const TRIVIAL_NUMBER = /^(?:[0-9]|1[0-9]|20)$/;
-
-/**
- * Canonicalize a matched number token so equivalent forms compare equal.
- *
- * Examples:
- *  "$2B" and "$2.0B" → "$2b"
- *  "2 billion" → "$2b"  (word suffix → letter suffix)
- *  "45%" stays "45%"
- *  "2020–2024" → "2020-2024" (normalize dash)
- */
-function canonicalize(raw: string): string {
-  let s = raw.replace(/[\s,]/g, "").toLowerCase();
-
-  // Normalize en-dash / em-dash to hyphen
-  s = s.replace(/[–—]/g, "-");
-
-  // Word suffixes → letter suffixes: "billion" → "b", "million" → "m", etc.
-  s = s.replace(/billion/g, "b").replace(/million/g, "m")
-    .replace(/trillion/g, "t").replace(/thousand/g, "k")
-    .replace(/percent/g, "%").replace(/basispoints/g, "bps");
-
-  // Strip trailing ".0" before a suffix: "$2.0b" → "$2b", "45.0%" → "45%"
-  s = s.replace(/\.0+([bmkt%x])/g, "$1");
-
-  // Strip "$" when a magnitude suffix is present, so "$2b" and "2b" match.
-  // Keep "$" for raw amounts without suffix (e.g. "$500" stays "$500").
-  if (/[bmtk]$/i.test(s)) {
-    s = s.replace(/^\$/, "");
-  }
-
-  return s;
-}
-
-/**
- * Extract hard data numbers from text (percentages, dollar amounts, years, multipliers).
- * Returns canonicalized string tokens for comparison.
- */
-export function extractHardNumbers(text: string): string[] {
-  const matches = text.match(HARD_DATA_PATTERN) ?? [];
-  return matches.map(canonicalize);
-}
-
-/**
- * Check whether script narration contains fabricated data.
- *
- * Strategy:
- * - Extract all hard numbers from script narrations.
- * - If userPrompt is provided, extract its numbers as the allowed set.
- * - Numbers in script that don't appear in user prompt → potential fabrication.
- * - If userPrompt has NO hard numbers at all, any hard number in script is suspect.
- */
-export function checkDataAccuracy(
-  scenes: Record<string, unknown>[],
-  userPrompt?: string,
-): string[] {
-  const issues: string[] = [];
-  if (!userPrompt) return issues; // no prompt → can't verify, skip
-
-  const userNumbers = new Set(extractHardNumbers(userPrompt));
-  const userHasData = userNumbers.size > 0;
-
-  for (let si = 0; si < scenes.length; si++) {
-    const narration = String(scenes[si].narration ?? "");
-    const scriptNumbers = extractHardNumbers(narration);
-
-    for (const num of scriptNumbers) {
-      // Skip trivial numbers that are structural, not data claims
-      // But keep numbers with format markers ($, %, B, M, x) — those are data claims
-      const hasFormatMarker = /[$%xbmkt]/i.test(num);
-      const raw = num.replace(/[%$xbmkt,.]/gi, "");
-      if (!hasFormatMarker && TRIVIAL_NUMBER.test(raw)) continue;
-
-      if (!userHasData) {
-        // User provided no data → script should not invent numbers
-        issues.push(
-          `data_accuracy: Scene ${si + 1} narration contains "${num}" but user provided no verifiable data — remove or replace with qualitative statement`,
-        );
-      } else if (!userNumbers.has(num)) {
-        // User provided data but this number isn't in it
-        issues.push(
-          `data_accuracy: Scene ${si + 1} narration contains "${num}" not found in user's original data — verify or remove`,
-        );
-      }
-    }
-  }
-  return issues;
-}
+// Data accuracy helpers moved to agentHooksData.ts
+// (checkDataAccuracy, extractHardNumbers imported at top of file)

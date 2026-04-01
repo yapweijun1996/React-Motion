@@ -119,19 +119,24 @@ React-Motion/
 | `LottieElement.tsx` | `lottie` | lottie-web animated icons (frame-synced) |
 | `IconElement.tsx` | `icon` | lucide-react SVG icons + bounce |
 | `AnnotationElement.tsx` | `annotation` | roughjs hand-drawn + stroke-draw |
-| `SvgElement.tsx` | `svg` | AI-generated inline SVG diagrams; current foundation for pseudo-3D/isometric visuals |
+| `SvgElement.tsx` | `svg` | AI-generated inline SVG diagrams |
+| `Svg3dElement.tsx` | `svg-3d` | Pseudo-3D layered SVG: depth presets, perspective tilt, parallax, float, shadow, reveal |
+| `svgSanitize.ts` | — | Shared SVG sanitization (whitelist + dangerous attr removal), used by both SvgElement and Svg3dElement |
+| `DrawingSvg.tsx` | — | Apple-style stroke-draw animation, reused by svg and svg-3d (reveal: draw) |
 | `MapElement.tsx` | `map` | d3-geo world map + country highlight |
 
 All elements accept a `dark` prop from `GenericScene` for text contrast auto-adaptation.
 
-### Pseudo-3D SVG Direction
+### Pseudo-3D SVG (RM-190)
 
-The repo's premium-web visual direction should build on `SvgElement.tsx` and the existing DOM/SVG render path:
+Implemented via `Svg3dElement.tsx` on the same export-safe DOM/SVG pipeline:
 
-- Prefer pseudo-3D SVG over true 3D runtime features
-- Compose depth with layered groups, gradients, shadows, and subtle wrapper transforms
-- Keep any future `svg-3d` style element in the same export-safe DOM/SVG pipeline
-- Treat Three.js/WebGL scene content as a separate future experiment, not the default path for story scenes
+- `svg-3d` element: layered `<g>` groups with deterministic depth transforms
+- Effects: depthPreset, cameraTilt, parallax, float, shadow, reveal (fade/rise/draw)
+- Shared sanitization: `svgSanitize.ts` cleans both root and child SVG elements
+- SVG quality rules in element catalog guide AI to generate richer markup
+- Settings: `svgModel` selects a Pro model for SVG generation (default: gemini-3.1-pro-preview)
+- Multi-Agent: Visual Director auto-switches to svgModel when storyboard mentions svg-3d
 
 ## Public (`public/`)
 

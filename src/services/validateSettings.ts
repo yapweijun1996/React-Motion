@@ -3,7 +3,7 @@
  */
 
 import type { ValidationResult } from "./validateEnums";
-import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_TTS_VOICE, BGM_MOODS, DEFAULT_BGM_MOOD, type BgmMood } from "./apiConfig";
+import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_SVG_MODEL, DEFAULT_TTS_VOICE, BGM_MOODS, DEFAULT_BGM_MOOD, type BgmMood } from "./apiConfig";
 
 // ============================================================
 // Type guard helpers (duplicated from validate.ts — tiny 1-liners)
@@ -42,6 +42,7 @@ export type AppSettings = {
   bgMusicMood: BgmMood;
   agentMode: AgentMode;
   imageGenEnabled: boolean;
+  svgModel: string;
 };
 
 const VALID_MODEL_IDS: readonly string[] = AVAILABLE_MODELS.map((m) => m.id);
@@ -99,9 +100,16 @@ export function validateSettings(input: unknown): ValidationResult<AppSettings> 
 
   const imageGenEnabled = typeof input.imageGenEnabled === "boolean" ? input.imageGenEnabled : false;
 
+  let svgModel = isStr(input.svgModel) ? input.svgModel.trim() : "";
+  if (svgModel && !VALID_MODEL_IDS.includes(svgModel)) {
+    warnings.push(`Unknown SVG model "${svgModel}", falling back to default`);
+    svgModel = DEFAULT_SVG_MODEL;
+  }
+  if (!svgModel) svgModel = DEFAULT_SVG_MODEL;
+
   return {
     ok: true,
-    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood, agentMode, imageGenEnabled },
+    data: { geminiApiKey, geminiModel, ttsVoice, ttsConcurrency, exportQuality, canvasEffects, bgMusicEnabled, bgMusicMood, agentMode, imageGenEnabled, svgModel },
     warnings,
   };
 }

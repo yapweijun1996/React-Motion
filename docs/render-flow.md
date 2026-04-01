@@ -18,11 +18,18 @@ VideoScript
 
 ### SVG and Pseudo-3D Scenes
 
-Premium-web "3D SVG" scenes should stay on this same render path:
+Both `svg` and `svg-3d` elements render as inline SVG in the DOM:
 
-- Render as inline SVG in the DOM
-- Animate with DOM/CSS transforms, path drawing, parallax, spotlight, and camera motion
-- Simulate depth with layered SVG groups, gradients, shadows, and occlusion
+- **`svg`**: Sanitized SVG injected via `dangerouslySetInnerHTML`. Supports `draw` animation (Apple-style path drawing via `DrawingSvg`).
+- **`svg-3d`**: Same sanitized SVG, plus per-layer transforms driven by `useLayoutEffect` each frame:
+  - Layer depth: deterministic translateY from `depthPreset` table
+  - Wrapper tilt: CSS perspective + rotateX/Y from `cameraTilt`
+  - Parallax: sinusoidal translateX per layer, amplitude from `parallax`
+  - Float: sinusoidal XY on wrapper container
+  - Shadow: CSS `filter: drop-shadow` from `shadow` preset
+  - Reveal: fade (opacity), rise (opacity + translateY), draw (delegates to DrawingSvg)
+
+Shared sanitization via `svgSanitize.ts` — whitelist includes both camelCase and lowercase SVG tags for cross-environment safety. Root `<svg>` attributes are also sanitized (not just children).
 
 This path is preferred because export captures the same DOM/SVG scene tree through `html-to-image`, preserving preview/export parity.
 
@@ -77,18 +84,21 @@ Step 5: Download
 
 ### Export-Safe Boundary for Pseudo-3D SVG
 
-Recommended:
+Supported in `svg-3d` (export-safe):
 
-- Layered SVG groups
-- Isometric geometry
-- Wrapper-level `scale`, `translate`, and restrained `rotateX` / `rotateY`
-- SVG gradients, masks, and lightweight filters
+- Layered SVG `<g>` groups with `id` or `data-layer` targeting
+- Per-layer `translate` transforms (depth + parallax)
+- Wrapper `perspective` + `rotateX`/`rotateY` (cameraTilt)
+- SVG `<defs>` gradients, masks, and standard filters
+- CSS `filter: drop-shadow` (shadow presets)
+- `DrawingSvg` stroke animation (reveal: draw)
 
-Use carefully or avoid:
+Avoid (not export-safe):
 
-- `foreignObject` (blocked by sanitizer since RM-189)
-- Complex nested CSS 3D scenes
-- True 3D runtime content with its own camera/light/material stack
+- `foreignObject` with embedded XHTML
+- Nested HTML 3D scenes inside SVG
+- Complex CSS 3D on individual SVG child elements
+- True 3D runtime content (Three.js/WebGL)
 
 The more a scene depends on browser-specific 3D composition instead of plain SVG/DOM, the higher the risk of preview/export mismatch.
 

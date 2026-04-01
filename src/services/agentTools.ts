@@ -171,6 +171,7 @@ register(
         props: e.props,
         description: e.description,
         ...(rec.usage_tips ? { usage_tips: rec.usage_tips } : {}),
+        ...(rec.svg_quality_rules ? { svg_quality_rules: rec.svg_quality_rules } : {}),
         ...(rec.markup_example ? { markup_example: rec.markup_example } : {}),
       };
     });

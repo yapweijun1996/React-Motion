@@ -121,10 +121,10 @@ export function sanitizeSvg(raw: string, isDraw = false): string {
     svg.setAttribute("height", "auto");
     // svg.style may be undefined in some DOM implementations (e.g. jsdom SVG)
     if (svg.style) {
-      svg.style.maxHeight = "100%";
+      svg.style.maxHeight = "100vh";
       svg.style.overflow = "visible";
     } else {
-      svg.setAttribute("style", "max-height:100%;overflow:visible");
+      svg.setAttribute("style", "max-height:100vh;overflow:visible");
     }
 
     // Sanitize root <svg> attrs too (fix: previously only children were sanitized)

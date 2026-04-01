@@ -1,5 +1,5 @@
 import { validateSettings, type AppSettings, type ExportQuality, type BgmMood, type AgentMode } from "./validate";
-import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_TTS_VOICE, DEFAULT_BGM_MOOD } from "./apiConfig";
+import { AVAILABLE_MODELS, DEFAULT_MODEL, DEFAULT_SVG_MODEL, DEFAULT_TTS_VOICE, DEFAULT_BGM_MOOD } from "./apiConfig";
 
 export type { AppSettings, ExportQuality, BgmMood, AgentMode } from "./validate";
 
@@ -41,6 +41,7 @@ export function loadSettings(): AppSettings {
       bgMusicMood: stored.bgMusicMood ?? DEFAULT_BGM_MOOD,
       agentMode: stored.agentMode ?? "single",
       imageGenEnabled: stored.imageGenEnabled ?? false,
+      svgModel: stored.svgModel ?? DEFAULT_SVG_MODEL,
     };
 
     const result = validateSettings(merged);
@@ -77,6 +78,7 @@ export function saveSettings(settings: AppSettings): void {
       bgMusicMood: result.data.bgMusicMood,
       agentMode: result.data.agentMode,
       imageGenEnabled: result.data.imageGenEnabled,
+      svgModel: result.data.svgModel,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   } catch (err) {
@@ -113,6 +115,7 @@ type StoredSettings = {
   bgMusicMood?: BgmMood;
   agentMode?: AgentMode;
   imageGenEnabled?: boolean;
+  svgModel?: string;
   // Legacy field — read for migration then discard
   geminiApiKey?: string;
 };
@@ -135,6 +138,7 @@ function getDefaults(): AppSettings {
     bgMusicMood: DEFAULT_BGM_MOOD,
     agentMode: "single",
     imageGenEnabled: false,
+    svgModel: DEFAULT_SVG_MODEL,
   };
 }
 

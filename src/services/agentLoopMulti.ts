@@ -7,6 +7,7 @@
 
 import {
   callGeminiRaw,
+  getSvgModel,
   type GeminiMessage,
 } from "./gemini";
 import {
@@ -110,6 +111,14 @@ export async function runMultiAgentLoop(
   const visualPrompt = buildVisualDirectorPrompt(plan);
   const handoffMessage = formatStoryboardHandoff(plan);
 
+  // Use Pro model for Visual Director when storyboard mentions svg-3d
+  const storyboardText = plan.storyboard ?? "";
+  const needsSvgModel = /svg-3d|svg\b.*layer|layered.*diagram|3d.*architect/i.test(storyboardText);
+  const svgModelOverride = needsSvgModel ? getSvgModel() : undefined;
+  if (svgModelOverride) {
+    console.log(`[MultiAgent] SVG-3D detected in storyboard — using model: ${svgModelOverride}`);
+  }
+
   const phase2 = await runPhase({
     name: "VisualDirector",
     systemPrompt: visualPrompt,
@@ -120,6 +129,7 @@ export async function runMultiAgentLoop(
     budget,
     terminalTool: "produce_script",
     onProgress,
+    modelOverride: svgModelOverride,
   });
 
   totalIterations += phase2.iterations;
@@ -193,10 +203,21 @@ export async function runMultiAgentLoop(
       const visualIssues = review.issues.filter((i) => i.target === "visual");
       const storyboardIssues = review.issues.filter((i) => i.target === "storyboard");
 
-      // Visual issues → retry Phase 2
-      if (visualIssues.length > 0) {
-        const feedback = "Quality reviewer found visual issues:\n" +
-          visualIssues.map((i) => `- [${i.category}] ${i.description}`).join("\n") +
+      // Data accuracy issues (fabricated numbers) are fixable by Visual Director
+      // even when classified as "storyboard" — VD controls narration + element data.
+      // Route them to Phase 2 retry instead of only logging.
+      const dataAccuracyFromStoryboard = storyboardIssues.filter(
+        (i) => i.category === "data_accuracy",
+      );
+      const pureStoryboardIssues = storyboardIssues.filter(
+        (i) => i.category !== "data_accuracy",
+      );
+
+      // Visual issues + data accuracy issues → retry Phase 2
+      const retryableIssues = [...visualIssues, ...dataAccuracyFromStoryboard];
+      if (retryableIssues.length > 0) {
+        const feedback = "Quality reviewer found issues:\n" +
+          retryableIssues.map((i) => `- [${i.category}] ${i.description}`).join("\n") +
           "\nPlease fix and call produce_script again.";
 
         const retry = await retryPhaseWithFeedback(
@@ -220,11 +241,11 @@ export async function runMultiAgentLoop(
         }
       }
 
-      // Log storyboard issues for observability (no retry for now —
-      // storyboard retry would require re-running Phase 1 + 2, too costly)
-      if (storyboardIssues.length > 0) {
+      // Log pure storyboard issues (narrative arc, hook phrasing) for observability.
+      // These require re-running Phase 1 which is too costly for a retry.
+      if (pureStoryboardIssues.length > 0) {
         report("phase3_storyboard_issues",
-          storyboardIssues.map((i) => i.description).join("; "));
+          pureStoryboardIssues.map((i) => i.description).join("; "));
       }
     } else {
       report("phase3_pass", "All quality checks passed");

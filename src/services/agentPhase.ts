@@ -43,6 +43,8 @@ export type PhaseConfig = {
   /** Tool name that terminates the phase (e.g., "draft_storyboard" or "produce_script"). */
   terminalTool: string;
   onProgress?: (p: AgentProgress) => void;
+  /** Override model for this phase (e.g. Pro model for SVG-heavy scripts). */
+  modelOverride?: string;
 };
 
 export type PhaseResult = {
@@ -63,6 +65,7 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
   const {
     name, systemPrompt, userMessage, toolDeclarations,
     maxIterations, context, budget, terminalTool, onProgress,
+    modelOverride,
   } = config;
 
   const messages: GeminiMessage[] = [
@@ -95,7 +98,7 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
     const result = await callGeminiRaw(
       systemPrompt,
       messages,
-      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL },
+      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, modelOverride },
     );
 
     recordModelOutput(budget, i, result.parts);

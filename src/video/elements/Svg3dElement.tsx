@@ -211,11 +211,10 @@ export const Svg3dElement: React.FC<Props> = ({ el, index }) => {
         ref={containerRef}
         style={{
           width: "100%",
+          maxHeight: "100%",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          flex: 1,
-          minHeight: 0,
           opacity: revealOpacity,
           transform: revealY !== 0 ? `translateY(${revealY}px)` : "none",
         }}
@@ -249,8 +248,7 @@ function wrapperStyle(
 
   return {
     width: "100%",
-    flex: 1,
-    minHeight: 0,
+    maxHeight: "100%",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",

@@ -206,8 +206,33 @@ Current `svg` scenes should be authored with an export-safe pseudo-3D mindset:
 Not recommended for the current render path:
 
 - True 3D scene descriptions
-- `foreignObject` (removed from sanitizer whitelist — embedded XHTML is a security risk)
 - Effects that rely on browser-only 3D composition semantics
+
+### svg-3d
+
+| Prop | Type | Default | Notes |
+|------|------|---------|-------|
+| markup | string | required | SVG string with `<g id="...">` grouped layers |
+| layers | string[] | [] | Layer ids in back-to-front order (e.g. `["bg","base","mid","front"]`) |
+| depthPreset | string | "subtle" | `subtle` \| `card-stack` \| `exploded` — controls per-layer Z offset |
+| cameraTilt | string | "left" | `left` \| `right` \| `top` — wrapper perspective rotation |
+| parallax | string | "subtle" | `none` \| `subtle` \| `medium` — per-layer horizontal drift |
+| float | boolean | false | Gentle sinusoidal floating motion on wrapper |
+| shadow | string | "soft" | `soft` \| `medium` \| `strong` — CSS filter drop-shadow |
+| reveal | string | "fade" | `fade` \| `rise` \| `draw` — entrance animation |
+| drawSpeed | number | 1 | Speed multiplier for `reveal:"draw"` |
+
+Rendered by `Svg3dElement.tsx`. Reuses shared SVG sanitization from `svgSanitize.ts`. Layer targeting resolves `<g id="...">` or `<g data-layer="...">` in the sanitized markup. Missing layer ids are silently skipped. If no layers match, renders as static SVG with wrapper motion only.
+
+The depth preset table drives deterministic per-layer translateY offsets:
+
+| Preset | Layer offsets (px) |
+|--------|-------------------|
+| subtle | 0, 8, 16, 24 |
+| card-stack | 0, 15, 30, 48 |
+| exploded | 0, 25, 55, 90 |
+
+Settings: `svgModel` in Settings panel selects the AI model for SVG generation (default: `gemini-3.1-pro-preview`). Multi-Agent Visual Director phase auto-switches to this model when storyboard mentions svg-3d.
 
 ### map
 
@@ -232,13 +257,13 @@ Theme colors cascade to elements that don't specify their own color.
 
 ## Prompt Templates
 
-28 preset templates defined in `src/components/templateData.ts` (data) and rendered by `src/components/PromptTemplates.tsx` (UI).
+33 preset templates defined in `src/components/templateData.ts` (data) and rendered by `src/components/PromptTemplates.tsx` (UI).
 
 | Category | Count | Templates |
 |----------|-------|-----------|
 | Business | 3 | Quarterly Report, Sales Ranking, Supplier Analysis |
 | Professional | 6 | Board Update, Budget vs Actual, Product Launch, Support KPI, Supply Chain, Hiring Funnel |
-| Technology | 1 | AI Industry Growth |
+| Technology | 5 | Canvas Effects Demo, Transition Showcase, 3D Architecture, WebGL Effects Demo, AI Industry Growth |
 | Science | 4 | Clean Energy, Solar System, World Population, Galaxy Explorer |
 | Study | 7 | Fibonacci, Exam Scores, Study Progress, Lab Results, Language Progress, Research Summary |
 | Sports | 1 | Olympics Medals |

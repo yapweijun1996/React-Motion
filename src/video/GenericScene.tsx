@@ -167,16 +167,14 @@ export const GenericScene: React.FC<GenericSceneProps> = ({
             frame={frame}
             fps={fps}
           >
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <ElementRenderer
-                el={el}
-                index={i}
-                primaryColor={primaryColor}
-                dark={dark}
-                tokens={tokens}
-                colors={colors}
-              />
-            </div>
+            <ElementRenderer
+              el={el}
+              index={i}
+              primaryColor={primaryColor}
+              dark={dark}
+              tokens={tokens}
+              colors={colors}
+            />
           </SpotlightWrapper>
         </ErrorBoundary>
       ))}
@@ -202,6 +200,8 @@ const chartWrapStyle: React.CSSProperties = {
   flex: 1,
   minHeight: 0,
   overflow: "visible",
+  position: "relative",
+  zIndex: 1,
 };
 
 const ElementRenderer: React.FC<ElementRendererProps> = ({
@@ -231,10 +231,10 @@ const ElementRenderer: React.FC<ElementRendererProps> = ({
   if (entry.category === "decor") {
     const halfGap = Math.round(tokens.gap / 2);
     return (
-      <div style={{ marginTop: -halfGap, marginBottom: -halfGap, alignSelf: "center" }}>
+      <div style={{ marginTop: -halfGap, marginBottom: -halfGap, alignSelf: "center", position: "relative", zIndex: 1 }}>
         {inner}
       </div>
     );
   }
-  return inner;
+  return <div style={{ position: "relative", zIndex: 1 }}>{inner}</div>;
 };
