@@ -146,10 +146,10 @@ function buildMuxArgs(
     args.push("-i", entry.filename);
   }
 
-  // Add BGM input (always last input)
+  // Add BGM input (always last input) — loop infinitely so it covers full video
   const bgmInputIdx = entries.length + 1; // 0=video, 1..N=TTS, N+1=BGM
   if (hasBGM) {
-    args.push("-i", "bgm.mp3");
+    args.push("-stream_loop", "-1", "-i", "bgm.mp3");
   }
 
   // --- Build filter_complex ---

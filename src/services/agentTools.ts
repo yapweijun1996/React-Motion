@@ -170,7 +170,8 @@ register(
     },
   },
   async (args) => {
-    const input = args.color_or_mood as string;
+    // Gracefully handle common AI parameter naming variants
+    const input = (args.color_or_mood ?? args.mood ?? args.hex ?? args.color ?? "professional") as string;
     const scheme = (args.scheme as PaletteScheme) ?? "analogous";
     const palette = generatePalette(input, scheme);
 

@@ -51,7 +51,7 @@ export const ReportComposition: React.FC<ReportCompositionProps> = ({
 
       {/* Background music — global track with auto-ducking */}
       {script.bgMusicUrl && (
-        <AudioTrack src={script.bgMusicUrl} volume={bgmVolume} />
+        <AudioTrack src={script.bgMusicUrl} volume={bgmVolume} loop />
       )}
 
       {/* Progress bar */}

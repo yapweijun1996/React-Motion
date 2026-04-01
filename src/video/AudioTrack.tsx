@@ -23,11 +23,14 @@ type AudioTrackProps = {
   src: string;
   /** Volume 0–1 (default 1). */
   volume?: number;
+  /** Loop the audio (useful for BGM shorter than video). */
+  loop?: boolean;
 };
 
 export const AudioTrack: React.FC<AudioTrackProps> = ({
   src,
   volume = 1,
+  loop = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -52,13 +55,19 @@ export const AudioTrack: React.FC<AudioTrackProps> = ({
     const el = audioRef.current;
     if (!el || !playing) return;
 
-    const desiredTime = Math.max(0, frame / fps);
+    let desiredTime = Math.max(0, frame / fps);
+
+    // For looped audio, wrap desiredTime within audio duration
+    if (loop && el.duration && Number.isFinite(el.duration) && el.duration > 0) {
+      desiredTime = desiredTime % el.duration;
+    }
+
     const drift = Math.abs(el.currentTime - desiredTime);
 
     if (drift > SEEK_THRESHOLD) {
       el.currentTime = desiredTime;
     }
-  }, [frame, fps, playing]);
+  }, [frame, fps, playing, loop]);
 
   // --- Volume ---
   useEffect(() => {
@@ -75,5 +84,5 @@ export const AudioTrack: React.FC<AudioTrackProps> = ({
   }, []);
 
   // Hidden audio element — no visual output
-  return <audio ref={audioRef} src={src} preload="auto" />;
+  return <audio ref={audioRef} src={src} preload="auto" loop={loop} />;
 };
