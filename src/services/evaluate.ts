@@ -46,6 +46,14 @@ Your job: verify the script is correct, effective, and visually fits the viewpor
    - Chart scenes should have at most: 1 title + 1 chart (+ optionally 1 callout if space allows)
    - Metric scenes: max 3 metrics in a row layout, max 2 in a column layout
 
+7. STORYTELLING QUALITY (CRITICAL — this is what makes the video useful, not boring):
+   a. **Hook test**: Does scene 1 open with a QUESTION or SURPRISING number? If it opens with a plain title like "Q1 Report" or "Data Overview", FAIL. Fix by rewriting scene 1 narration as a provocative question or dramatic stat.
+   b. **Audience awareness**: Does narration speak TO the audience? Look for "you", "we", "our", "your team". If all narration is impersonal ("The data shows..."), FAIL. Fix by rewriting key narration lines to address the audience directly.
+   c. **So What test**: For each scene with a chart or metric, does the narration INTERPRET what it means (not just read numbers)? If narration says "Revenue was $4.8M" without context like "exceeding target by 6.7%", FAIL.
+   d. **Visual metaphor**: Does the video use at least ONE of: kawaii character, annotation, icon with metric, SVG illustration, or map? If it's ALL text + charts with no visual personality, flag as "visually monotonous".
+   e. **Action close**: Does the last or second-to-last scene contain a RECOMMENDATION or CALL-TO-ACTION? If the video ends with just a data summary or "thank you", FAIL. Fix by adding a resolution scene with actionable next steps.
+   f. **Emotional arc**: Do scenes vary in tone? There should be at least one moment of tension/surprise AND one moment of resolution/hope. If all scenes have the same neutral tone, flag it.
+
 ## Output JSON
 
 {

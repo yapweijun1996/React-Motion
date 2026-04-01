@@ -25,11 +25,13 @@ export const VALID_TRANSITIONS = [
   "fade", "slide", "wipe", "clock-wipe",
   "radial-wipe", "diamond-wipe", "iris", "zoom-out",
   "zoom-blur", "slide-up", "split", "rotate",
+  "dissolve", "pixelate",
 ] as const;
 
 export const VALID_ANIMATIONS = [
   "fade", "slide-up", "slide-left", "slide-right",
   "zoom", "bounce", "rubber-band", "scale-rotate", "flip",
+  "typewriter",
 ] as const;
 
 export const VALID_STAGGER_SPEEDS = ["tight", "normal", "relaxed", "dramatic"] as const;

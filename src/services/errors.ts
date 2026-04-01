@@ -32,6 +32,7 @@ export type ErrorCode =
   | "EVAL_PARSE_FAILED"
   | "PPTX_EXPORT_FAILED"
   | "BGM_GENERATION_FAILED"
+  | "EXPORT_WEBCODECS_ENCODE"
   | "UNKNOWN";
 
 // --- User-friendly messages ---
@@ -47,6 +48,7 @@ const USER_MESSAGES: Partial<Record<ErrorCode, string>> = {
   EXPORT_TOO_MANY_FAILED: "Too many frames failed to capture — try again with the tab in focus.",
   EXPORT_FFMPEG_LOAD: "Video encoder failed to load — try refreshing the page.",
   EXPORT_FFMPEG_ENCODE: "Video encoding failed — try again.",
+  EXPORT_WEBCODECS_ENCODE: "Hardware video encoder failed — retrying with software encoder.",
   EXPORT_SURFACE_NOT_READY: "Export surface not ready — try again.",
   AGENT_NO_OUTPUT: "AI did not produce a video script — please try a different prompt.",
   AGENT_MAX_ITERATIONS: "AI took too long to generate — please simplify your prompt.",

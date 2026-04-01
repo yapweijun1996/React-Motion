@@ -234,7 +234,7 @@ describe("validateVideoScript — scene validation", () => {
   it("validates transition enum", () => {
     const r = validateVideoScript({
       title: "X",
-      scenes: [{ elements: [{ type: "text" }], transition: "dissolve" }],
+      scenes: [{ elements: [{ type: "text" }], transition: "swirl" }],
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -414,7 +414,7 @@ describe("Enum constants", () => {
   });
 
   it("VALID_ANIMATIONS has expected count", () => {
-    expect(VALID_ANIMATIONS.length).toBe(9);
+    expect(VALID_ANIMATIONS.length).toBe(10);
   });
 
   it("CONSTRAINTS has sane values", () => {

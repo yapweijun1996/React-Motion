@@ -6,8 +6,8 @@
 export const ELEMENT_CATALOG = [
   {
     type: "text",
-    props: "content, fontSize, color, fontWeight, align (left|center|right), animation (fade|slide-up|slide-left|slide-right|zoom|bounce|rubber-band|scale-rotate|flip), letterSpacing, textTransform (uppercase|none), delay, stagger",
-    description: "Text block with spring entrance animation. Hero-grade spring (punchy). Use 'bounce' for titles, 'scale-rotate' for dramatic reveals, 'flip' for surprises.",
+    props: "content, fontSize, color, fontWeight, align (left|center|right), animation (fade|slide-up|slide-left|slide-right|zoom|bounce|rubber-band|scale-rotate|flip|typewriter), letterSpacing, textTransform (uppercase|none), delay, stagger",
+    description: "Text block with spring entrance animation. Hero-grade spring (punchy). Use 'bounce' for titles, 'scale-rotate' for dramatic reveals, 'flip' for surprises, 'typewriter' for cinematic character-by-character reveal with blinking cursor (great for opening hooks, key insights, dramatic quotes).",
   },
   {
     type: "metric",

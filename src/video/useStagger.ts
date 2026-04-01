@@ -227,6 +227,10 @@ export function computeEntranceStyle(
       };
     }
 
+    case "typewriter":
+      // Per-character reveal handled inside TextElement — container stays fully visible
+      return { opacity: 1, transform: "none" };
+
     default:
       return { opacity: progress, transform: "none" };
   }

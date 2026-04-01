@@ -23,7 +23,7 @@ export type VideoScene = {
   layout?: "column" | "center" | "row";
   padding?: string;
   elements: SceneElement[];
-  transition?: "fade" | "slide" | "wipe" | "clock-wipe" | "radial-wipe" | "diamond-wipe" | "iris" | "zoom-out" | "zoom-blur" | "slide-up" | "split" | "rotate";
+  transition?: "fade" | "slide" | "wipe" | "clock-wipe" | "radial-wipe" | "diamond-wipe" | "iris" | "zoom-out" | "zoom-blur" | "slide-up" | "split" | "rotate" | "dissolve" | "pixelate";
   narration?: string;
   ttsAudioUrl?: string;        // blob: URL to WAV (runtime only, not persisted)
   ttsAudioDurationMs?: number; // audio duration in ms (used for timing adjustment)
