@@ -6,9 +6,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--rm-gray-200);
+  margin-bottom: var(--rm-space-lg);
+  padding-bottom: var(--rm-space-md);
+  border-bottom: 1px solid var(--rm-border);
 }
 
 .rm-logo {
@@ -20,8 +20,8 @@
 .rm-logo-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--rm-primary), #7c3aed);
+  border-radius: var(--rm-radius);
+  background: var(--rm-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,9 +31,10 @@
 }
 
 .rm-logo-text {
+  font-family: var(--rm-font-display);
   font-size: 20px;
   font-weight: 700;
-  color: var(--rm-gray-900);
+  color: var(--rm-text);
 }
 
 .rm-logo-sub {
@@ -53,15 +54,15 @@
   width: 40px;
   height: 40px;
   border-radius: var(--rm-radius);
-  border: 1px solid var(--rm-gray-200);
-  background: white;
+  border: 1px solid var(--rm-border);
+  background: var(--rm-bg-surface);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: var(--rm-gray-600);
-  transition: background 0.15s, border-color 0.15s;
+  color: var(--rm-text-secondary);
+  transition: background var(--rm-duration-short), border-color var(--rm-duration-short);
 }
 .rm-btn-gear:hover {
   background: var(--rm-gray-50);
@@ -76,10 +77,10 @@
   font-weight: 500;
 }
 .rm-status-ok {
-  background: #ecfdf5;
-  color: #065f46;
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--rm-success);
 }
 .rm-status-warn {
-  background: #fef3c7;
-  color: #92400e;
+  background: rgba(217, 119, 6, 0.1);
+  color: var(--rm-warning);
 }
