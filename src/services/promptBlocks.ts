@@ -118,6 +118,7 @@ export const AVAILABLE_ELEMENTS = `## Available elements
 // RULE: when data is spatial or relational (not tabular), svg is BETTER than bar-chart/line-chart. Example: planetary orbits → svg with concentric circles + planet dots, NOT a bar chart.
 // AI generates the full SVG markup string. MUST include viewBox. Use palette colors (fill, not CSS color). Font-size 16+ inside SVG.
 // One svg element per scene — it auto-scales to fill available space.
+// PLACEMENT RULE: Use svg ONLY in "How It Works" or "Proof" beats. NEVER use svg for title/hook/intro or resolution/closing scenes — use text element instead.
 // **animation "draw"**: Apple-style path drawing — each SVG stroke draws itself sequentially, then fill fades in. Cinematic storytelling for process flows, architecture diagrams. Set drawSpeed:0.5 for slow, 1 for normal, 2 for fast. Ensure SVG paths have explicit stroke colors.
 
 { "type": "svg-3d", "markup": "<svg viewBox='0 0 800 500'><g id='bg'>...</g><g id='base'>...</g><g id='mid'>...</g><g id='front'>...</g></svg>", "layers": ["bg","base","mid","front"], "depthPreset": "subtle"|"card-stack"|"exploded", "cameraTilt": "left"|"right"|"top", "parallax": "none"|"subtle"|"medium", "float": boolean, "shadow": "soft"|"medium"|"strong", "reveal": "fade"|"rise"|"draw", "drawSpeed": number }

@@ -45,6 +45,7 @@ Each narrative beat has a visual job. Match your element choices and layout to t
 - Minimal supporting text (1 subtitle max)
 - Goal: viewer knows the point within 2 seconds
 - Camera push-in draws viewer into the bold opening claim
+- **NEVER use svg element for hook/title/intro scenes** — use \`text\` element instead. SVG is reserved for diagrams in How It Works / Proof beats.
 
 ### Why It Matters → Metric + context
 - Layout: \`center\` or \`column\` | Camera: \`drift\`
@@ -81,6 +82,7 @@ Each narrative beat has a visual job. Match your element choices and layout to t
 - Calm animation (fade, slide-up)
 - Stagger: \`relaxed\`
 - Camera pull-out creates a "stepping back to see the big picture" feeling
+- **NEVER use svg element for resolution/closing scenes** — keep it clean with text/callout/progress.
 
 ## Visual Constraints (Apple Discipline)
 

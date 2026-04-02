@@ -263,6 +263,9 @@ export function runStopChecks(
         const visualTags = (markup.match(/<(rect|circle|ellipse|path|line|polyline|polygon|text|tspan)\b/g) || []).length;
         const hasDefs = /<defs\b/.test(markup);
         const hasGradient = /Gradient\b/.test(markup);
+        const textLabels = (markup.match(/<text\b/g) || []).length;
+        const connectors = (markup.match(/<(line|polyline)\b/g) || []).length +
+          (markup.match(/marker-end/g) || []).length;
         if (visualTags < 10) {
           issues.push(
             `Scene ${si + 1}: SVG has only ${visualTags} visual elements — need ≥10 for 1920×1080 canvas. ` +
@@ -272,6 +275,17 @@ export function runStopChecks(
         if (!hasDefs || !hasGradient) {
           issues.push(
             `Scene ${si + 1}: SVG lacks <defs> with gradients — use linearGradient/radialGradient fills for depth, not flat colors.`,
+          );
+        }
+        // Diagram SVGs need connectors (arrows/lines between nodes) and text labels
+        if (connectors === 0 && visualTags >= 10) {
+          issues.push(
+            `Scene ${si + 1}: SVG diagram has no connectors — add lines or paths with marker-end arrows to show relationships.`,
+          );
+        }
+        if (textLabels < 3 && visualTags >= 10) {
+          issues.push(
+            `Scene ${si + 1}: SVG has only ${textLabels} text labels — add descriptive labels, data badges, and metric callouts (need ≥3).`,
           );
         }
       }
