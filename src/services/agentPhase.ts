@@ -232,6 +232,7 @@ async function runPhaseWithMessages(
   const {
     name, systemPrompt, toolDeclarations,
     maxIterations, context, budget, terminalTool, onProgress,
+    modelOverride,
   } = config;
 
   const tools: GeminiTool[] = [
@@ -256,7 +257,7 @@ async function runPhaseWithMessages(
     const isUnderPressure = budget.warnCount > 0 || budget.forceCount > 0;
     const result = await callGeminiRaw(
       systemPrompt, messages,
-      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL },
+      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, modelOverride },
     );
     recordModelOutput(budget, i, result.parts);
 

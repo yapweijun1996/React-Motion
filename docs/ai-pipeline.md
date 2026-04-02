@@ -180,6 +180,45 @@ Configured via Settings panel or `.env.local`:
 - Legacy fallback: 0.7
 - Force output: 0.5 (more deterministic)
 
+## SVG Generation Quality
+
+SVG diagrams (flowcharts, org charts, mind maps) are the highest-complexity output from the AI pipeline. See `docs/svg-quality-analysis.md` for the full quality analysis.
+
+### How SVG is Generated
+
+Phase 2 (Visual Director) generates SVG markup embedded in the `produce_script` JSON:
+
+```json
+{
+  "type": "svg",
+  "markup": "<svg viewBox='0 0 800 500'>...full SVG...</svg>",
+  "animation": "draw"
+}
+```
+
+The Visual Director runs on the Pro model override (`getSvgModel()`) with 11 SVG quality rules in its system prompt.
+
+### Quality Gate (agentHooks.ts)
+
+Deterministic checks after `produce_script`:
+- Visual elements (rect, circle, path, text, etc.) ≥ 10
+- Has `<defs>` block with gradients
+- `linearGradient` or `radialGradient` present
+
+### Known Bottlenecks
+
+1. **Title scene SVG dilution** — AI sometimes uses `svg` for title scenes (2-4 elements), triggering quality gate failures meant for diagram SVGs.
+2. **Retry loses model override** — `retryPhaseWithFeedback()` does not forward `modelOverride`, falling back to Flash model for SVG-critical retries.
+3. **Budget pressure reduces quality** — T=0.5 under pressure produces shorter SVGs, but SVG quality rules in the prompt compensate well.
+4. **Multi-scene output budget** — SVGs compete with narration and other elements for output token budget in a single API call.
+
+### Test Scripts
+
+```bash
+npx vite-node test/svg-quality-smoke.ts     # Isolated SVG quality (3 scenarios)
+npx vite-node test/svg-pipeline-smoke.ts    # Pipeline condition comparison (4 scenarios)
+```
+
 ## Fallback
 
 If the agent loop fails at any point, `generateScript.ts` catches the error and falls back to the legacy single-shot pipeline (direct prompt → JSON → parse). This legacy path uses `buildSystemPrompt()` (not the agent prompt) and does not use tools.
