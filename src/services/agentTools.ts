@@ -239,7 +239,7 @@ register(
 // ============================================================
 
 const RICH_VISUAL_TYPES = new Set([
-  "svg", "svg-3d", "map", "annotation", "progress", "comparison", "timeline",
+  "svg", "svg-3d", "map", "progress", "comparison", "timeline",
 ]);
 
 register(
@@ -249,8 +249,8 @@ register(
       "Visual direction for each scene — called AFTER storyboard and palette, BEFORE produce_script. " +
       "You are now the DIRECTOR: for each scene, decide the concrete visual approach. " +
       "Do NOT default to bar-chart for everything. Think: what VISUAL METAPHOR makes this data memorable? " +
-      "At least 2 scenes MUST use rich visual elements (svg, map, annotation, progress, comparison, timeline). " +
-      "Icons and kawaii do NOT count as rich visuals.",
+      "At least 2 scenes MUST use rich visual elements (svg, map, progress, comparison, timeline). " +
+      "Icons, kawaii, and annotation do NOT count as rich visuals — annotation is decoration only.",
     parameters: {
       type: "object",
       properties: {

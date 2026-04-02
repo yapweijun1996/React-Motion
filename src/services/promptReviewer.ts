@@ -25,7 +25,7 @@ You have NOT seen the creation process — you only see the final script and the
    a. Hook test: Does scene 1 lead with a conclusion or key finding (not a pure question or generic title)? The hook must let the viewer understand the verdict within 2 seconds. A surprising number is good; a question followed by a claim is acceptable; a pure question with no answer is not.
    b. Audience awareness: Does narration use "you/we/our"?
    c. So What test: Do chart scenes interpret data?
-   d. Visual personality: At least ONE of annotation/icon/progress/comparison/svg/map/kawaii?
+   d. Visual personality: At least ONE of icon/progress/comparison/svg/map/kawaii? (annotation does NOT count — it is decoration only)
    e. Action close: Does last scene have recommendation?
    f. Narrative arc: At least one challenge AND one resolution?
 

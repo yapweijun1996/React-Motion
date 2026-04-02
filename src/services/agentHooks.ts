@@ -22,13 +22,15 @@ export type StopCheckResult = {
 };
 
 // Element types that add visual personality (not just data/text)
+// NOTE: annotation excluded — it's a decoration overlay, not standalone personality.
+// Including it incentivizes AI to add useless floating circles to pass the gate.
 const PERSONALITY_TYPES = new Set([
-  "kawaii", "icon", "annotation", "svg", "svg-3d", "lottie", "map",
+  "kawaii", "icon", "svg", "svg-3d", "lottie", "map",
 ]);
 
 // Rich visual types — require more creative effort than basic icon/kawaii
 const RICH_VISUAL_TYPES = new Set([
-  "svg", "svg-3d", "map", "annotation", "progress", "comparison", "timeline",
+  "svg", "svg-3d", "map", "progress", "comparison", "timeline",
 ]);
 
 // Action words indicating a call-to-action in the closing scene
@@ -193,6 +195,18 @@ export function runStopChecks(
     if (decorations.length > 0 && content.length === 0) {
       issues.push(
         `Scene ${si + 1}: decoration element (${decorations.map((d) => d.type).join(", ")}) without content — annotation/kawaii must pair with a chart, metric, or comparison, not float alone`,
+      );
+    }
+  }
+
+  // 5c. Annotation layout check: annotation in non-row layout looks like floating garbage
+  for (let si = 0; si < scenes.length; si++) {
+    const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
+    const hasAnnotation = elements.some((el) => el.type === "annotation");
+    const layout = String(scenes[si].layout ?? "column");
+    if (hasAnnotation && layout !== "row") {
+      issues.push(
+        `Scene ${si + 1}: annotation in "${layout}" layout — use "row" layout so annotation pairs visually with adjacent content, not as standalone block`,
       );
     }
   }

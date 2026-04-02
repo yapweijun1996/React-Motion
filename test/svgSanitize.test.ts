@@ -59,11 +59,12 @@ describe("sanitizeSvg", () => {
     expect(result).toContain('viewBox="0 0 200 100"');
   });
 
-  it("sets responsive sizing (width 100%, height auto)", () => {
+  it("sets responsive sizing (width 100%, height 100%, preserveAspectRatio)", () => {
     const svg = `<svg viewBox="0 0 100 100"><rect/></svg>`;
     const result = sanitizeSvg(svg);
     expect(result).toContain('width="100%"');
-    expect(result).toContain('height="auto"');
+    expect(result).toContain('height="100%"');
+    expect(result).toContain('preserveAspectRatio="xMidYMid meet"');
   });
 
   it("adds stroke-width in draw mode", () => {
