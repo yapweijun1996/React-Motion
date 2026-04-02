@@ -21,38 +21,27 @@ Your job: diagnose issues. Do NOT return a corrected script — only list proble
    - If narration mentions a number/percentage/trend, it MUST appear in a visual element in that scene.
    - If a scene has a chart or metric, the narration MUST reference what it shows.
    - Flag orphan narration (data mentioned but not shown) and silent visuals (data shown but not narrated).
-6. LAYOUT FIT: Estimate whether each scene's elements fit within 1920×1080 (usable ~1824×1008px).
-   Height estimates: text title ~140px, subtitle ~100px, body ~80px, metric ~220px, bar-chart ~80px/bar+40px, pie/sankey ~500px, line-chart ~450px, list ~80px/item, callout ~120px, divider ~30px, icon/kawaii/lottie ~160px, gap ~20px.
-   Flag any scene where estimated total > 1008px or element count > 4.
-7. STORYTELLING QUALITY:
-   a. **Hook test**: Does scene 1 lead with a conclusion or key finding within the first sentence? The hook must let the viewer understand the verdict within 2 seconds. It can be a surprising number, but must NOT be a pure question with no answer, or a generic title like "Q1 Report" or "Let's look at...". A question followed immediately by a concrete claim is acceptable.
-   b. **Audience awareness**: Does narration use "you/we/our"? Flag impersonal-only narration.
-   c. **So What test**: Do chart/metric scenes interpret the data, not just read numbers?
-   d. **Visual variety**: At least ONE of: annotation, icon, progress, comparison, SVG, map, or kawaii?
-   e. **Action close**: Does the last scene have a recommendation or call-to-action? Flag recap dumps or "thank you" endings.
-   f. **Narrative arc**: Is there at least one challenge AND one resolution across scenes?
+6. LAYOUT FIT: Flag scenes where element count > 4 or estimated height > 1008px (title~140, metric~220, chart~450, list~80/item, gap~20).
+7. STORYTELLING: Hook test (scene 1 = conclusion, not title), So What test (interpret data, don't read numbers), action close (last scene = recommendation), narrative arc (challenge + resolution).
 
-8. APPLE NARRATIVE DISCIPLINE (Perception → Proof → Consequence):
-   a. **2-second test**: Can the viewer understand the point of scene 1 within 2 seconds? The hook must state a conclusion or verdict, not introduce a topic. A surprising number is good; a pure question with no follow-up claim is not.
-   b. **Single message test**: Does each scene have exactly ONE dominant message? Flag scenes that try to make multiple unrelated points.
-   c. **Narration interprets, not duplicates**: Narration should explain WHY the visual matters, not read the visual verbatim. Flag scenes where narration just lists the same numbers shown in charts.
-   d. **Claim → Evidence → Implication flow**: Does the script progress from stating a claim (hook) to showing evidence (proof) to drawing implication (resolution)? Flag scripts that jump randomly between unrelated points.
-   e. **Climax strength test**: Is the climax scene clearly stronger than surrounding scenes? Check for: strongest data point, highest contrast element, most impactful visual. Flag scripts where climax is indistinguishable from proof scenes.
-   f. **Compressed close test**: Does the last scene compress to ONE takeaway and ONE action/implication? Flag endings with 3+ bullet points, multiple charts, or recap-style summaries.
+8. SVG QUALITY (when element has svgSummary):
+   a. **Element count**: visualElements must be ≥10 for a 1920×1080 canvas. Fewer than 10 = "looks empty."
+   b. **Gradients required**: hasGradients must be true. Flat single-color shapes look unprofessional.
+   c. **Structure required**: hasConnectors > 0 — diagrams need connecting lines/arrows between nodes.
+   d. **Detail required**: textLabels should include specific data/metrics, not just generic titles.
+   e. **Complexity match**: The SVG should match the narrative complexity. A "risk matrix" with only 3 rectangles fails this test. A proper risk matrix has axes, positioned nodes, severity badges, and connecting arrows.
+   Flag: "Scene N: SVG is too simple (X visual elements, no connectors/gradients) — should be a rich diagram with ≥10 elements, gradient fills, connecting arrows, and data labels."
 
-## Output JSON
+9. APPLE NARRATIVE DISCIPLINE:
+   - 2-second test: scene 1 must state conclusion, not introduce topic.
+   - Single message: each scene = ONE point. Flag multi-point scenes.
+   - Narration interprets: explain WHY, don't read chart numbers verbatim.
+   - Claim→Evidence→Implication flow: hook→proof→resolution progression.
+   - Climax must be visually/narratively stronger than surrounding scenes.
+   - Compressed close: last scene = ONE takeaway + ONE action.
 
-{
-  "pass": boolean,
-  "issues": ["string", ...]
-}
-
-If pass is true, return { "pass": true, "issues": [] }.
-If pass is false, return specific, actionable issue strings, e.g.:
-- "Scene 3: narration mentions 45% but no visual element shows this number"
-- "Scene 5: estimated height ~1200px (5 elements), exceeds 1008px viewport"
-- "Scene 1: opens with generic title, no hook or surprising data point"
-
+## Output: { "pass": boolean, "issues": ["string", ...] }
+Return specific issues like "Scene 3: narration mentions 45% but no element shows it."
 Do NOT return a corrected script. Only diagnose.`;
 
 type EvalResult = {
@@ -196,7 +185,28 @@ function summarizeElement(el: SceneElement): Record<string, unknown> {
         : [];
       break;
 
-    // svg, divider, unknown: type only
+    case "svg":
+    case "svg-3d": {
+      // Extract structural summary from SVG markup for quality evaluation
+      const props = (el.props as Record<string, unknown>) ?? el;
+      const markup = String(props.markup ?? el.markup ?? "");
+      if (markup.length > 0) {
+        const visualTags = (markup.match(/<(rect|circle|ellipse|path|line|polyline|polygon|text|tspan)\b/g) || []);
+        const textContent = (markup.match(/>([^<]{2,})</g) || []).map((m: string) => m.slice(1).trim()).filter(Boolean);
+        base.svgSummary = {
+          visualElements: visualTags.length,
+          hasGradients: /Gradient\b/.test(markup),
+          hasDefs: /<defs\b/.test(markup),
+          hasArrowMarkers: /marker/i.test(markup),
+          hasConnectors: (markup.match(/<(line|path)\b/g) || []).length,
+          textLabels: textContent.slice(0, 10),
+          markupLength: markup.length,
+        };
+      }
+      break;
+    }
+
+    // divider, unknown: type only
   }
 
   return base;
