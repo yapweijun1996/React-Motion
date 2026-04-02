@@ -141,6 +141,32 @@ Top drop-off reasons: compensation mismatch, slow scheduling, relocation concern
 Create a talent acquisition review video for leadership. Show funnel conversion, hiring bottlenecks, and specific actions to improve hiring speed and quality.`,
   },
 
+  {
+    id: "so-outstanding-review",
+    icon: "\u{1F4E6}",
+    label: "SO Outstanding",
+    category: "Professional",
+    desc: "Sales order backlog analysis with concentration risk",
+    prompt: `Kinetics Industries — Sales Order Outstanding Report (as of 31-Dec-2010):
+
+Total outstanding balance: 117,069.39 across 516 order lines.
+Top part codes by balance:
+POM1265: 42,831.89 (highest, multiple unit types).
+POM1315: 31,149 total (31,099 PCS + 50 other units).
+POM1060: 12,480.00.
+POM1290: 8,750.50.
+Others: 21,859.00 combined.
+
+Unit breakdown:
+PCS (pieces): 91,119 quantity — dominant unit type.
+Non-PCS units (kg, SET, EA, PKT, M3): 4,575.89 combined.
+
+Request date concentration: 79 of 499 records tied to 01-Dec-2010.
+Fulfillment risk: Top 2 part codes (POM1265 + POM1315) account for 63% of total outstanding balance.
+
+Create a professional operations review video for supply chain management. Start with the total exposure, show the concentration risk in top part codes, break down unit types, highlight the fulfillment bottleneck, and recommend prioritization actions.`,
+  },
+
   // ── Technology ────────────────────────────────────────
   {
     id: "tech-canvas-demo",
