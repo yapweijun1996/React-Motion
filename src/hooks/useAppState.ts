@@ -10,6 +10,8 @@ import { hasApiKey } from "../services/settingsStore";
 import { useGenerate, useExport } from "./useVideoActions";
 import { exportToPptx } from "../services/exportPptx";
 import { generateSceneTTS } from "../services/tts";
+import { restoreTTSAudio, restoreBGMAudio } from "../services/ttsCache";
+import { restoreImageBlobs } from "../services/imageCache";
 import { adjustSceneTimings } from "../services/adjustTiming";
 import { logWarn } from "../services/errors";
 import type { GenerationProgress } from "../services/generateScript";
@@ -37,16 +39,19 @@ export function useAppState(config: MountConfig) {
   const exportSurfaceRef = useRef<HTMLDivElement>(null);
   const ttsSessionRef = useRef(0);
 
-  // Restore cached script on mount
+  // Restore cached script + audio/image blobs on mount
   useEffect(() => {
     let cancelled = false;
-    loadScript().then((cached) => {
+    loadScript().then(async (cached) => {
+      if (cancelled || !cached) return;
+      // Re-attach TTS, BGM, and image blob URLs from IndexedDB cache
+      const scenesWithTTS = await restoreTTSAudio("cache", cached.script.scenes);
+      const scriptWithBGM = await restoreBGMAudio("cache", { ...cached.script, scenes: scenesWithTTS });
+      const scenesWithImages = await restoreImageBlobs("cache", scriptWithBGM.scenes);
       if (cancelled) return;
-      if (cached) {
-        setScript(cached.script);
-        setPrompt(cached.prompt);
-        console.log("[App] Restored cached video from IndexedDB");
-      }
+      setScript({ ...scriptWithBGM, scenes: scenesWithImages });
+      setPrompt(cached.prompt);
+      console.log("[App] Restored cached video from IndexedDB");
     }).catch((err) => {
       if (cancelled) return;
       logWarn("App", "CACHE_LOAD_FAILED", "Failed to restore cached script", { error: err });
@@ -135,13 +140,34 @@ export function useAppState(config: MountConfig) {
       }
       return scene;
     });
-    const restoredScript = { ...s, scenes: scenesWithNarration };
+    let restoredScript = { ...s, scenes: scenesWithNarration };
 
-    setScript(restoredScript);
     setPrompt(p);
     setError(null);
 
-    if (ttsMetadata.length > 0) {
+    // Try to restore TTS/BGM/images from IndexedDB cache first (avoids API calls)
+    (async () => {
+      let scenes = restoredScript.scenes;
+      try {
+        scenes = await restoreTTSAudio("cache", scenes);
+        const withBGM = await restoreBGMAudio("cache", { ...restoredScript, scenes });
+        scenes = await restoreImageBlobs("cache", withBGM.scenes);
+        restoredScript = { ...withBGM, scenes };
+      } catch { /* non-fatal */ }
+
+      // Check how many scenes still need TTS
+      const needsTTS = scenes.filter((sc) => sc.narration && !sc.ttsAudioUrl);
+      if (needsTTS.length === 0) {
+        // All TTS restored from cache — no API calls needed
+        const adjusted = adjustSceneTimings(restoredScript);
+        if (sessionId !== ttsSessionRef.current) return;
+        setScript(adjusted);
+        return;
+      }
+
+      // Only regenerate TTS for scenes missing audio
+      if (sessionId !== ttsSessionRef.current) return;
+      setScript(restoredScript);
       const ttsStart = performance.now();
       const ttsProg = (done: number, total: number): GenerationProgress => ({
         stage: "tts", stageIndex: 2, stageCount: 4, stageLabel: "Narration",
@@ -151,7 +177,7 @@ export function useAppState(config: MountConfig) {
         startTime: ttsStart,
         eta: done > 0 ? Math.round(((performance.now() - ttsStart) / done) * (total - done) / 1000) : undefined,
       });
-      setGenerationStatus(ttsProg(0, ttsMetadata.length));
+      setGenerationStatus(ttsProg(0, needsTTS.length));
       generateSceneTTS(restoredScript.scenes, (prog) => {
         if (sessionId !== ttsSessionRef.current) return;
         setGenerationStatus(ttsProg(prog.scenesProcessed, prog.totalScenes));
@@ -167,7 +193,7 @@ export function useAppState(config: MountConfig) {
           logWarn("App", "TTS_PARTIAL_FAILURE", "TTS regeneration failed", { error: err });
           setGenerationStatus(null);
         });
-    }
+    })();
   }, []);
 
   const isExporting = exportProgress !== null && exportProgress.stage !== "done" && exportProgress.stage !== "error";
