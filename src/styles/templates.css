@@ -14,11 +14,12 @@
 }
 
 .rm-templates-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--rm-gray-700);
+  font-family: var(--rm-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--rm-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.08em;
 }
 
 .rm-templates-count {
@@ -38,12 +39,12 @@
   padding: 5px 14px;
   font-size: 13px;
   font-weight: 500;
-  border: 1px solid var(--rm-gray-200);
-  border-radius: 20px;
-  background: white;
-  color: var(--rm-gray-600);
+  border: 1px solid var(--rm-border);
+  border-radius: var(--rm-radius-full);
+  background: var(--rm-bg-surface);
+  color: var(--rm-text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--rm-duration-short);
   white-space: nowrap;
 }
 
@@ -76,17 +77,17 @@
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--rm-gray-200);
+  border: 1px solid var(--rm-border);
   border-radius: var(--rm-radius);
-  background: white;
+  background: var(--rm-bg-surface);
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: border-color var(--rm-duration-short), box-shadow var(--rm-duration-short), transform var(--rm-duration-micro);
   text-align: left;
 }
 
 .rm-template-card:hover:not(:disabled) {
   border-color: var(--rm-primary);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 2px 8px var(--rm-primary-muted);
   transform: translateY(-1px);
 }
 
@@ -112,7 +113,7 @@
 .rm-template-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--rm-gray-800);
+  color: var(--rm-text);
   line-height: 1.3;
 }
 
@@ -134,13 +135,13 @@
   font-weight: 500;
   color: var(--rm-primary);
   background: none;
-  border: 1px dashed var(--rm-gray-200);
+  border: 1px dashed var(--rm-border);
   border-radius: var(--rm-radius);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color var(--rm-duration-short), background var(--rm-duration-short);
 }
 
 .rm-templates-toggle:hover {
   border-color: var(--rm-primary);
-  background: rgba(37, 99, 235, 0.04);
+  background: var(--rm-primary-muted);
 }

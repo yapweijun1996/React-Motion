@@ -3,14 +3,7 @@
    spinner, player, empty state
    ============================================ */
 
-/* App shell */
-.rm-app {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  max-width: 1024px;
-  margin: 0 auto;
-  padding: 16px;
-  color: var(--rm-gray-800);
-}
+/* App shell — layout defined in layout.css */
 
 /* Buttons */
 .rm-btn {
@@ -20,7 +13,7 @@
   border: none;
   border-radius: var(--rm-radius);
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition: background var(--rm-duration-short), opacity var(--rm-duration-short);
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -73,11 +66,11 @@
 }
 
 .rm-btn-danger {
-  background: #fef2f2;
+  background: rgba(220, 38, 38, 0.08);
   color: var(--rm-danger);
 }
 .rm-btn-danger:hover:not(:disabled) {
-  background: #fee2e2;
+  background: rgba(220, 38, 38, 0.15);
 }
 
 /* Alert / Error */
@@ -104,21 +97,21 @@
 }
 .rm-alert-dismiss:hover { opacity: 1; }
 .rm-alert-error {
-  background: #fef2f2;
+  background: rgba(220, 38, 38, 0.08);
   color: var(--rm-danger);
-  border: 1px solid #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.2);
 }
 .rm-alert-info {
-  background: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
+  background: rgba(2, 132, 199, 0.08);
+  color: var(--rm-info);
+  border: 1px solid rgba(2, 132, 199, 0.2);
 }
 
 /* Progress bar */
 .rm-progress-track {
   margin-top: 6px;
   height: 4px;
-  background: #dbeafe;
+  background: var(--rm-primary-muted);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -142,17 +135,17 @@
 .rm-gen-check {
   font-size: 12px;
   padding: 1px 8px;
-  background: #dbeafe;
-  border-radius: 10px;
-  color: #1e40af;
+  background: var(--rm-primary-muted);
+  border-radius: var(--rm-radius-full);
+  color: var(--rm-primary);
 }
 
 /* Generation detail section */
 .rm-gen-detail {
   margin-top: 6px;
   padding: 6px 8px;
-  background: rgba(30, 64, 175, 0.06);
-  border-radius: 6px;
+  background: var(--rm-primary-muted);
+  border-radius: var(--rm-radius-sm);
   font-size: 12px;
 }
 .rm-gen-detail-row {
@@ -162,15 +155,15 @@
 }
 .rm-gen-iter {
   font-weight: 600;
-  color: #1e40af;
+  color: var(--rm-primary);
   white-space: nowrap;
 }
 .rm-gen-action {
-  color: #374151;
+  color: var(--rm-text);
 }
 .rm-gen-action-detail {
   margin-top: 2px;
-  color: #6b7280;
+  color: var(--rm-text-muted);
   font-size: 11px;
   word-break: break-all;
 }
@@ -178,7 +171,7 @@
 .rm-gen-log {
   margin-top: 4px;
   padding: 4px 0;
-  border-top: 1px solid rgba(30, 64, 175, 0.1);
+  border-top: 1px solid var(--rm-border);
   max-height: 80px;
   overflow-y: auto;
 }
@@ -187,12 +180,12 @@
   gap: 6px;
   align-items: baseline;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--rm-text-muted);
   padding: 1px 0;
 }
 .rm-gen-log-icon { font-size: 10px; flex-shrink: 0; }
 .rm-gen-log-detail {
-  color: #d1d5db;
+  color: var(--rm-gray-300);
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -200,25 +193,7 @@
   max-width: 200px;
 }
 
-/* Player area */
-.rm-player-wrap {
-  border-radius: var(--rm-radius-lg);
-  overflow: hidden;
-  box-shadow: var(--rm-shadow);
-  background: #000;
-  margin-bottom: 16px;
-}
-
-/* Empty state */
-.rm-empty {
-  padding: 60px 24px;
-  text-align: center;
-  color: var(--rm-gray-400);
-  font-size: 15px;
-  border: 2px dashed var(--rm-gray-200);
-  border-radius: var(--rm-radius-lg);
-  line-height: 1.6;
-}
+/* Player area + Empty state — defined in layout.css */
 
 /* Loading spinner */
 .rm-spinner {

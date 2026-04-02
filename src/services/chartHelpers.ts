@@ -32,8 +32,8 @@ export function isColorDark(color: string | undefined): boolean {
   return 0.2126*(c[0]/255) + 0.7152*(c[1]/255) + 0.0722*(c[2]/255) < 0.4;
 }
 
-const LIGHT_TEXT = "#f1f5f9";
-const DARK_TEXT = "#1e293b";
+const LIGHT_TEXT = "#F5F5F4";
+const DARK_TEXT = "#1C1917";
 
 /**
  * Ensure text color is readable against the background.

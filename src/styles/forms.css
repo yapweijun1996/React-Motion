@@ -5,11 +5,11 @@
 
 /* Prompt input area */
 .rm-input-area {
-  background: white;
-  border: 1px solid var(--rm-gray-200);
+  background: var(--rm-bg-surface);
+  border: 1px solid var(--rm-border);
   border-radius: var(--rm-radius-lg);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: var(--rm-space-md);
+  margin-bottom: var(--rm-space-md);
   box-shadow: var(--rm-shadow);
 }
 
@@ -17,19 +17,21 @@
   width: 100%;
   padding: 12px 14px;
   font-size: 15px;
-  border: 1px solid var(--rm-gray-200);
+  border: 1px solid var(--rm-border);
   border-radius: var(--rm-radius);
   outline: none;
   resize: vertical;
   font-family: inherit;
   min-height: 80px;
   box-sizing: border-box;
-  transition: border-color 0.15s;
+  transition: border-color var(--rm-duration-short);
+  background: var(--rm-bg);
+  color: var(--rm-text);
   line-height: 1.5;
 }
 .rm-textarea:focus {
   border-color: var(--rm-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--rm-primary-muted);
 }
 .rm-textarea:disabled {
   background: var(--rm-gray-50);
@@ -50,9 +52,10 @@
 
 .rm-label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--rm-gray-700);
+  font-family: var(--rm-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--rm-text-secondary);
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -66,11 +69,13 @@
   border-radius: var(--rm-radius);
   outline: none;
   box-sizing: border-box;
-  font-family: monospace;
+  font-family: var(--rm-font-mono);
+  background: var(--rm-bg);
+  color: var(--rm-text);
 }
 .rm-input:focus {
   border-color: var(--rm-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--rm-primary-muted);
 }
 
 .rm-key-row {
@@ -84,8 +89,8 @@
 .rm-btn-icon {
   width: 42px;
   height: 42px;
-  border: 1px solid var(--rm-gray-300);
-  background: white;
+  border: 1px solid var(--rm-border);
+  background: var(--rm-bg-surface);
   border-radius: var(--rm-radius);
   cursor: pointer;
   font-size: 16px;
@@ -101,13 +106,14 @@
   border: 1px solid var(--rm-gray-300);
   border-radius: var(--rm-radius);
   outline: none;
-  background: white;
+  background: var(--rm-bg-surface);
   box-sizing: border-box;
   cursor: pointer;
+  color: var(--rm-text);
 }
 .rm-select:focus {
   border-color: var(--rm-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--rm-primary-muted);
 }
 
 .rm-hint {

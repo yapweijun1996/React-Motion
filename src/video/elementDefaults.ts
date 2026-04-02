@@ -36,19 +36,19 @@ export function resolveColors(colors: SceneColors | undefined, dark?: boolean): 
 // ═══════════════════════════════════════════════════════════════════
 
 /** Default primary accent — used by metric, list, callout, divider, icon. */
-export const COLOR_PRIMARY = "#2563eb";
+export const COLOR_PRIMARY = "#0F766E";
 
 /** Default progress bar color. */
-export const COLOR_PROGRESS = "#3b82f6";
+export const COLOR_PROGRESS = "#14B8A6";
 
 /** Default annotation / error accent. */
-export const COLOR_ANNOTATION = "#ef4444";
+export const COLOR_ANNOTATION = "#DC2626";
 
 /** Default comparison left card accent. */
-export const COLOR_COMPARE_LEFT = "#3b82f6";
+export const COLOR_COMPARE_LEFT = "#14B8A6";
 
 /** Default comparison right card accent. */
-export const COLOR_COMPARE_RIGHT = "#ef4444";
+export const COLOR_COMPARE_RIGHT = "#DC2626";
 
 /** Default kawaii character color. */
 export const COLOR_KAWAII = "#FFD882";

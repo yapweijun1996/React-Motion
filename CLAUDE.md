@@ -67,6 +67,12 @@ Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-desig
 /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex,
 /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, /learn.
 
+## Design System
+Always read DESIGN.md before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match DESIGN.md.
+
 ## Skill routing
 
 When the user's request matches an available skill, ALWAYS invoke it using the Skill

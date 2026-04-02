@@ -22,8 +22,8 @@ export type Palette = {
 // --- Mood-to-color mapping ---
 
 const MOOD_COLORS: Record<string, string> = {
-  professional: "#2563eb",
-  corporate: "#1e40af",
+  professional: "#0F766E",
+  corporate: "#115E59",
   warm: "#ea580c",
   cool: "#0891b2",
   bold: "#dc2626",

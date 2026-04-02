@@ -8,7 +8,7 @@
   position: fixed;
   inset: 0;
   z-index: 10001;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(12, 10, 9, 0.5);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -21,7 +21,7 @@
   max-height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
-  background: white;
+  background: var(--rm-bg-surface);
   border-radius: var(--rm-radius-lg);
   box-shadow: var(--rm-shadow-lg);
   overflow: hidden;
@@ -32,15 +32,16 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--rm-gray-200);
+  border-bottom: 1px solid var(--rm-border);
   flex-shrink: 0;
 }
 
 .rm-panel-title {
+  font-family: var(--rm-font-display);
   font-size: 18px;
   font-weight: 700;
   margin: 0;
-  color: var(--rm-gray-900);
+  color: var(--rm-text);
 }
 
 .rm-btn-close {
@@ -64,7 +65,7 @@
 /* Tabs */
 .rm-tabs {
   display: flex;
-  border-bottom: 1px solid var(--rm-gray-200);
+  border-bottom: 1px solid var(--rm-border);
   flex-shrink: 0;
 }
 
@@ -78,7 +79,7 @@
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color var(--rm-duration-short), border-color var(--rm-duration-short);
 }
 .rm-tab:hover {
   color: var(--rm-gray-700);
@@ -120,10 +121,10 @@
 
 .rm-history-item {
   padding: 12px 14px;
-  border: 1px solid var(--rm-gray-200);
+  border: 1px solid var(--rm-border);
   border-radius: var(--rm-radius);
-  background: white;
-  transition: border-color 0.15s;
+  background: var(--rm-bg-surface);
+  transition: border-color var(--rm-duration-short);
 }
 .rm-history-item:hover {
   border-color: var(--rm-gray-300);
@@ -140,7 +141,7 @@
 .rm-history-title {
   font-size: 14px;
   font-weight: 600;
-  color: var(--rm-gray-800);
+  color: var(--rm-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

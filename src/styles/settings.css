@@ -6,7 +6,7 @@
   position: fixed;
   inset: 0;
   z-index: 10001;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(12, 10, 9, 0.5);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -16,7 +16,7 @@
 .rm-settings-panel {
   width: min(480px, 100%);
   max-height: 80vh;
-  background: white;
+  background: var(--rm-bg-surface);
   border-radius: var(--rm-radius-lg);
   box-shadow: var(--rm-shadow-lg);
   overflow: hidden;
@@ -35,14 +35,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--rm-gray-200);
+  border-bottom: 1px solid var(--rm-border);
 }
 
 .rm-settings-title {
+  font-family: var(--rm-font-display);
   font-size: 18px;
   font-weight: 700;
   margin: 0;
-  color: var(--rm-gray-900);
+  color: var(--rm-text);
 }
 
 .rm-settings-close {
@@ -76,7 +77,7 @@
   font-weight: 600;
   border: 1px solid var(--rm-gray-300);
   border-radius: var(--rm-radius);
-  background: white;
+  background: var(--rm-bg-surface);
   cursor: pointer;
   white-space: nowrap;
   min-height: 40px;
@@ -94,6 +95,6 @@
   display: flex;
   gap: 8px;
   padding: 16px 20px;
-  border-top: 1px solid var(--rm-gray-200);
+  border-top: 1px solid var(--rm-border);
   justify-content: flex-end;
 }

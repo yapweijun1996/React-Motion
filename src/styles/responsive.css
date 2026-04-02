@@ -1,44 +1,49 @@
 /* ============================================
-   Mobile responsive — all @media queries
+   Mobile responsive — three-column → single column
    ============================================ */
 
+/* ── Tablet: collapse to two columns (hide sidebar) ── */
+@media (max-width: 960px) {
+  .rm-app {
+    grid-template-columns: 1fr 320px;
+  }
+
+  .rm-sidebar {
+    display: none;
+  }
+}
+
+/* ── Mobile: single column ── */
 @media (max-width: 640px) {
   .rm-app {
-    padding: 12px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
   }
 
-  .rm-header {
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
+  .rm-sidebar {
+    display: none;
   }
 
-  .rm-logo-text {
-    font-size: 17px;
+  .rm-center {
+    padding: var(--rm-space-sm);
+    min-height: 0;
   }
 
-  .rm-input-area {
-    padding: 12px;
+  .rm-right-panel {
+    border-left: none;
+    border-top: 1px solid var(--rm-border);
+    max-height: 45vh;
   }
 
-  .rm-textarea {
+  .rm-right-body .rm-textarea {
     font-size: 16px; /* prevent iOS zoom */
-    min-height: 100px;
-  }
-
-  .rm-actions {
-    flex-direction: column;
+    min-height: 80px;
   }
 
   .rm-btn {
     width: 100%;
     justify-content: center;
-  }
-
-  .rm-empty {
-    padding: 40px 16px;
-    font-size: 14px;
   }
 
   .rm-chips {
@@ -52,7 +57,7 @@
 
   .rm-templates-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: var(--rm-space-sm);
   }
 
   .rm-template-card {
@@ -82,7 +87,8 @@
 }
 
 @media (max-width: 380px) {
-  .rm-logo-sub {
-    display: none;
+  .rm-center-header {
+    flex-wrap: wrap;
+    gap: var(--rm-space-sm);
   }
 }
