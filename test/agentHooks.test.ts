@@ -387,6 +387,34 @@ describe("checkDataAccuracy", () => {
     const issues = checkDataAccuracy(scenes, "Revenue is 2 billion dollars");
     expect(issues).toHaveLength(0);
   });
+
+  it("matches formatted $117,069 to unformatted user data 117,069.39", () => {
+    const scenes = [{
+      narration: "Outstanding balance of $117,069.",
+      elements: [{ type: "metric", items: [{ value: "$117,069", label: "Balance" }] }],
+    }] as Record<string, unknown>[];
+    const issues = checkDataAccuracy(scenes, "Total outstanding balance: 117,069.39 across 516 order lines.");
+    expect(issues).toHaveLength(0);
+  });
+
+  it("matches $117K abbreviation to raw 117,069.39 in user data", () => {
+    const scenes = [{
+      narration: "Over $117K in outstanding orders.",
+      elements: [{ type: "metric", items: [{ value: "$117K", label: "Balance" }] }],
+    }] as Record<string, unknown>[];
+    const issues = checkDataAccuracy(scenes, "Total outstanding balance: 117,069.39 across 516 order lines.");
+    expect(issues).toHaveLength(0);
+  });
+
+  it("matches part code numbers like POM1315 in user prompt", () => {
+    const scenes = [{
+      narration: "Parts POM1265 and POM1315 account for 63% of the balance.",
+      elements: [],
+    }] as Record<string, unknown>[];
+    const prompt = "POM1265: 42,831.89. POM1315: 31,149. Fulfillment risk: 63% of total.";
+    const issues = checkDataAccuracy(scenes, prompt);
+    expect(issues).toHaveLength(0);
+  });
 });
 
 // ============================================================

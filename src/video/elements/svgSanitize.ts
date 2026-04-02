@@ -118,13 +118,16 @@ export function sanitizeSvg(raw: string, isDraw = false): string {
       svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
     }
     svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "auto");
+    svg.setAttribute("height", "100%");
+    // Preserve aspect ratio — scale to fit without distortion
+    if (!svg.getAttribute("preserveAspectRatio")) {
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    }
     // svg.style may be undefined in some DOM implementations (e.g. jsdom SVG)
     if (svg.style) {
-      svg.style.maxHeight = "100vh";
       svg.style.overflow = "visible";
     } else {
-      svg.setAttribute("style", "max-height:100vh;overflow:visible");
+      svg.setAttribute("style", "overflow:visible");
     }
 
     // Sanitize root <svg> attrs too (fix: previously only children were sanitized)

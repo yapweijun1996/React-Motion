@@ -53,6 +53,25 @@ export function extractHardNumbers(text: string): string[] {
 }
 
 /**
+ * Fallback: check if a script number's core digits appear in the raw user prompt.
+ *
+ * Handles cases where:
+ * - User writes "117,069.39" (no $ sign) → not extracted by HARD_DATA_PATTERN
+ *   but AI formats it as "$117K" or "$117,069" → flagged as fabricated.
+ * - User writes "POM1315" → "1315" extracted as year from narration → flagged.
+ *
+ * Strips all non-digit characters from both the number and the prompt,
+ * then checks substring containment. Requires ≥3 digits to avoid trivial matches.
+ */
+function coreDigitsMatch(num: string, rawPrompt: string): boolean {
+  const digits = num.replace(/[^0-9]/g, "");
+  if (digits.length < 3) return false;
+  // Strip commas, dots, spaces from prompt so "117,069.39" becomes "11706939"
+  const normalized = rawPrompt.replace(/[,.\s]/g, "");
+  return normalized.includes(digits);
+}
+
+/**
  * Extract hard data numbers from scene elements (metric values, chart data, progress).
  * Returns canonicalized string tokens for comparison.
  */
@@ -122,16 +141,23 @@ export function checkDataAccuracy(
 
       if (!userHasData) {
         // User provided no data → script should not invent numbers
-        const source = narrationNumbers.includes(num) ? "narration" : "element data";
-        issues.push(
-          `data_accuracy: Scene ${si + 1} ${source} contains "${num}" but user provided no verifiable data — remove or replace with qualitative statement`,
-        );
+        // But check fallback: digits may appear in raw prompt (e.g. part codes, unformatted amounts)
+        if (!coreDigitsMatch(num, userPrompt)) {
+          const source = narrationNumbers.includes(num) ? "narration" : "element data";
+          issues.push(
+            `data_accuracy: Scene ${si + 1} ${source} contains "${num}" but user provided no verifiable data — remove or replace with qualitative statement`,
+          );
+        }
       } else if (!userNumbers.has(num)) {
         // User provided data but this number isn't in it
-        const source = narrationNumbers.includes(num) ? "narration" : "element data";
-        issues.push(
-          `data_accuracy: Scene ${si + 1} ${source} contains "${num}" not found in user's original data — verify or remove`,
-        );
+        // Fallback: check if core digits appear in raw prompt text
+        // Handles format differences: "$117K" ↔ "117,069.39", "1315" ↔ "POM1315"
+        if (!coreDigitsMatch(num, userPrompt)) {
+          const source = narrationNumbers.includes(num) ? "narration" : "element data";
+          issues.push(
+            `data_accuracy: Scene ${si + 1} ${source} contains "${num}" not found in user's original data — verify or remove`,
+          );
+        }
       }
     }
   }

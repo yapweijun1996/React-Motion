@@ -165,7 +165,7 @@ export const BAR_MAX_BAR_H = 80;
 /** Bar border radius (px). */
 export const BAR_RADIUS = 4;
 /** Char-width multiplier for label width calculation. */
-export const BAR_CHAR_WIDTH = 0.55;
+export const BAR_CHAR_WIDTH = 0.65;
 /** Min label column width (px). */
 export const BAR_LABEL_MIN_W = 160;
 /** Max label column width (px). */
