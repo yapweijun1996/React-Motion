@@ -113,16 +113,11 @@ export async function runMultiAgentLoop(
   const visualPrompt = buildVisualDirectorPrompt(plan);
   const handoffMessage = formatStoryboardHandoff(plan);
 
-  // Use Pro model for Visual Director when storyboard mentions svg/svg-3d
-  // SVG generation requires stronger model for complex markup with gradients/badges/connectors
-  const storyboardText = plan.storyboard ?? "";
-  const elementHints = (plan.scenePlan ?? []).map((s) => s.elementHints?.join(" ") ?? "").join(" ");
-  const combinedText = `${storyboardText} ${elementHints}`;
-  const needsSvgModel = /svg|diagram|flowchart|process|funnel|matrix|pipeline|architecture/i.test(combinedText);
-  const svgModelOverride = needsSvgModel ? getSvgModel() : undefined;
-  if (svgModelOverride) {
-    console.log(`[MultiAgent] SVG/diagram detected — using Pro model: ${svgModelOverride}`);
-  }
+  // Always use Pro model for Visual Director — Flash can't generate quality SVG
+  // and gives up when quality gate rejects bare markup. Pro is slower but produces
+  // richer visual decisions (gradients, badges, connectors, 15+ SVG elements).
+  const svgModelOverride = getSvgModel();
+  console.log(`[MultiAgent] Visual Director using Pro model: ${svgModelOverride}`);
 
   const phase2 = await runPhase({
     name: "VisualDirector",
