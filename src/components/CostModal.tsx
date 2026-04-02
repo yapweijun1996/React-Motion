@@ -123,7 +123,7 @@ export function CostModal({ open, onClose, currentCost }: Props) {
               Cumulative ({historyCount} generations)
             </span>
             <span style={{ fontSize: 18, fontWeight: 600, fontFamily: "var(--rm-font-mono)", color: "var(--rm-text)" }}>
-              {formatCost(totalHistoryCost + (currentCost?.totalUsd ?? 0))}
+              {formatCost(totalHistoryCost)}
             </span>
           </div>
         </div>
