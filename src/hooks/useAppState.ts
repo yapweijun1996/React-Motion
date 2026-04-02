@@ -115,13 +115,15 @@ export function useAppState(config: MountConfig) {
   );
 
   const handleRestore = useCallback((s: VideoScript, p: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>) => {
-    // Restore cost if available
+    // Restore cost from history entry, or clear if not available
     if (costUsd != null && costBreakdown) {
       setLastCost({
         totalUsd: costUsd,
         breakdown: costBreakdown as CostSummary["breakdown"],
         totalInputTokens: 0, totalOutputTokens: 0, callCount: 0, entries: [],
       });
+    } else {
+      setLastCost(null);
     }
     ttsSessionRef.current += 1;
     const sessionId = ttsSessionRef.current;
