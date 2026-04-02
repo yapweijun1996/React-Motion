@@ -245,13 +245,19 @@ export function runStopChecks(
   }
 
   // 6b. SVG complexity: reject bare-bones SVGs that look empty on 1920×1080
+  // Skip SVGs with svgPrompt (deferred generation fills markup post-agent-loop)
   for (let si = 0; si < scenes.length; si++) {
     const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
     for (const el of elements) {
+      if (el.type !== "svg" && el.type !== "svg-3d") continue;
+
+      // If element has svgPrompt, markup will be generated post-loop — skip check
+      if (typeof el.svgPrompt === "string" && el.svgPrompt.length > 0) continue;
+
       // Support both flat (el.markup) and nested (el.props.markup) structures
       const props = (el.props as Record<string, unknown>) ?? el;
       const rawMarkup = props.markup ?? el.markup;
-      if ((el.type === "svg" || el.type === "svg-3d") && typeof rawMarkup === "string") {
+      if (typeof rawMarkup === "string") {
         const markup = rawMarkup as string;
         // Count visual elements (shapes, paths, text, lines — not defs/metadata)
         const visualTags = (markup.match(/<(rect|circle|ellipse|path|line|polyline|polygon|text|tspan)\b/g) || []).length;

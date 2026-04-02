@@ -25,6 +25,13 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark,
 
   const entrance = computeEntranceStyle(progress, animation);
 
+  // Auto-shrink font when content is long to prevent overflow
+  const content = (el.content as string) ?? "";
+  const baseFontSize = (el.fontSize as number) ?? CALLOUT_FONT_SIZE;
+  const contentFontSize = content.length > 80 ? Math.min(baseFontSize, 48)
+    : content.length > 50 ? Math.min(baseFontSize, 56)
+    : baseFontSize;
+
   return (
     <div
       style={{
@@ -35,6 +42,7 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark,
         opacity: entrance.opacity,
         transform: entrance.transform,
         width: "100%",
+        overflow: "hidden",
       }}
     >
       {typeof el.title === "string" && (
@@ -53,13 +61,13 @@ export const CalloutElement: React.FC<Props> = ({ el, index, primaryColor, dark,
       )}
       <div
         style={{
-          fontSize: Math.round(((el.fontSize as number) ?? CALLOUT_FONT_SIZE) * fontScale),
+          fontSize: Math.round(contentFontSize * fontScale),
           color: readableColor((el.color as string) ?? borderColor, dark),
           fontWeight: 600,
           lineHeight: 1.4,
         }}
       >
-        {el.content as string}
+        {content}
       </div>
     </div>
   );

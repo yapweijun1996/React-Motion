@@ -6,14 +6,16 @@ import { callGemini, type GeminiMessage } from "./gemini";
 import { generateSceneTTS } from "./tts";
 import { generateBgMusic } from "./bgMusic";
 import { generateImage } from "./imageGen";
+import { generateSvgElements } from "./svgGen";
 import { adjustSceneTimings } from "./adjustTiming";
 import { loadSettings } from "./settingsStore";
 import { trackEvent } from "./metrics";
 import { getImageHints } from "./agentToolRegistry";
 import { JSON_PARSE_MAX_RETRIES } from "./agentConfig";
+import { formatAgentMessage, concurrentPool } from "./generateScriptHelpers";
 
 export type GenerationProgress = {
-  stage: "agent" | "evaluate" | "tts" | "bgm" | "imageGen" | "done";
+  stage: "agent" | "evaluate" | "svgGen" | "tts" | "bgm" | "imageGen" | "done";
   stageIndex: number;
   stageCount: number;
   stageLabel: string;
@@ -28,8 +30,8 @@ export type GenerationProgress = {
 };
 
 // --- Stage weights based on real timing data ---
-const STAGE_WEIGHTS = [28, 0, 47, 13, 12]; // agent (includes evaluate), skip, tts, bgm, imageGen → sums to 100
-const STAGE_LABELS = ["AI Scripting", "Quality Check", "Narration", "Background Music", "Image Generation"];
+const STAGE_WEIGHTS = [26, 0, 8, 43, 12, 11]; // agent, skip, svgGen, tts, bgm, imageGen → sums to 100
+const STAGE_LABELS = ["AI Scripting", "Quality Check", "SVG Generation", "Narration", "Background Music", "Image Generation"];
 
 /** Lightweight progress tracker — computes percent, elapsed, ETA */
 function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
@@ -44,9 +46,9 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
   function emit(overrides: Partial<GenerationProgress>) {
     if (!onProgress) return;
     onProgress({
-      stage: (["agent", "evaluate", "tts", "bgm", "imageGen"] as const)[stageIdx],
+      stage: (["agent", "evaluate", "svgGen", "tts", "bgm", "imageGen"] as const)[stageIdx],
       stageIndex: stageIdx,
-      stageCount: 5,
+      stageCount: 6,
       stageLabel: STAGE_LABELS[stageIdx],
       message: "",
       percent: basePercent(stageIdx),
@@ -98,7 +100,7 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
     },
 
     done() {
-      emit({ stage: "done", stageIndex: 5, stageLabel: "Done", message: "Done", percent: 100 });
+      emit({ stage: "done", stageIndex: 6, stageLabel: "Done", message: "Done", percent: 100 });
     },
   };
 }
@@ -171,8 +173,18 @@ export async function generateScript(
   // --- Phase 2: Evaluate — now runs inside agent loop (RM-155) ---
   tracker.setStage(1, "Quality verified");
 
+  // --- Phase 2b: SVG Post-Generation ---
+  tracker.setStage(2, "Generating SVG diagrams...");
+  try {
+    script = await generateSvgElements(script, (p) => {
+      tracker.reportSimple(`Generating SVG (${p.generated}/${p.total})...`);
+    });
+  } catch (err) {
+    console.warn("[SvgGen] Failed (non-fatal):", err);
+  }
+
   // --- Phase 3: TTS ---
-  tracker.setStage(2, "Generating narration audio...");
+  tracker.setStage(3, "Generating narration audio...");
   console.log("[TTS] Generating...");
   const ttsStart = performance.now();
 
@@ -189,7 +201,7 @@ export async function generateScript(
   // --- Phase 4: BGM ---
   const { bgMusicEnabled, bgMusicMood } = loadSettings();
   if (bgMusicEnabled) {
-    tracker.setStage(3, "Generating background music...");
+    tracker.setStage(4, "Generating background music...");
     console.log(`[BGM] Generating (mood: ${bgMusicMood})...`);
 
     try {
@@ -209,7 +221,7 @@ export async function generateScript(
   console.log(`[ImageGen] enabled=${imageGenEnabled}, scenes with imagePrompt=${imageScenes.length}`);
   if (imageGenEnabled) {
     if (imageScenes.length > 0) {
-      tracker.setStage(4, "Generating scene images...");
+      tracker.setStage(5, "Generating scene images...");
       const imgTotal = imageScenes.length;
       console.log(`[ImageGen] Generating images for ${imgTotal} scenes (concurrency: 2)`);
 
@@ -227,7 +239,7 @@ export async function generateScript(
       };
 
       // Concurrent pool — limit to 2 parallel requests to avoid rate limits
-      await imageGenPool(imageScenes, processScene, 2);
+      await concurrentPool(imageScenes, processScene, 2);
     }
   }
 
@@ -270,61 +282,4 @@ async function legacyGenerate(
   throw new Error("Legacy generation failed after retries");
 }
 
-// --- Agent message formatting ---
-
-function formatAgentMessage(p: AgentProgress, completedTools: string[]): string {
-  // Context-aware "thinking" labels
-  if (p.action === "thinking") {
-    if (completedTools.length === 0) return "Analyzing your data...";
-    if (completedTools.includes("search_reference") && !completedTools.includes("draft_storyboard"))
-      return "Incorporating research...";
-    if (!completedTools.includes("draft_storyboard")) return "Planning storyboard...";
-    if (!completedTools.includes("generate_palette")) return "Designing color palette...";
-    if (!completedTools.includes("direct_visuals")) return "Directing visual approach...";
-    if (!completedTools.includes("produce_script")) return "Writing final script...";
-    return "Refining script...";
-  }
-
-  const LABELS: Record<string, string> = {
-    "tool:analyze_data": "Analyzing data...",
-    "tool:search_reference": "Researching context...",
-    "tool:draft_storyboard": "Writing storyboard...",
-    "tool:get_element_catalog": "Reviewing elements...",
-    "tool:generate_palette": "Generating color palette...",
-    "tool:direct_visuals": "Directing visual approach...",
-    "tool:produce_script": "Producing video script...",
-    quality_gate: "Checking script quality...",
-    evaluate: "Evaluating script quality...",
-    evaluate_retry: "Fixing evaluation issues...",
-    advisory: "Reviewing narrative structure...",
-    budget_warn: "Optimizing token usage...",
-    budget_force_finish: "Wrapping up...",
-    text_only: "Processing...",
-    fallback_json: "Parsing output...",
-    max_reached: "Finalizing...",
-    force_output: "Generating final script...",
-    produce_script: "Script produced",
-  };
-
-  // Handle tool_error:* pattern
-  if (p.action.startsWith("tool_error:")) return "Retrying...";
-
-  return LABELS[p.action] ?? `${p.action}`;
-}
-
-/** Simple concurrency pool — runs tasks with at most `limit` in flight. */
-async function imageGenPool<T>(
-  items: T[],
-  fn: (item: T) => Promise<void>,
-  limit: number,
-): Promise<void> {
-  let idx = 0;
-  const next = async (): Promise<void> => {
-    while (idx < items.length) {
-      const i = idx++;
-      await fn(items[i]);
-    }
-  };
-  const workers = Array.from({ length: Math.min(limit, items.length) }, () => next());
-  await Promise.all(workers);
-}
+// formatAgentMessage & concurrentPool extracted to generateScriptHelpers.ts
