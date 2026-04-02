@@ -217,13 +217,15 @@ export function runStopChecks(
     const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
     for (const el of elements) {
       const t = String(el.type);
-      if (t === "bar-chart" && !((el.bars as unknown[])?.length > 0))
+      // Support both flat and nested props (Pro model wraps under el.props)
+      const p = (el.props as Record<string, unknown>) ?? el;
+      if (t === "bar-chart" && !((p.bars as unknown[])?.length > 0) && !((el.bars as unknown[])?.length > 0))
         issues.push(`Scene ${si + 1}: bar-chart has no bars — remove it or add data`);
-      if (t === "pie-chart" && !((el.slices as unknown[])?.length > 0))
+      if (t === "pie-chart" && !((p.slices as unknown[])?.length > 0) && !((el.slices as unknown[])?.length > 0))
         issues.push(`Scene ${si + 1}: pie-chart has no slices — remove it or add data`);
-      if (t === "line-chart" && !((el.series as unknown[])?.length > 0))
+      if (t === "line-chart" && !((p.series as unknown[])?.length > 0) && !((el.series as unknown[])?.length > 0))
         issues.push(`Scene ${si + 1}: line-chart has no series — remove it or add data`);
-      if (t === "sankey" && (!((el.nodes as unknown[])?.length > 0) || !((el.links as unknown[])?.length > 0)))
+      if (t === "sankey" && !((p.nodes as unknown[])?.length > 0) && !((el.nodes as unknown[])?.length > 0))
         issues.push(`Scene ${si + 1}: sankey missing nodes or links — remove it or add data`);
     }
   }
@@ -232,8 +234,11 @@ export function runStopChecks(
   for (let si = 0; si < scenes.length; si++) {
     const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
     for (const el of elements) {
-      if ((el.type === "svg" || el.type === "svg-3d") && typeof el.markup === "string") {
-        const markup = el.markup as string;
+      // Support both flat (el.markup) and nested (el.props.markup) structures
+      const props = (el.props as Record<string, unknown>) ?? el;
+      const rawMarkup = props.markup ?? el.markup;
+      if ((el.type === "svg" || el.type === "svg-3d") && typeof rawMarkup === "string") {
+        const markup = rawMarkup as string;
         // Count visual elements (shapes, paths, text, lines — not defs/metadata)
         const visualTags = (markup.match(/<(rect|circle|ellipse|path|line|polyline|polygon|text|tspan)\b/g) || []).length;
         const hasDefs = /<defs\b/.test(markup);
