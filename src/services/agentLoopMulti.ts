@@ -191,6 +191,7 @@ export async function runMultiAgentLoop(
     const reviewResult = await callGeminiRaw(reviewPrompt, reviewMessages, {
       temperature: TEMP_REVIEWER,
       jsonOutput: true,
+      costCategory: "agent",
     });
 
     const reviewText = reviewResult.parts.find((p) => p.text)?.text ?? "";

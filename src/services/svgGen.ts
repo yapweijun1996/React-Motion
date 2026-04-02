@@ -205,6 +205,7 @@ async function generateSvgMarkup(target: SvgTarget): Promise<string | null> {
   const result = await callGeminiRaw(SVG_SYSTEM_PROMPT, messages, {
     modelOverride: model,
     temperature: 0.7,
+    costCategory: "svgGen",
   });
 
   const raw = result.parts.find((p) => p.text)?.text ?? "";

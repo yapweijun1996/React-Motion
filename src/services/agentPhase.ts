@@ -98,7 +98,7 @@ export async function runPhase(config: PhaseConfig): Promise<PhaseResult> {
     const result = await callGeminiRaw(
       systemPrompt,
       messages,
-      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, modelOverride },
+      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, modelOverride, costCategory: "agent" },
     );
 
     recordModelOutput(budget, i, result.parts);
@@ -257,7 +257,7 @@ async function runPhaseWithMessages(
     const isUnderPressure = budget.warnCount > 0 || budget.forceCount > 0;
     const result = await callGeminiRaw(
       systemPrompt, messages,
-      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, modelOverride },
+      { tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, modelOverride, costCategory: "agent" },
     );
     recordModelOutput(budget, i, result.parts);
 

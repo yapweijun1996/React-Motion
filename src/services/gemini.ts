@@ -3,6 +3,7 @@ import { ClassifiedError, classifyHttpStatus, logError } from "./errors";
 import { addLogEntry } from "./geminiLog";
 import { GEMINI_API_BASE } from "./apiConfig";
 import { TEMP_DEFAULT } from "./agentConfig";
+import { recordTokenCost } from "./costTracker";
 
 function getApiKey(): string {
   const { geminiApiKey } = loadSettings();
@@ -51,6 +52,12 @@ type GeminiResponsePart = {
   functionCall?: { name: string; args: Record<string, unknown> };
 };
 
+export type UsageMetadata = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+};
+
 type GeminiResponse = {
   candidates?: {
     content?: {
@@ -58,11 +65,15 @@ type GeminiResponse = {
     };
     finishReason?: string;
   }[];
+  usageMetadata?: UsageMetadata;
+  modelVersion?: string;
 };
 
 export type GeminiCallResult = {
   parts: GeminiResponsePart[];
   finishReason: string;
+  usage?: UsageMetadata;
+  model?: string;
 };
 
 // --- Options ---
@@ -73,6 +84,8 @@ export type CallGeminiOptions = {
   jsonOutput?: boolean;
   /** Override the model for this call (e.g. Pro model for SVG generation) */
   modelOverride?: string;
+  /** Cost tracking category — if set, auto-records cost from usageMetadata */
+  costCategory?: import("./costTracker").CostCategory;
 };
 
 // --- Original simple call (backward compatible) ---
@@ -191,5 +204,21 @@ export async function callGeminiRaw(
     responseData: data, durationMs: Math.round(performance.now() - t0),
   });
 
-  return { parts, finishReason };
+  // Auto-record cost if category specified and usage metadata available
+  const usage = data.usageMetadata;
+  if (options.costCategory && usage) {
+    recordTokenCost(
+      options.costCategory,
+      data.modelVersion ?? model,
+      usage.promptTokenCount ?? 0,
+      usage.candidatesTokenCount ?? 0,
+    );
+  }
+
+  return {
+    parts,
+    finishReason,
+    usage,
+    model: data.modelVersion ?? model,
+  };
 }

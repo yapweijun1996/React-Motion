@@ -13,6 +13,7 @@ import { trackEvent } from "./metrics";
 import { getImageHints } from "./agentToolRegistry";
 import { JSON_PARSE_MAX_RETRIES } from "./agentConfig";
 import { formatAgentMessage, concurrentPool } from "./generateScriptHelpers";
+import { resetCostTracker, getCostSummary, formatCostLog, recordBgmCost, recordImageCost } from "./costTracker";
 
 export type GenerationProgress = {
   stage: "agent" | "evaluate" | "svgGen" | "tts" | "bgm" | "imageGen" | "done";
@@ -113,6 +114,7 @@ export async function generateScript(
   onProgress?: (p: GenerationProgress) => void,
 ): Promise<VideoScript> {
   console.group("[ReactMotion] generateScript (OODAE Agent)");
+  resetCostTracker();
   const tracker = createProgressTracker(onProgress);
 
   // --- Phase 1: Agent Loop ---
@@ -209,6 +211,7 @@ export async function generateScript(
         tracker.reportSimple(status);
       });
       script = { ...script, bgMusicUrl: bgm.blobUrl, bgMusicDurationMs: bgm.durationMs };
+      recordBgmCost();
       console.log(`[BGM] Done. Duration: ${bgm.durationMs}ms`);
     } catch (err) {
       console.warn("[BGM] Failed (non-fatal):", err);
@@ -230,6 +233,7 @@ export async function generateScript(
         try {
           const result = await generateImage(scene.imagePrompt!);
           scene.imageUrl = result.blobUrl;
+          recordImageCost();
           console.log(`[ImageGen] Scene "${scene.id}" done`);
         } catch (err) {
           console.warn(`[ImageGen] Scene "${scene.id}" failed (non-fatal):`, err);
@@ -243,11 +247,17 @@ export async function generateScript(
     }
   }
 
+  // --- Cost Summary ---
+  const cost = getCostSummary();
+  console.log(`[Cost] ${formatCostLog(cost)}`);
+
   tracker.done();
   trackEvent("generation", true, 0, {
     scenes: script.scenes.length,
     iterations,
     durationFrames: script.durationInFrames,
+    costUsd: cost.totalUsd,
+    costBreakdown: cost.breakdown,
   });
   console.groupEnd();
   return script;

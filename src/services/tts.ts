@@ -246,12 +246,19 @@ async function callGeminiTTS(
     throw new Error(`TTS API error (${res.status}): ${err}`);
   }
 
-  const data: TTSResponse = await res.json();
+  const data = await res.json();
   const elapsed = ((performance.now() - t0) / 1000).toFixed(2);
 
   const inlineData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
   if (!inlineData?.data) {
     throw new Error("TTS returned empty audio data");
+  }
+
+  // Record TTS cost from usage metadata if available
+  const usage = data.usageMetadata;
+  if (usage) {
+    const { recordTokenCost } = await import("./costTracker");
+    recordTokenCost("tts", model, usage.promptTokenCount ?? 0, usage.candidatesTokenCount ?? 0);
   }
 
   console.log(`[TTS] Response in ${elapsed}s, mimeType: ${inlineData.mimeType}`);
