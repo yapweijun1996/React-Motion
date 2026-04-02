@@ -16,7 +16,8 @@ export const DividerElement: React.FC<Props> = ({ el, index, primaryColor }) => 
     elementType: "divider",
   });
 
-  const width = interpolate(progress, [0, 1], [0, targetWidth]);
+  const rawWidth = interpolate(progress, [0, 1], [0, targetWidth]);
+  const width = Number.isFinite(rawWidth) ? rawWidth : 0;
 
   return (
     <div
