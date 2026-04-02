@@ -77,7 +77,9 @@ function extractLayout(s: VideoScene): string {
 
 function extractHero(s: VideoScene): string {
   const elements = s.elements ?? [];
-  return elements.length > 0 ? elements[0].type : "empty";
+  // Skip text/divider to find the real "hero" content element
+  const hero = elements.find((e) => e.type !== "text" && e.type !== "divider");
+  return hero?.type ?? (elements.length > 0 ? elements[0].type : "empty");
 }
 
 function extractBg(s: VideoScene): string {
@@ -92,10 +94,14 @@ function extractTransition(s: VideoScene): string {
 }
 
 function extractEnergy(s: VideoScene): string {
-  const count = s.elements?.length ?? 0;
-  if (count <= 2) return "low";
-  if (count <= 3) return "medium";
-  return "high";
+  const elements = s.elements ?? [];
+  // Weight by element complexity, not just count
+  const HEAVY = new Set(["svg", "svg-3d", "bar-chart", "pie-chart", "line-chart", "sankey", "comparison", "timeline", "map"]);
+  const heavyCount = elements.filter((e) => HEAVY.has(e.type)).length;
+  const total = elements.length;
+  if (heavyCount >= 2 || total >= 4) return "high";
+  if (heavyCount >= 1 || total >= 3) return "medium";
+  return "low";
 }
 
 function abbrev(val: string): string {
