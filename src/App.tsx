@@ -32,6 +32,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
     script,
     loading,
     generationStatus,
+    lastCost,
     error,
     exportProgress, setExportProgress,
     showExportStage,
@@ -104,6 +105,11 @@ export const App: React.FC<AppProps> = ({ config }) => {
               <>
                 <span className="rm-badge rm-badge-success">✓ Generated</span>
                 <span className="rm-badge rm-badge-neutral">{sceneCount} scenes</span>
+                {lastCost && lastCost.totalUsd > 0 && (
+                  <span className="rm-badge rm-badge-neutral" title={`Agent: $${lastCost.breakdown.agent.toFixed(3)} | SVG: $${lastCost.breakdown.svgGen.toFixed(3)} | TTS: $${lastCost.breakdown.tts.toFixed(3)} | BGM: $${lastCost.breakdown.bgm.toFixed(3)} | Image: $${lastCost.breakdown.imageGen.toFixed(3)}`}>
+                    ${lastCost.totalUsd < 0.01 ? lastCost.totalUsd.toFixed(4) : lastCost.totalUsd.toFixed(2)}
+                  </span>
+                )}
               </>
             )}
             {loading && <span className="rm-badge rm-badge-primary">● Generating</span>}

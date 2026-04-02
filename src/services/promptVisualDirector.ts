@@ -57,7 +57,7 @@ Each narrative beat has a visual job. Match your element choices and layout to t
 - Layout: \`column\` or \`row\` | Camera: \`drift\` or \`pan-right\`
 - Best elements: svg (flowchart/process with animation:"draw"), timeline, sankey, structured list
 - This is where SVG draw animation shines — let diagrams build themselves
-- One diagram/flow element as hero, optional text label
+- One diagram/flow element as hero + REQUIRED title text element above it (viewers need context for what the diagram shows)
 
 ### Proof → Evidence with interpretation
 - Layout: \`column\` (chart scenes) or \`center\` (single KPI) | Camera: \`drift\`

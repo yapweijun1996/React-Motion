@@ -13,6 +13,7 @@ import { generateSceneTTS } from "../services/tts";
 import { adjustSceneTimings } from "../services/adjustTiming";
 import { logWarn } from "../services/errors";
 import type { GenerationProgress } from "../services/generateScript";
+import type { CostSummary } from "../services/costTracker";
 import type { MountConfig, VideoScript } from "../types";
 import type { TTSMetadata } from "../services/historyStore";
 
@@ -28,6 +29,7 @@ export function useAppState(config: MountConfig) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pptxExporting, setPptxExporting] = useState(false);
   const [apiReady, setApiReady] = useState(hasApiKey);
+  const [lastCost, setLastCost] = useState<CostSummary | null>(null);
 
   const playerRef = useRef<PlayerHandle>(null);
   const exportPlayerRef = useRef<PlayerHandle>(null);
@@ -66,11 +68,16 @@ export function useAppState(config: MountConfig) {
     };
   }, [script]);
 
+  const handleGenerateStatus = useCallback((p: GenerationProgress | null) => {
+    setGenerationStatus(p);
+    if (p?.costSummary) setLastCost(p.costSummary);
+  }, []);
+
   const handleGenerate = useGenerate({
     prompt,
     data: config.data,
     onScript: setScript,
-    onStatus: setGenerationStatus,
+    onStatus: handleGenerateStatus,
     onError: setError,
     onLoadingChange: setLoading,
   });
@@ -160,6 +167,7 @@ export function useAppState(config: MountConfig) {
     script,
     loading,
     generationStatus,
+    lastCost,
     error, setError,
     exportProgress, setExportProgress,
     showExportStage,

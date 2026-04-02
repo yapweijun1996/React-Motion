@@ -39,9 +39,12 @@ register(
     // Data is already in the user message (buildUserMessage sends it).
     // Do NOT echo it back — that doubles payload for zero benefit.
     const hasStructuredData = !!context.data?.rows?.length;
-    // Detect inline numeric data in user prompt (numbers, percentages, currency)
+    // Detect inline numeric data in user prompt (numbers, percentages, currency, or data patterns)
     const numericPattern = /\d[\d,.]*\s*[%$€£¥]|[$€£¥]\s*\d|\d+\s*(million|billion|thousand|M|B|K)\b/gi;
-    const hasInlineData = numericPattern.test(context.userPrompt);
+    // Also detect data-rich patterns: multiple "number + unit" pairs (e.g. "0.39 AU", "88 days", "91,119 quantity")
+    const dataPattern = /\d[\d,.]*\s+(?:AU|days?|hours?|km|miles?|units?|pieces?|PCS|kg|tons?|percent|points?|bps)\b/gi;
+    const dataMatches = context.userPrompt.match(dataPattern) ?? [];
+    const hasInlineData = numericPattern.test(context.userPrompt) || dataMatches.length >= 3;
     const hasAnyData = hasStructuredData || hasInlineData;
 
     if (!hasAnyData) {

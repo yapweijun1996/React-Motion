@@ -28,6 +28,8 @@ export type GenerationProgress = {
   eta?: number;
   completedTools?: string[];
   agentDetail?: AgentProgress;
+  /** Cost summary — only present when stage === "done" */
+  costSummary?: import("./costTracker").CostSummary;
 };
 
 // --- Stage weights based on real timing data ---
@@ -100,8 +102,8 @@ function createProgressTracker(onProgress?: (p: GenerationProgress) => void) {
       emit({ message });
     },
 
-    done() {
-      emit({ stage: "done", stageIndex: 6, stageLabel: "Done", message: "Done", percent: 100 });
+    done(costSummary?: import("./costTracker").CostSummary) {
+      emit({ stage: "done", stageIndex: 6, stageLabel: "Done", message: "Done", percent: 100, costSummary });
     },
   };
 }
@@ -251,7 +253,7 @@ export async function generateScript(
   const cost = getCostSummary();
   console.log(`[Cost] ${formatCostLog(cost)}`);
 
-  tracker.done();
+  tracker.done(cost);
   trackEvent("generation", true, 0, {
     scenes: script.scenes.length,
     iterations,
