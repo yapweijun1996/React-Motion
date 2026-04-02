@@ -170,7 +170,7 @@ export function runStopChecks(
     }
   }
 
-  // 5. Visual personality: count scenes with at least one personality element
+  // 5. Visual personality: at least 1 scene with a personality element
   let personalityCount = 0;
   for (const scene of scenes) {
     const elements = (scene.elements as Record<string, unknown>[]) ?? [];
@@ -178,11 +178,23 @@ export function runStopChecks(
       personalityCount++;
     }
   }
-  const minPersonality = scenes.length >= 5 ? 2 : 1;
-  if (personalityCount < minPersonality) {
+  if (personalityCount < 1) {
     issues.push(
-      `Only ${personalityCount} scene(s) with personality elements — need ≥${minPersonality} (kawaii/icon/annotation/svg/map)`,
+      "No visual personality elements (icon/annotation/svg/map) — add at least 1 for visual interest",
     );
+  }
+
+  // 5b. Standalone decoration check: annotation/kawaii must not be sole non-text element
+  const DECORATION_TYPES = new Set(["annotation", "kawaii", "lottie"]);
+  for (let si = 0; si < scenes.length; si++) {
+    const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
+    const decorations = elements.filter((el) => DECORATION_TYPES.has(String(el.type)));
+    const content = elements.filter((el) => !DECORATION_TYPES.has(String(el.type)) && el.type !== "text" && el.type !== "divider");
+    if (decorations.length > 0 && content.length === 0) {
+      issues.push(
+        `Scene ${si + 1}: decoration element (${decorations.map((d) => d.type).join(", ")}) without content — annotation/kawaii must pair with a chart, metric, or comparison, not float alone`,
+      );
+    }
   }
 
   // 5b. Rich visual variety: at least 1 rich visual element (not just icon/kawaii)
@@ -213,6 +225,31 @@ export function runStopChecks(
         issues.push(`Scene ${si + 1}: line-chart has no series — remove it or add data`);
       if (t === "sankey" && (!((el.nodes as unknown[])?.length > 0) || !((el.links as unknown[])?.length > 0)))
         issues.push(`Scene ${si + 1}: sankey missing nodes or links — remove it or add data`);
+    }
+  }
+
+  // 6b. SVG complexity: reject bare-bones SVGs that look empty on 1920×1080
+  for (let si = 0; si < scenes.length; si++) {
+    const elements = (scenes[si].elements as Record<string, unknown>[]) ?? [];
+    for (const el of elements) {
+      if ((el.type === "svg" || el.type === "svg-3d") && typeof el.markup === "string") {
+        const markup = el.markup as string;
+        // Count visual elements (shapes, paths, text, lines — not defs/metadata)
+        const visualTags = (markup.match(/<(rect|circle|ellipse|path|line|polyline|polygon|text|tspan)\b/g) || []).length;
+        const hasDefs = /<defs\b/.test(markup);
+        const hasGradient = /Gradient\b/.test(markup);
+        if (visualTags < 10) {
+          issues.push(
+            `Scene ${si + 1}: SVG has only ${visualTags} visual elements — need ≥10 for 1920×1080 canvas. ` +
+            `Add more shapes, labels, badges, connectors. Use <defs> for gradients.`,
+          );
+        }
+        if (!hasDefs || !hasGradient) {
+          issues.push(
+            `Scene ${si + 1}: SVG lacks <defs> with gradients — use linearGradient/radialGradient fills for depth, not flat colors.`,
+          );
+        }
+      }
     }
   }
 

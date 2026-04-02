@@ -10,6 +10,7 @@ import { HistoryPanel } from "./components/HistoryPanel";
 import { LogModal } from "./components/LogModal";
 import { IconHistory, IconClipboard, IconSettings, IconX } from "./components/Icons";
 import { RhythmDebugPanel } from "./components/RhythmDebugPanel";
+import { ScriptInspector } from "./components/ScriptInspector";
 import { useAppState } from "./hooks/useAppState";
 import type { MountConfig } from "./types";
 import "./styles.css";
@@ -50,6 +51,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
   } = useAppState(config);
 
   const [logOpen, setLogOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const sceneCount = script?.scenes?.length ?? 0;
@@ -76,6 +78,11 @@ export const App: React.FC<AppProps> = ({ config }) => {
           <button className="rm-nav-item" onClick={() => setLogOpen(true)}>
             <IconClipboard size={16} /> API Log
           </button>
+          {script && (
+            <button className="rm-nav-item" onClick={() => setInspectorOpen(true)}>
+              <IconClipboard size={16} /> Inspector
+            </button>
+          )}
           <button className="rm-nav-item" onClick={() => setSettingsOpen(true)}>
             <IconSettings size={16} /> Settings
           </button>
@@ -249,6 +256,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
       {/* ── Overlays (unchanged) ── */}
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <LogModal open={logOpen} onClose={() => setLogOpen(false)} />
+      <ScriptInspector open={inspectorOpen} onClose={() => setInspectorOpen(false)} script={script} />
       <HistoryPanel
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}

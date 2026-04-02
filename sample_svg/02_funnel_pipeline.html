@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>SVG: Sales Funnel</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0C0A09;display:flex;align-items:center;justify-content:center;min-height:100vh}.scene{width:1920px;height:1080px;background:linear-gradient(135deg,#1C1917,#292524);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 64px;gap:24px;transform:scale(0.5);transform-origin:top left}.title{font-family:sans-serif;font-size:64px;font-weight:700;color:#e2e8f0}.svg-wrap{flex:1;display:flex;align-items:center;justify-content:center;width:100%}.svg-wrap svg{width:85%;height:auto}</style></head><body>
+<div class="scene">
+  <div class="title">Customer Acquisition Funnel</div>
+  <div class="svg-wrap">
+    <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="f1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.9"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.5"/></linearGradient>
+        <linearGradient id="f2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.9"/><stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.5"/></linearGradient>
+        <linearGradient id="f3" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#f59e0b" stop-opacity="0.9"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0.5"/></linearGradient>
+        <linearGradient id="f4" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#0f766e" stop-opacity="0.9"/><stop offset="100%" stop-color="#0f766e" stop-opacity="0.5"/></linearGradient>
+        <linearGradient id="f5" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444" stop-opacity="0.9"/><stop offset="100%" stop-color="#ef4444" stop-opacity="0.5"/></linearGradient>
+        <marker id="da" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#475569"/></marker>
+      </defs>
+
+      <!-- Funnel stages (trapezoids) -->
+      <polygon points="100,30 1000,30 940,150 160,150" fill="url(#f1)" stroke="#60a5fa" stroke-width="1.5"/>
+      <polygon points="160,160 940,160 880,280 220,280" fill="url(#f2)" stroke="#a78bfa" stroke-width="1.5"/>
+      <polygon points="220,290 880,290 820,410 280,410" fill="url(#f3)" stroke="#fbbf24" stroke-width="1.5"/>
+      <polygon points="280,420 820,420 760,540 340,540" fill="url(#f4)" stroke="#14b8a6" stroke-width="1.5"/>
+      <polygon points="340,550 760,550 700,650 400,650" fill="url(#f5)" stroke="#f87171" stroke-width="1.5"/>
+
+      <!-- Stage labels (left) -->
+      <text x="550" y="100" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="bold" font-family="sans-serif">Awareness</text>
+      <text x="550" y="230" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="bold" font-family="sans-serif">Interest</text>
+      <text x="550" y="360" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="bold" font-family="sans-serif">Evaluation</text>
+      <text x="550" y="490" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="bold" font-family="sans-serif">Commitment</text>
+      <text x="550" y="615" text-anchor="middle" fill="#e2e8f0" font-size="24" font-weight="bold" font-family="sans-serif">Closed Won</text>
+
+      <!-- Right side: metrics panel -->
+      <rect x="1020" y="30" width="170" height="120" rx="12" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="0.5"/>
+      <text x="1105" y="70" text-anchor="middle" fill="#93c5fd" font-size="36" font-weight="800" font-family="sans-serif">12,400</text>
+      <text x="1105" y="95" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">Leads</text>
+      <rect x="1060" y="110" width="90" height="24" rx="12" fill="rgba(59,130,246,0.1)"/><text x="1105" y="127" text-anchor="middle" fill="#60a5fa" font-size="11" font-family="sans-serif">100%</text>
+
+      <rect x="1020" y="160" width="170" height="120" rx="12" fill="rgba(139,92,246,0.15)" stroke="#8b5cf6" stroke-width="0.5"/>
+      <text x="1105" y="200" text-anchor="middle" fill="#c4b5fd" font-size="36" font-weight="800" font-family="sans-serif">4,200</text>
+      <text x="1105" y="225" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">Engaged</text>
+      <rect x="1060" y="240" width="90" height="24" rx="12" fill="rgba(139,92,246,0.1)"/><text x="1105" y="257" text-anchor="middle" fill="#a78bfa" font-size="11" font-family="sans-serif">33.9%</text>
+
+      <rect x="1020" y="290" width="170" height="120" rx="12" fill="rgba(245,158,11,0.15)" stroke="#f59e0b" stroke-width="0.5"/>
+      <text x="1105" y="330" text-anchor="middle" fill="#fde68a" font-size="36" font-weight="800" font-family="sans-serif">890</text>
+      <text x="1105" y="355" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">SQLs</text>
+      <rect x="1060" y="370" width="90" height="24" rx="12" fill="rgba(245,158,11,0.1)"/><text x="1105" y="387" text-anchor="middle" fill="#fbbf24" font-size="11" font-family="sans-serif">7.2%</text>
+
+      <rect x="1020" y="420" width="170" height="120" rx="12" fill="rgba(15,118,110,0.15)" stroke="#0f766e" stroke-width="0.5"/>
+      <text x="1105" y="460" text-anchor="middle" fill="#99f6e4" font-size="36" font-weight="800" font-family="sans-serif">210</text>
+      <text x="1105" y="485" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">Proposals</text>
+      <rect x="1060" y="500" width="90" height="24" rx="12" fill="rgba(15,118,110,0.1)"/><text x="1105" y="517" text-anchor="middle" fill="#14b8a6" font-size="11" font-family="sans-serif">1.7%</text>
+
+      <rect x="1020" y="550" width="170" height="100" rx="12" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="0.5"/>
+      <text x="1105" y="588" text-anchor="middle" fill="#fca5a5" font-size="36" font-weight="800" font-family="sans-serif">126</text>
+      <text x="1105" y="613" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">Customers</text>
+      <rect x="1060" y="622" width="90" height="24" rx="12" fill="rgba(239,68,68,0.1)"/><text x="1105" y="639" text-anchor="middle" fill="#f87171" font-size="11" font-family="sans-serif">1.0%</text>
+
+      <!-- Conversion arrows between right panels -->
+      <line x1="1105" y1="150" x2="1105" y2="160" stroke="#475569" stroke-width="1" marker-end="url(#da)"/>
+      <line x1="1105" y1="280" x2="1105" y2="290" stroke="#475569" stroke-width="1" marker-end="url(#da)"/>
+      <line x1="1105" y1="410" x2="1105" y2="420" stroke="#475569" stroke-width="1" marker-end="url(#da)"/>
+      <line x1="1105" y1="540" x2="1105" y2="550" stroke="#475569" stroke-width="1" marker-end="url(#da)"/>
+
+      <!-- Drop-off indicators -->
+      <text x="1105" y="157" text-anchor="middle" fill="#ef4444" font-size="10" font-family="sans-serif">-66%</text>
+      <text x="1105" y="287" text-anchor="middle" fill="#ef4444" font-size="10" font-family="sans-serif">-79%</text>
+      <text x="1105" y="417" text-anchor="middle" fill="#ef4444" font-size="10" font-family="sans-serif">-76%</text>
+      <text x="1105" y="547" text-anchor="middle" fill="#ef4444" font-size="10" font-family="sans-serif">-40%</text>
+
+      <!-- Bottom summary -->
+      <text x="550" y="690" text-anchor="middle" fill="#475569" font-size="15" font-family="sans-serif">Overall Conversion: 12,400 leads to 126 customers (1.0%) | Target: 140 customers</text>
+    </svg>
+  </div>
+</div>
+</body></html>

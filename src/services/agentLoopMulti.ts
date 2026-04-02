@@ -113,12 +113,15 @@ export async function runMultiAgentLoop(
   const visualPrompt = buildVisualDirectorPrompt(plan);
   const handoffMessage = formatStoryboardHandoff(plan);
 
-  // Use Pro model for Visual Director when storyboard mentions svg-3d
+  // Use Pro model for Visual Director when storyboard mentions svg/svg-3d
+  // SVG generation requires stronger model for complex markup with gradients/badges/connectors
   const storyboardText = plan.storyboard ?? "";
-  const needsSvgModel = /svg-3d|svg\b.*layer|layered.*diagram|3d.*architect/i.test(storyboardText);
+  const elementHints = (plan.scenePlan ?? []).map((s) => s.elementHints?.join(" ") ?? "").join(" ");
+  const combinedText = `${storyboardText} ${elementHints}`;
+  const needsSvgModel = /svg|diagram|flowchart|process|funnel|matrix|pipeline|architecture/i.test(combinedText);
   const svgModelOverride = needsSvgModel ? getSvgModel() : undefined;
   if (svgModelOverride) {
-    console.log(`[MultiAgent] SVG-3D detected in storyboard — using model: ${svgModelOverride}`);
+    console.log(`[MultiAgent] SVG/diagram detected — using Pro model: ${svgModelOverride}`);
   }
 
   const phase2 = await runPhase({

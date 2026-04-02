@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>SVG Sample 1: Process Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0C0A09; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+  .scene { width: 1920px; height: 1080px; position: relative; overflow: hidden; transform-origin: top left; }
+  .scene-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 64px; gap: 24px; }
+  .title { font-family: 'DM Sans', sans-serif; font-size: 72px; font-weight: 700; color: #e2e8f0; text-align: center; }
+  .svg-wrap { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; }
+  .svg-wrap svg { width: 100%; height: auto; max-height: 100%; }
+  /* Scale to fit screen */
+  @media (max-width: 1920px) { .scene { transform: scale(0.5); } }
+</style>
+</head>
+<body>
+<div class="scene" style="background: linear-gradient(135deg, #1C1917, #292524);">
+  <div class="scene-inner">
+    <div class="title">Data Processing Pipeline</div>
+    <div class="svg-wrap">
+      <svg viewBox="0 0 1600 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#0f766e" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#0f766e" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="g3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+          </linearGradient>
+          <linearGradient id="g4" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.95"/>
+            <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.4"/>
+          </linearGradient>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+          </marker>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Stage 1: Data Collection -->
+        <rect x="40" y="180" width="340" height="340" rx="20" fill="url(#g1)" stroke="#14b8a6" stroke-width="1.5"/>
+        <text x="210" y="230" text-anchor="middle" fill="#e2e8f0" font-size="28" font-weight="bold" font-family="sans-serif">Data Collection</text>
+        <rect x="70" y="255" width="130" height="40" rx="10" fill="rgba(20,184,166,0.25)" stroke="#14b8a6" stroke-width="0.5"/>
+        <text x="135" y="282" text-anchor="middle" fill="#99f6e4" font-size="16" font-family="sans-serif">REST APIs</text>
+        <rect x="215" y="255" width="130" height="40" rx="10" fill="rgba(20,184,166,0.25)" stroke="#14b8a6" stroke-width="0.5"/>
+        <text x="280" y="282" text-anchor="middle" fill="#99f6e4" font-size="16" font-family="sans-serif">File Upload</text>
+        <rect x="70" y="310" width="130" height="40" rx="10" fill="rgba(20,184,166,0.25)" stroke="#14b8a6" stroke-width="0.5"/>
+        <text x="135" y="337" text-anchor="middle" fill="#99f6e4" font-size="16" font-family="sans-serif">Webhook</text>
+        <rect x="215" y="310" width="130" height="40" rx="10" fill="rgba(20,184,166,0.25)" stroke="#14b8a6" stroke-width="0.5"/>
+        <text x="280" y="337" text-anchor="middle" fill="#99f6e4" font-size="16" font-family="sans-serif">Streaming</text>
+        <!-- Metric badge -->
+        <rect x="100" y="380" width="200" height="36" rx="18" fill="rgba(20,184,166,0.15)"/>
+        <text x="200" y="404" text-anchor="middle" fill="#5eead4" font-size="15" font-family="sans-serif">500K records/day</text>
+        <!-- Uptime indicator -->
+        <circle cx="120" y="450" r="6" fill="#22c55e"/>
+        <text x="135" y="454" fill="#86efac" font-size="13" font-family="sans-serif">99.9% uptime</text>
+
+        <!-- Arrow 1 -->
+        <line x1="380" y1="350" x2="440" y2="350" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <!-- Stage 2: Processing -->
+        <rect x="440" y="180" width="340" height="340" rx="20" fill="url(#g2)" stroke="#60a5fa" stroke-width="1.5"/>
+        <text x="610" y="230" text-anchor="middle" fill="#e2e8f0" font-size="28" font-weight="bold" font-family="sans-serif">AI Processing</text>
+        <rect x="470" y="255" width="130" height="40" rx="10" fill="rgba(96,165,250,0.25)" stroke="#60a5fa" stroke-width="0.5"/>
+        <text x="535" y="282" text-anchor="middle" fill="#93c5fd" font-size="16" font-family="sans-serif">NLP Engine</text>
+        <rect x="615" y="255" width="130" height="40" rx="10" fill="rgba(96,165,250,0.25)" stroke="#60a5fa" stroke-width="0.5"/>
+        <text x="680" y="282" text-anchor="middle" fill="#93c5fd" font-size="16" font-family="sans-serif">ML Models</text>
+        <rect x="470" y="310" width="130" height="40" rx="10" fill="rgba(96,165,250,0.25)" stroke="#60a5fa" stroke-width="0.5"/>
+        <text x="535" y="337" text-anchor="middle" fill="#93c5fd" font-size="16" font-family="sans-serif">Validation</text>
+        <rect x="615" y="310" width="130" height="40" rx="10" fill="rgba(96,165,250,0.25)" stroke="#60a5fa" stroke-width="0.5"/>
+        <text x="680" y="337" text-anchor="middle" fill="#93c5fd" font-size="16" font-family="sans-serif">Transform</text>
+        <rect x="500" y="380" width="200" height="36" rx="18" fill="rgba(96,165,250,0.15)"/>
+        <text x="600" y="404" text-anchor="middle" fill="#93c5fd" font-size="15" font-family="sans-serif">Accuracy: 96.3%</text>
+        <circle cx="520" cy="450" r="6" fill="#f59e0b"/>
+        <text x="535" y="454" fill="#fcd34d" font-size="13" font-family="sans-serif">Avg latency: 120ms</text>
+
+        <!-- Arrow 2 -->
+        <line x1="780" y1="350" x2="840" y2="350" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <!-- Stage 3: Analysis -->
+        <rect x="840" y="180" width="340" height="340" rx="20" fill="url(#g3)" stroke="#a78bfa" stroke-width="1.5"/>
+        <text x="1010" y="230" text-anchor="middle" fill="#e2e8f0" font-size="28" font-weight="bold" font-family="sans-serif">Deep Analysis</text>
+        <rect x="870" y="255" width="130" height="40" rx="10" fill="rgba(167,139,250,0.25)" stroke="#a78bfa" stroke-width="0.5"/>
+        <text x="935" y="282" text-anchor="middle" fill="#c4b5fd" font-size="16" font-family="sans-serif">Clustering</text>
+        <rect x="1015" y="255" width="130" height="40" rx="10" fill="rgba(167,139,250,0.25)" stroke="#a78bfa" stroke-width="0.5"/>
+        <text x="1080" y="282" text-anchor="middle" fill="#c4b5fd" font-size="16" font-family="sans-serif">Prediction</text>
+        <rect x="870" y="310" width="130" height="40" rx="10" fill="rgba(167,139,250,0.25)" stroke="#a78bfa" stroke-width="0.5"/>
+        <text x="935" y="337" text-anchor="middle" fill="#c4b5fd" font-size="16" font-family="sans-serif">Anomaly</text>
+        <rect x="1015" y="310" width="130" height="40" rx="10" fill="rgba(167,139,250,0.25)" stroke="#a78bfa" stroke-width="0.5"/>
+        <text x="1080" y="337" text-anchor="middle" fill="#c4b5fd" font-size="16" font-family="sans-serif">Trend</text>
+        <rect x="900" y="380" width="200" height="36" rx="18" fill="rgba(167,139,250,0.15)"/>
+        <text x="1000" y="404" text-anchor="middle" fill="#c4b5fd" font-size="15" font-family="sans-serif">42 insight types</text>
+
+        <!-- Arrow 3 -->
+        <line x1="1180" y1="350" x2="1240" y2="350" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+
+        <!-- Stage 4: Output -->
+        <rect x="1240" y="180" width="320" height="340" rx="20" fill="url(#g4)" stroke="#fbbf24" stroke-width="1.5"/>
+        <text x="1400" y="230" text-anchor="middle" fill="#1e293b" font-size="28" font-weight="bold" font-family="sans-serif">Report Output</text>
+        <rect x="1270" y="255" width="120" height="40" rx="10" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="1330" y="282" text-anchor="middle" fill="#fef3c7" font-size="16" font-family="sans-serif">Dashboard</text>
+        <rect x="1405" y="255" width="120" height="40" rx="10" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="1465" y="282" text-anchor="middle" fill="#fef3c7" font-size="16" font-family="sans-serif">PDF Export</text>
+        <rect x="1270" y="310" width="120" height="40" rx="10" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="1330" y="337" text-anchor="middle" fill="#fef3c7" font-size="16" font-family="sans-serif">Video</text>
+        <rect x="1405" y="310" width="120" height="40" rx="10" fill="rgba(251,191,36,0.25)" stroke="#fbbf24" stroke-width="0.5"/>
+        <text x="1465" y="337" text-anchor="middle" fill="#fef3c7" font-size="16" font-family="sans-serif">API Feed</text>
+        <rect x="1300" y="380" width="200" height="36" rx="18" fill="rgba(251,191,36,0.15)"/>
+        <text x="1400" y="404" text-anchor="middle" fill="#fde68a" font-size="15" font-family="sans-serif">1,200+ reports/mo</text>
+
+        <!-- Bottom connector dots -->
+        <circle cx="210" cy="145" r="5" fill="#14b8a6" opacity="0.7"/>
+        <circle cx="610" cy="145" r="5" fill="#60a5fa" opacity="0.7"/>
+        <circle cx="1010" cy="145" r="5" fill="#a78bfa" opacity="0.7"/>
+        <circle cx="1400" cy="145" r="5" fill="#fbbf24" opacity="0.7"/>
+        <line x1="210" y1="150" x2="210" y2="180" stroke="#14b8a6" stroke-dasharray="4,4" stroke-width="1" opacity="0.5"/>
+        <line x1="610" y1="150" x2="610" y2="180" stroke="#60a5fa" stroke-dasharray="4,4" stroke-width="1" opacity="0.5"/>
+        <line x1="1010" y1="150" x2="1010" y2="180" stroke="#a78bfa" stroke-dasharray="4,4" stroke-width="1" opacity="0.5"/>
+        <line x1="1400" y1="150" x2="1400" y2="180" stroke="#fbbf24" stroke-dasharray="4,4" stroke-width="1" opacity="0.5"/>
+
+        <!-- Phase labels -->
+        <text x="210" y="135" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">PHASE 1</text>
+        <text x="610" y="135" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">PHASE 2</text>
+        <text x="1010" y="135" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">PHASE 3</text>
+        <text x="1400" y="135" text-anchor="middle" fill="#64748b" font-size="14" font-family="sans-serif">PHASE 4</text>
+
+        <!-- Footer -->
+        <text x="800" y="580" text-anchor="middle" fill="#475569" font-size="18" font-family="sans-serif">End-to-End Automated Data Pipeline</text>
+        <line x1="300" y1="600" x2="1300" y2="600" stroke="#334155" stroke-width="0.5" opacity="0.3"/>
+        <text x="800" y="625" text-anchor="middle" fill="#64748b" font-size="13" font-family="sans-serif">Total throughput: 500K records/day | 96.3% accuracy | 120ms avg latency</text>
+
+        <!-- Subtle grid dots -->
+        <circle cx="100" cy="620" r="2" fill="#334155" opacity="0.3"/>
+        <circle cx="200" cy="620" r="2" fill="#334155" opacity="0.3"/>
+        <circle cx="300" cy="620" r="2" fill="#334155" opacity="0.3"/>
+        <circle cx="1300" cy="620" r="2" fill="#334155" opacity="0.3"/>
+        <circle cx="1400" cy="620" r="2" fill="#334155" opacity="0.3"/>
+        <circle cx="1500" cy="620" r="2" fill="#334155" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+</div>
+</body>
+</html>

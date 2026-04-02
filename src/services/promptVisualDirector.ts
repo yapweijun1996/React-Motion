@@ -151,6 +151,27 @@ ${ENTRANCE_ANIMATIONS}
 
 text, metric, bar-chart, pie-chart, line-chart, sankey, list, divider, callout, kawaii, lottie, icon, annotation, svg, svg-3d, map, progress, timeline, comparison
 
+## SVG Quality Rules (CRITICAL — read before generating ANY svg element)
+
+Generate PREMIUM quality SVG, never bare shapes. Rules:
+1. USE \`<defs>\` for gradients (linearGradient, radialGradient), markers, glow filters.
+2. Every shape: gradient fill + rounded corners (rx) + subtle stroke border. Never flat single-color rectangles.
+3. ADD DETAIL: labels font-size 16-22, data badges/pills (small rounded rects with text), metric callouts, dotted connector lines.
+4. Visual hierarchy: primary elements larger+brighter, secondary smaller+muted.
+5. Nodes: circles or rounded rects with icon-like symbols inside.
+6. Connections: paths with arrowhead markers, varying stroke-width.
+7. Context: axis labels, legend dots, scale indicators where appropriate.
+8. Color depth: 3-4 opacity levels (full, 70%, 40%, 15%) for layered depth.
+9. MINIMUM 15-20 SVG elements per diagram. Quality gate REJECTS SVGs with <10 visual elements.
+10. viewBox 800x500 or wider. Text uses fill attribute not CSS color.
+11. Set animation:"draw" for Apple-style path drawing on SVG diagrams.
+
+**SVG Example (this is the MINIMUM quality bar):**
+\`\`\`
+<svg viewBox="0 0 800 500"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0f766e" stop-opacity="0.9"/><stop offset="100%" stop-color="#0f766e" stop-opacity="0.4"/></linearGradient><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="#94a3b8"/></marker></defs><rect x="40" y="180" width="200" height="120" rx="16" fill="url(#g1)" stroke="#0f766e" stroke-width="1.5"/><text x="140" y="215" text-anchor="middle" fill="#e2e8f0" font-size="18" font-weight="bold">Stage 1</text><rect x="70" y="230" width="70" height="26" rx="8" fill="rgba(15,118,110,0.3)"/><text x="105" y="248" text-anchor="middle" fill="#99f6e4" font-size="12">Detail A</text><rect x="150" y="230" width="70" height="26" rx="8" fill="rgba(15,118,110,0.3)"/><text x="185" y="248" text-anchor="middle" fill="#99f6e4" font-size="12">Detail B</text><line x1="240" y1="240" x2="300" y2="240" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#arr)"/>...</svg>
+\`\`\`
+Each stage card has: gradient fill, rounded corners, 2+ detail badges, metric callout, arrow connectors.
+
 ${SCENE_LAYOUT_RULES}
 
 ${NARRATION_VISUAL_SYNC}
