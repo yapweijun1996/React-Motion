@@ -36,14 +36,16 @@ export function useGenerate(opts: GenerateOptions) {
 
     try {
       // Old blob URLs are revoked by App's useEffect cleanup when script changes
+      let lastCost: { totalUsd: number; breakdown: Record<string, number> } | undefined;
       const result = await generateScript(opts.prompt, opts.data, (p: GenerationProgress) => {
         opts.onStatus(p);
+        if (p.costSummary) lastCost = { totalUsd: p.costSummary.totalUsd, breakdown: p.costSummary.breakdown };
       });
       opts.onScript(result);
 
       try {
         await saveScript(result, opts.prompt);
-        await saveToHistory(opts.prompt, result);
+        await saveToHistory(opts.prompt, result, lastCost);
       } catch (cacheErr) {
         logWarn("App", "CACHE_SAVE_FAILED", "Script generated but cache save failed", { error: cacheErr });
       }

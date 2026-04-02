@@ -11,6 +11,7 @@ import { LogModal } from "./components/LogModal";
 import { IconHistory, IconClipboard, IconSettings, IconX } from "./components/Icons";
 import { RhythmDebugPanel } from "./components/RhythmDebugPanel";
 import { ScriptInspector } from "./components/ScriptInspector";
+import { CostModal } from "./components/CostModal";
 import { useAppState } from "./hooks/useAppState";
 import type { MountConfig } from "./types";
 import "./styles.css";
@@ -23,6 +24,11 @@ type AppProps = {
 const IconGenerate = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+);
+const IconDollar = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
   </svg>
 );
 
@@ -54,6 +60,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
   const [logOpen, setLogOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [costOpen, setCostOpen] = useState(false);
 
   const sceneCount = script?.scenes?.length ?? 0;
 
@@ -84,6 +91,9 @@ export const App: React.FC<AppProps> = ({ config }) => {
               <IconClipboard size={16} /> Inspector
             </button>
           )}
+          <button className="rm-nav-item" onClick={() => setCostOpen(true)}>
+            <IconDollar /> Cost
+          </button>
           <button className="rm-nav-item" onClick={() => setSettingsOpen(true)}>
             <IconSettings size={16} /> Settings
           </button>
@@ -263,6 +273,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <LogModal open={logOpen} onClose={() => setLogOpen(false)} />
       <ScriptInspector open={inspectorOpen} onClose={() => setInspectorOpen(false)} script={script} />
+      <CostModal open={costOpen} onClose={() => setCostOpen(false)} currentCost={lastCost} />
       <HistoryPanel
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}

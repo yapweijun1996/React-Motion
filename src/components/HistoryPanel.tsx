@@ -139,6 +139,7 @@ function HistoryTab({ entries, onRestore, onDelete, onClear, disabled }: History
               {entry.script.scenes.length} scenes
               {entry.ttsMetadata.length > 0 && ` · ${entry.ttsMetadata.length} TTS`}
               {` · ${(entry.script.durationInFrames / entry.script.fps).toFixed(1)}s`}
+              {entry.costUsd != null && ` · $${entry.costUsd < 0.01 ? entry.costUsd.toFixed(4) : entry.costUsd.toFixed(2)}`}
             </div>
             <div className="rm-history-actions">
               <button

@@ -32,6 +32,8 @@ export type HistoryEntry = {
   script: VideoScript;       // stripped of runtime blob URLs
   ttsMetadata: TTSMetadata[];
   createdAt: number;
+  costUsd?: number;          // total generation cost in USD
+  costBreakdown?: Record<string, number>; // per-category breakdown
 };
 
 // --- Public API ---
@@ -40,6 +42,7 @@ export type HistoryEntry = {
 export async function saveToHistory(
   prompt: string,
   script: VideoScript,
+  cost?: { totalUsd: number; breakdown: Record<string, number> },
 ): Promise<number | undefined> {
   try {
     const db = await openDB();
@@ -51,6 +54,7 @@ export async function saveToHistory(
       script: stripBlobUrls(script),
       ttsMetadata: extractTTSMetadata(script.scenes),
       createdAt: Date.now(),
+      ...(cost ? { costUsd: cost.totalUsd, costBreakdown: cost.breakdown } : {}),
     };
 
     const id = await idbRequest<IDBValidKey>(store.add(entry)) as number;
