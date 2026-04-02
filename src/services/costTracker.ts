@@ -75,9 +75,26 @@ export type CostSummary = {
 
 let entries: CostEntry[] = [];
 
+const COST_CACHE_KEY = "rm_last_cost";
+
 /** Reset tracker for a new generation run */
 export function resetCostTracker(): void {
   entries = [];
+}
+
+/** Persist last cost summary to localStorage for page refresh recovery */
+export function saveCostToCache(summary: CostSummary): void {
+  try {
+    localStorage.setItem(COST_CACHE_KEY, JSON.stringify(summary));
+  } catch { /* quota exceeded — non-fatal */ }
+}
+
+/** Load last cost summary from localStorage */
+export function loadCostFromCache(): CostSummary | null {
+  try {
+    const raw = localStorage.getItem(COST_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
 
 /**

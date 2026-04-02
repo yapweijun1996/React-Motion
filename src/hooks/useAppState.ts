@@ -14,6 +14,7 @@ import { adjustSceneTimings } from "../services/adjustTiming";
 import { logWarn } from "../services/errors";
 import type { GenerationProgress } from "../services/generateScript";
 import type { CostSummary } from "../services/costTracker";
+import { loadCostFromCache } from "../services/costTracker";
 import type { MountConfig, VideoScript } from "../types";
 import type { TTSMetadata } from "../services/historyStore";
 
@@ -29,7 +30,7 @@ export function useAppState(config: MountConfig) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [pptxExporting, setPptxExporting] = useState(false);
   const [apiReady, setApiReady] = useState(hasApiKey);
-  const [lastCost, setLastCost] = useState<CostSummary | null>(null);
+  const [lastCost, setLastCost] = useState<CostSummary | null>(() => loadCostFromCache());
 
   const playerRef = useRef<PlayerHandle>(null);
   const exportPlayerRef = useRef<PlayerHandle>(null);
@@ -113,7 +114,15 @@ export function useAppState(config: MountConfig) {
     [handleGenerate],
   );
 
-  const handleRestore = useCallback((s: VideoScript, p: string, ttsMetadata: TTSMetadata[]) => {
+  const handleRestore = useCallback((s: VideoScript, p: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>) => {
+    // Restore cost if available
+    if (costUsd != null && costBreakdown) {
+      setLastCost({
+        totalUsd: costUsd,
+        breakdown: costBreakdown as CostSummary["breakdown"],
+        totalInputTokens: 0, totalOutputTokens: 0, callCount: 0, entries: [],
+      });
+    }
     ttsSessionRef.current += 1;
     const sessionId = ttsSessionRef.current;
 

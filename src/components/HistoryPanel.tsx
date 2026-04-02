@@ -18,7 +18,7 @@ import type { TTSMetadata } from "../services/historyStore";
 type HistoryPanelProps = {
   open: boolean;
   onClose: () => void;
-  onRestore: (script: VideoScript, prompt: string, ttsMetadata: TTSMetadata[]) => void;
+  onRestore: (script: VideoScript, prompt: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>) => void;
   disabled?: boolean;
 };
 
@@ -40,7 +40,7 @@ export function HistoryPanel({ open, onClose, onRestore, disabled }: HistoryPane
   if (!open) return null;
 
   const handleRestore = (entry: HistoryEntry) => {
-    onRestore(entry.script, entry.prompt, entry.ttsMetadata);
+    onRestore(entry.script, entry.prompt, entry.ttsMetadata, entry.costUsd, entry.costBreakdown);
     onClose();
   };
 

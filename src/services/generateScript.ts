@@ -13,7 +13,7 @@ import { trackEvent } from "./metrics";
 import { getImageHints } from "./agentToolRegistry";
 import { JSON_PARSE_MAX_RETRIES } from "./agentConfig";
 import { formatAgentMessage, concurrentPool } from "./generateScriptHelpers";
-import { resetCostTracker, getCostSummary, formatCostLog, recordBgmCost, recordImageCost } from "./costTracker";
+import { resetCostTracker, getCostSummary, formatCostLog, recordBgmCost, recordImageCost, saveCostToCache } from "./costTracker";
 
 export type GenerationProgress = {
   stage: "agent" | "evaluate" | "svgGen" | "tts" | "bgm" | "imageGen" | "done";
@@ -251,6 +251,7 @@ export async function generateScript(
 
   // --- Cost Summary ---
   const cost = getCostSummary();
+  saveCostToCache(cost);
   console.log(`[Cost] ${formatCostLog(cost)}`);
 
   tracker.done(cost);
