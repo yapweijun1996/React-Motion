@@ -1,0 +1,46 @@
+{
+  "date": "2026-04-02",
+  "window": "7d",
+  "metrics": {
+    "commits": 66,
+    "contributors": 1,
+    "prs_merged": 0,
+    "insertions": 62091,
+    "deletions": 7010,
+    "net_loc": 55081,
+    "test_loc": 4972,
+    "test_ratio": 0.08,
+    "active_days": 2,
+    "sessions": 7,
+    "deep_sessions": 6,
+    "avg_session_minutes": 79,
+    "loc_per_session_hour": 6700,
+    "feat_pct": 0.41,
+    "fix_pct": 0.17,
+    "peak_hour": 16,
+    "ai_assisted_commits": 50
+  },
+  "authors": {
+    "yapweijun1996": {
+      "commits": 66,
+      "insertions": 62091,
+      "deletions": 7010,
+      "test_ratio": 0.08,
+      "top_area": "src/services/"
+    }
+  },
+  "version_range": ["0.0.0", "0.0.0"],
+  "streak_days": 2,
+  "tweetable": "Week of Mar 26: 66 commits (solo), 62k LOC, 8% tests, 7 deep sessions, peak: 4-5pm | Streak: 2d",
+  "test_health": {
+    "total_test_files": 2886,
+    "tests_added_this_period": 3091,
+    "regression_test_commits": 0,
+    "test_files_changed": 3091
+  },
+  "bulk_setup": {
+    "commits": 4,
+    "insertions": 6342464,
+    "note": "Initial project setup with sample-project and node_modules"
+  }
+}
