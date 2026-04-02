@@ -9,6 +9,7 @@ import { GenerationProgressBar } from "./components/GenerationProgressBar";
 import { HistoryPanel } from "./components/HistoryPanel";
 import { LogModal } from "./components/LogModal";
 import { IconHistory, IconClipboard, IconSettings, IconX } from "./components/Icons";
+import { RhythmDebugPanel } from "./components/RhythmDebugPanel";
 import { useAppState } from "./hooks/useAppState";
 import type { MountConfig } from "./types";
 import "./styles.css";
@@ -156,6 +157,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
                 />
               </ErrorBoundary>
             </div>
+            <RhythmDebugPanel script={script} />
             {showExportStage && (
               <ExportStage script={script} playerRef={exportPlayerRef} surfaceRef={exportSurfaceRef} />
             )}

@@ -14,6 +14,7 @@ import {
   resetPaletteState,
   resetScriptState,
   resetImageHints,
+  resetScenePlanState,
   type ToolContext,
 } from "./agentTools";
 import {
@@ -55,6 +56,7 @@ export async function runMultiAgentLoop(
   resetPaletteState();
   resetScriptState();
   resetImageHints();
+  resetScenePlanState();
 
   const log: AgentProgress[] = [];
   let totalIterations = 0;

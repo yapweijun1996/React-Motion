@@ -31,8 +31,9 @@ Transform the narrative plan below into a polished VideoScript with precise visu
 
 1. **Palette**: Call \`generate_palette\` with the mood from the storyboard. You MUST use the returned palette for ALL colors.
 2. **Catalog**: Call \`get_element_catalog\` to get full element schemas and props. You MUST call this before producing the script.
-3. **Visual Direction**: Call \`direct_visuals\` to plan visual approach for EACH scene. At least 2 scenes must use rich visuals (svg, map, progress, comparison, timeline, annotation).
-4. **Produce**: Call \`produce_script\` with the final VideoScript JSON.
+3. **Visual Rhythm**: Call \`plan_visual_rhythm\` to plan per-scene layout, background mode, transition, energy, and hero element. The validator enforces rhythm rules (no 3 consecutive same layout/hero/transition, minimum element diversity, breathing + climax scenes). If validation fails, fix the issues and call again.
+4. **Visual Direction**: Call \`direct_visuals\` to plan visual metaphors for EACH scene. At least 2 scenes must use rich visuals (svg, map, progress, comparison, timeline, annotation).
+5. **Produce**: Call \`produce_script\` with the final VideoScript JSON. Your script MUST match the rhythm plan's layout and backgroundMode per scene.
 
 ## Apple-Style Visual Grammar (MANDATORY)
 
@@ -130,8 +131,9 @@ Do NOT just use bar-chart everywhere. Make data CONCRETE:
 
 Call \`generate_palette\` BEFORE \`produce_script\`. Apply everywhere:
 - theme.primaryColor = palette.primary, theme.chartColors = palette.chart
-- bgColor: ONLY palette.background.dark or palette.background.light
-- bgGradient: max 2-3 gradient scenes
+- bgColor: use palette.background.dark, palette.background.light, or palette.background.accent
+- bgGradient: use palette.background.gradient for cinematic scenes (max 2-3)
+- If you called \`plan_visual_rhythm\`, match backgroundMode: dark→palette.background.dark, light→palette.background.light, accent→palette.background.accent, gradient→set bgGradient
 - Text on dark: palette.text.light. Text on light: palette.text.dark.
 - NEVER pick random hex colors.
 

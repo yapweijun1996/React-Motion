@@ -13,7 +13,12 @@ export type Palette = {
   primary: string;
   secondary: string;
   accent: string;
-  background: { light: string; dark: string };
+  background: {
+    light: string;
+    dark: string;
+    accent: string;          // warm mid-tone derived from primary
+    gradient: string;        // CSS linear-gradient template
+  };
   chart: string[];      // 8 colors for data visualization
   text: { light: string; dark: string };
   scheme: PaletteScheme;
@@ -59,8 +64,13 @@ export function generatePalette(
   // Background colors — modern, clean light/dark mode
   // Light: near-white with a hint of primary hue (not pure white)
   // Dark: deep slate with primary tint (not muddy gray)
+  // Accent: warm mid-tone for visual contrast scenes
+  // Gradient: CSS template for cinematic scenes
   const bgLight = chroma(primary).luminance(0.96).hex();
   const bgDark = chroma(primary).luminance(0.03).desaturate(0.5).hex();
+  const bgAccent = chroma(primary).luminance(0.88).saturate(0.3).hex();
+  const bgGradientEnd = chroma(primary).luminance(0.12).desaturate(0.3).hex();
+  const bgGradient = `linear-gradient(135deg, ${bgDark}, ${bgGradientEnd})`;
 
   // Text colors with guaranteed contrast
   const textDark = chroma(primary).luminance(0.05).desaturate(1).hex();
@@ -70,7 +80,7 @@ export function generatePalette(
     primary,
     secondary,
     accent,
-    background: { light: bgLight, dark: bgDark },
+    background: { light: bgLight, dark: bgDark, accent: bgAccent, gradient: bgGradient },
     chart,
     text: { light: textLight, dark: textDark },
     scheme,
@@ -109,26 +119,6 @@ export function hasContrast(fg: string, bg: string, minRatio = 4.5): boolean {
  */
 export function textColorOn(bg: string): string {
   return chroma(bg).luminance() > 0.4 ? "#1f2937" : "#f9fafb";
-}
-
-/**
- * Generate scene background colors that alternate light/dark.
- */
-export function generateSceneBgs(primary: string, count: number): string[] {
-  const bgs: string[] = [];
-  for (let i = 0; i < count; i++) {
-    if (i % 3 === 0) {
-      // Dark scene
-      bgs.push(chroma(primary).luminance(0.04).desaturate(1).hex());
-    } else if (i % 3 === 1) {
-      // Light scene
-      bgs.push(chroma(primary).luminance(0.95).hex());
-    } else {
-      // Accent scene — slightly tinted
-      bgs.push(chroma(primary).luminance(0.88).saturate(0.3).hex());
-    }
-  }
-  return bgs;
 }
 
 // --- Internal ---

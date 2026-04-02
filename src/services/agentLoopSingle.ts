@@ -13,6 +13,7 @@ import {
   resetPaletteState,
   resetScriptState,
   resetImageHints,
+  resetScenePlanState,
   type ToolContext,
 } from "./agentTools";
 import { runStopChecks } from "./agentHooks";
@@ -33,6 +34,7 @@ import {
   TEMP_PRESSURE,
   TEXT_ONLY_NUDGE_THRESHOLD,
 } from "./agentConfig";
+import { checkAdvisories } from "./agentAdvisories";
 
 const MAX_ITERATIONS = SINGLE_AGENT_MAX_ITERATIONS;
 
@@ -45,6 +47,7 @@ export async function runSingleAgentLoop(
   resetPaletteState();
   resetScriptState();
   resetImageHints();
+  resetScenePlanState();
 
   const messages: GeminiMessage[] = [
     { role: "user", parts: [{ text: userMessage }] },
@@ -69,8 +72,7 @@ export async function runSingleAgentLoop(
   let textOnlyStreak = 0;
   let stopRetried = false;
   let evalRetried = false;
-  let storyboardAdvisoryGiven = false;
-  let visualAdvisoryGiven = false;
+  const advisoryGiven = new Set<string>();
   const budget = createBudgetTracker(systemPrompt.length, userMessage.length);
 
   function report(iteration: number, action: string, detail?: string) {
@@ -200,30 +202,13 @@ export async function runSingleAgentLoop(
 
     // --- Post-tool hooks: only when produce_script returned terminal ---
     if (terminalScript) {
-      // RM-143a: PostToolUse — storyboard advisory (one-time)
-      if (!calledTools.has("draft_storyboard") && !storyboardAdvisoryGiven) {
-        storyboardAdvisoryGiven = true;
-        report(i, "advisory", "No storyboard drafted before produce_script");
-        const advisory = "Note: You produced a script without drafting a storyboard. " +
-          "Scripts without narrative planning typically lack: " +
-          "a compelling hook (scene 1), emotional arc (tension → climax), and action close. " +
-          "Consider calling draft_storyboard first and then produce_script again with an improved narrative.";
-        messages.push({ role: "user", parts: [{ text: advisory }] });
-        recordUserMessage(budget, advisory);
-        terminalScript = null;
-        continue; // AI gets a chance to revise
-      }
-
-      // RM-157: PostToolUse — visual direction advisory (one-time)
-      if (!calledTools.has("direct_visuals") && !visualAdvisoryGiven) {
-        visualAdvisoryGiven = true;
-        report(i, "advisory", "No visual direction before produce_script");
-        const advisory = "You produced a script without visual direction. " +
-          "Call direct_visuals to plan visual metaphors for each scene — " +
-          "decide where to use SVG diagrams, maps, progress gauges, comparisons, or timelines " +
-          "instead of defaulting to bar-chart/pie-chart for everything.";
-        messages.push({ role: "user", parts: [{ text: advisory }] });
-        recordUserMessage(budget, advisory);
+      // Post-tool advisories: guide AI through required workflow steps (one-time each)
+      const missed = checkAdvisories(calledTools, advisoryGiven);
+      if (missed) {
+        advisoryGiven.add(missed.tool);
+        report(i, "advisory", missed.label);
+        messages.push({ role: "user", parts: [{ text: missed.message }] });
+        recordUserMessage(budget, missed.message);
         terminalScript = null;
         continue;
       }
@@ -305,3 +290,4 @@ export async function runSingleAgentLoop(
     );
   }
 }
+

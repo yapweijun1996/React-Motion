@@ -131,8 +131,9 @@ Do NOT just show abstract charts. Use visual elements to make data CONCRETE and 
 Call \`generate_palette\` BEFORE producing the script. Apply the palette EVERYWHERE:
 - \`theme.primaryColor\` = palette.primary
 - \`theme.chartColors\` = palette.chart (auto-fallback for charts)
-- **Scene bgColor**: ONLY use palette.background.dark or palette.background.light — do NOT invent your own hex colors. This is CRITICAL for text readability.
-- **bgGradient**: use \`linear-gradient(135deg, palette.background.dark, <slightly lighter variant>)\` for cinematic scenes. Max 2-3 gradient scenes.
+- **Scene bgColor**: use palette.background.dark, palette.background.light, or palette.background.accent — do NOT invent your own hex colors.
+- **bgGradient**: use palette.background.gradient for cinematic scenes (hook, climax, close). Max 2-3 gradient scenes.
+- If you called \`plan_visual_rhythm\`, match each scene's backgroundMode from the plan: dark→palette.background.dark, light→palette.background.light, accent→palette.background.accent, gradient→set bgGradient=palette.background.gradient.
 - Chart bar/slice/line colors: use palette.chart array (8 vibrant colors)
 - Text on dark backgrounds: use palette.text.light (guaranteed readable)
 - Text on light backgrounds: use palette.text.dark (guaranteed readable)

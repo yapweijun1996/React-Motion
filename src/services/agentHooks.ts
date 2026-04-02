@@ -13,6 +13,7 @@
  */
 
 import { checkDataAccuracy, extractHardNumbers } from "./agentHooksData";
+import { checkRhythmGates } from "./agentHooksRhythm";
 export { checkDataAccuracy, extractHardNumbers };
 
 export type StopCheckResult = {
@@ -138,7 +139,7 @@ export function runStopChecks(
     );
   }
 
-  // 3. Element diversity: >= 3 different element types
+  // 3. Element diversity: >= 3 for short videos, >= 5 for 5+ scene videos
   const elementTypes = new Set<string>();
   for (const scene of scenes) {
     const elements = (scene.elements as Record<string, unknown>[]) ?? [];
@@ -146,37 +147,41 @@ export function runStopChecks(
       if (typeof el.type === "string") elementTypes.add(el.type);
     }
   }
-  if (elementTypes.size < 3) {
+  const minElementTypes = scenes.length >= 5 ? 5 : 3;
+  if (elementTypes.size < minElementTypes) {
     issues.push(
-      `Only ${elementTypes.size} element type(s) used — need ≥3 for visual variety`,
+      `Only ${elementTypes.size} element type(s) used — need ≥${minElementTypes} for visual variety. ` +
+      `Consider: svg, comparison, timeline, progress, map, annotation.`,
     );
   }
 
-  // 4. Transition diversity: >= 2 different transitions (if > 2 scenes)
+  // 4. Transition diversity: >= 2 for short, >= 3 for 5+ scene videos
   if (scenes.length > 2) {
     const transitions = new Set<string>();
     for (const scene of scenes) {
       if (typeof scene.transition === "string") transitions.add(scene.transition);
     }
-    if (transitions.size < 2) {
+    const minTransitions = scenes.length >= 5 ? 3 : 2;
+    if (transitions.size < minTransitions) {
       issues.push(
-        "All scenes use the same transition — vary for visual interest",
+        `Only ${transitions.size} transition type(s) — need ≥${minTransitions}. ` +
+        `Available: fade, slide, wipe, clock-wipe, zoom-out, zoom-blur, dissolve, iris, split, rotate.`,
       );
     }
   }
 
-  // 5. Visual personality: at least one personality element
-  let hasPersonality = false;
+  // 5. Visual personality: count scenes with at least one personality element
+  let personalityCount = 0;
   for (const scene of scenes) {
     const elements = (scene.elements as Record<string, unknown>[]) ?? [];
     if (elements.some((el) => PERSONALITY_TYPES.has(String(el.type)))) {
-      hasPersonality = true;
-      break;
+      personalityCount++;
     }
   }
-  if (!hasPersonality) {
+  const minPersonality = scenes.length >= 5 ? 2 : 1;
+  if (personalityCount < minPersonality) {
     issues.push(
-      "No visual personality elements (kawaii/icon/annotation/svg) — video feels like a spreadsheet",
+      `Only ${personalityCount} scene(s) with personality elements — need ≥${minPersonality} (kawaii/icon/annotation/svg/map)`,
     );
   }
 
@@ -234,92 +239,15 @@ export function runStopChecks(
   const dataIssues = checkDataAccuracy(scenes, userPrompt);
   issues.push(...dataIssues);
 
-  // 10. Background variety: prevent canvas effect repetition.
-  //     Activated when >= 4 scenes. Catches "all-bokeh" wallpaper syndrome.
-  const bgIssues = checkBackgroundVariety(scenes);
-  issues.push(...bgIssues);
+  // 10-11. Background variety + Director Mode rhythm gates
+  //        (layout/transition consecutive, stagger, ScenePlan conformance)
+  //        Moved to agentHooksRhythm.ts for 300-line compliance.
+  const rhythmIssues = checkRhythmGates(scenes);
+  issues.push(...rhythmIssues);
 
   return { pass: issues.length === 0, issues };
 }
 
-// ---------------------------------------------------------------------------
-// Background variety helpers
-// ---------------------------------------------------------------------------
-
-const CHART_TYPES = new Set(["bar-chart", "pie-chart", "line-chart", "sankey"]);
-
-/**
- * Check background canvas effect diversity.
- *
- * Rules (activated when >= 4 scenes):
- * - Max 3 scenes may use bgEffect.
- * - If multiple scenes use bgEffect, they must not all be the same effect.
- * - Chart-heavy scenes (primary element is a chart) should not use bgEffect.
- */
-export function checkBackgroundVariety(
-  scenes: Record<string, unknown>[],
-): string[] {
-  const issues: string[] = [];
-  if (scenes.length < 4) return issues;
-
-  const bgEffectScenes: { index: number; effect: string }[] = [];
-  const chartWithCanvas: number[] = [];
-
-  for (let si = 0; si < scenes.length; si++) {
-    const scene = scenes[si];
-    const effect = scene.bgEffect;
-    if (typeof effect !== "string" || effect.length === 0) continue;
-
-    bgEffectScenes.push({ index: si, effect });
-
-    // Check if scene is chart-heavy (has a chart as primary/first content element)
-    const elements = (scene.elements as Record<string, unknown>[]) ?? [];
-    const hasChart = elements.some((el) => CHART_TYPES.has(String(el.type)));
-    if (hasChart) chartWithCanvas.push(si + 1);
-  }
-
-  // Too many canvas scenes
-  if (bgEffectScenes.length > 3) {
-    issues.push(
-      `Too many scenes use animated canvas background (${bgEffectScenes.length}) — reduce to 2-3 max and use bgGradient or bgColor for the rest`,
-    );
-  }
-
-  // All same effect
-  if (bgEffectScenes.length >= 2) {
-    const uniqueEffects = new Set(bgEffectScenes.map((s) => s.effect));
-    if (uniqueEffects.size === 1) {
-      issues.push(
-        `Background canvas repeats the same effect ("${bgEffectScenes[0].effect}") across all ${bgEffectScenes.length} canvas scenes — use different effects (bokeh/flow/rising) for variety`,
-      );
-    }
-  }
-
-  // Chart-heavy scenes with canvas
-  if (chartWithCanvas.length > 0) {
-    issues.push(
-      `Chart-heavy scene(s) ${chartWithCanvas.join(", ")} should not use bgEffect — particle backgrounds compete with data visualization`,
-    );
-  }
-
-  // Monotonous background rhythm: only plain bgColor switching, no gradient/image/canvas variety
-  if (scenes.length >= 5) {
-    let hasGradient = false;
-    let hasImage = false;
-    const hasCanvas = bgEffectScenes.length > 0;
-    for (const scene of scenes) {
-      if (typeof scene.bgGradient === "string" && scene.bgGradient.length > 0) hasGradient = true;
-      if (typeof scene.imagePrompt === "string" && scene.imagePrompt.length > 0) hasImage = true;
-    }
-    if (!hasGradient && !hasImage && !hasCanvas) {
-      issues.push(
-        "All scenes use plain bgColor only — add bgGradient, imagePrompt, or bgEffect on 1-2 key scenes for visual rhythm",
-      );
-    }
-  }
-
-  return issues;
-}
-
 // Data accuracy helpers moved to agentHooksData.ts
 // (checkDataAccuracy, extractHardNumbers imported at top of file)
+// Background variety + rhythm gates moved to agentHooksRhythm.ts

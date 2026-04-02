@@ -6,9 +6,10 @@ import { ELEMENT_CATALOG, STAGGER_SYSTEM, SPOTLIGHT_SYSTEM, CAMERA_SYSTEM } from
 import "./agentToolScript";
 import "./agentToolRefine";
 import "./agentToolSearch";
+import "./agentToolScenePlan";
 
 // Re-export for backward compatibility
-export { resetPaletteState, resetScriptState, resetImageHints, getImageHints, getToolDeclarations, getToolExecutor } from "./agentToolRegistry";
+export { resetPaletteState, resetScriptState, resetImageHints, getImageHints, resetScenePlanState, getLastScenePlan, getToolDeclarations, getToolExecutor } from "./agentToolRegistry";
 export type { ToolResult, ToolExecutor, ToolContext } from "./agentToolRegistry";
 
 // ============================================================

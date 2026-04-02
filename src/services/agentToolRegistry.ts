@@ -38,6 +38,27 @@ export function resetImageHints(): void {
   lastImageHints = [];
 }
 
+// --- ScenePlan state (captured by plan_visual_rhythm, consumed by produce_script) ---
+
+import type { ScenePlan } from "../types/scenePlan";
+
+let lastScenePlan: ScenePlan | null = null;
+
+/** Get the last validated ScenePlan (used by produce_script for rhythm context). */
+export function getLastScenePlan(): ScenePlan | null {
+  return lastScenePlan;
+}
+
+/** Set the last validated ScenePlan (used by plan_visual_rhythm). */
+export function setLastScenePlan(p: ScenePlan | null): void {
+  lastScenePlan = p;
+}
+
+/** Reset ScenePlan state between generation runs. */
+export function resetScenePlanState(): void {
+  lastScenePlan = null;
+}
+
 // --- Last script state (captured by produce_script, patched by refine_scene) ---
 
 let lastProducedScript: Record<string, unknown> | null = null;
@@ -102,6 +123,7 @@ export const STORYBOARD_TOOLS = new Set(["analyze_data", "draft_storyboard"]);
 
 export const VISUAL_DIRECTOR_TOOLS = new Set([
   "generate_palette", "direct_visuals", "produce_script", "get_element_catalog",
+  "plan_visual_rhythm",
 ]);
 
 /** Get tool declarations filtered to a specific set of names. */

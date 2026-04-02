@@ -4,8 +4,8 @@ import {
   checkHookClaim,
   extractHardNumbers,
   checkDataAccuracy,
-  checkBackgroundVariety,
 } from "../src/services/agentHooks";
+import { checkBackgroundVariety } from "../src/services/agentHooksRhythm";
 
 /** Helper: build a minimal script that passes all checks */
 function goodScript(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
@@ -431,7 +431,7 @@ describe("checkBackgroundVariety", () => {
   it("fails when all canvas scenes use same effect", () => {
     const scenes = makeScenes(["bokeh", undefined, "bokeh", undefined]);
     const issues = checkBackgroundVariety(scenes);
-    expect(issues.some((i) => i.includes("same effect"))).toBe(true);
+    expect(issues.some((i) => i.includes("repeats"))).toBe(true);
   });
 
   it("fails when > 3 scenes use bgEffect", () => {
@@ -506,7 +506,7 @@ describe("checkBackgroundVariety", () => {
     const result = runStopChecks(script);
     // Should flag: too many canvas scenes (4), all same effect, chart with canvas
     expect(result.issues.some((i) => i.includes("Too many"))).toBe(true);
-    expect(result.issues.some((i) => i.includes("same effect"))).toBe(true);
+    expect(result.issues.some((i) => i.includes("repeats"))).toBe(true);
     expect(result.issues.some((i) => i.includes("Chart-heavy"))).toBe(true);
   });
 });

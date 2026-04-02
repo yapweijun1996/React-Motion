@@ -27,10 +27,11 @@ export const MULTI_STORYBOARD_MAX_ITERATIONS = 4;
 
 /**
  * Multi-agent Phase 2: Visual Director Agent (导演) max turns.
- * Needs generate_palette + direct_visuals + produce_script — more complex.
- * Range: 4–8.
+ * Needs generate_palette + get_element_catalog + plan_visual_rhythm (1-2) +
+ * direct_visuals (1-2) + produce_script — minimum 5, typical 7.
+ * Range: 6–10.
  */
-export const MULTI_DIRECTOR_MAX_ITERATIONS = 6;
+export const MULTI_DIRECTOR_MAX_ITERATIONS = 9;
 
 /**
  * Multi-agent retry phase max turns (quality gate / reviewer feedback).
