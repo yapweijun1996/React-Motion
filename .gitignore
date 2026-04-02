@@ -2,3 +2,5 @@ node_modules/
 dist/
 *.local
 .gstack/
+.DS_Store
+test/svg-output/
