@@ -191,8 +191,9 @@ export async function exportToMp4(
     try {
       for (let i = 0; i < totalFrames; i++) {
         playerRef.seekTo(i);
-        // Minimal wait: just one microtask flush for React to commit DOM update
-        await waitMicrotask();
+        // Wait for full paint cycle so React renders the correct frame before capture.
+        // waitMicrotask() was faster (~0-4ms) but caused frame skips → audio/video desync.
+        await waitFrame();
 
         try {
           const canvas = await toCanvas(captureTarget, captureOpts);
