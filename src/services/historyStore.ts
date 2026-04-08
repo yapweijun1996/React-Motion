@@ -10,7 +10,7 @@
  * Max 50 entries, FIFO eviction.
  */
 
-import { openDB, STORE_HISTORY } from "./db";
+import { openDB, STORE_HISTORY, STORE_TTS_AUDIO, STORE_IMAGE_CACHE } from "./db";
 import { logWarn } from "./errors";
 import { saveTTSAudio, restoreTTSAudio, clearTTSAudio, saveBGMAudio, restoreBGMAudio } from "./ttsCache";
 import { saveImageBlobs, restoreImageBlobs, clearImageBlobs } from "./imageCache";
@@ -32,8 +32,9 @@ export type HistoryEntry = {
   script: VideoScript;       // stripped of runtime blob URLs
   ttsMetadata: TTSMetadata[];
   createdAt: number;
-  costUsd?: number;          // total generation cost in USD
-  costBreakdown?: Record<string, number>; // per-category breakdown
+  costUsd?: number;          // total generation cost in USD (legacy, kept for compat)
+  costBreakdown?: Record<string, number>; // per-category breakdown (legacy)
+  costSummary?: import("./costTracker").CostSummary; // full v2 cost summary
 };
 
 // --- Public API ---
@@ -43,6 +44,7 @@ export async function saveToHistory(
   prompt: string,
   script: VideoScript,
   cost?: { totalUsd: number; breakdown: Record<string, number> },
+  costSummary?: import("./costTracker").CostSummary,
 ): Promise<number | undefined> {
   try {
     const db = await openDB();
@@ -55,6 +57,7 @@ export async function saveToHistory(
       ttsMetadata: extractTTSMetadata(script.scenes),
       createdAt: Date.now(),
       ...(cost ? { costUsd: cost.totalUsd, costBreakdown: cost.breakdown } : {}),
+      ...(costSummary ? { costSummary } : {}),
     };
 
     const id = await idbRequest<IDBValidKey>(store.add(entry)) as number;
@@ -135,15 +138,18 @@ export async function deleteHistoryEntry(id: number): Promise<void> {
   }
 }
 
-/** Clear all history. */
+/** Clear all history entries AND all associated TTS/BGM/image blobs. */
 export async function clearHistory(): Promise<void> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_HISTORY, "readwrite");
-    tx.objectStore(STORE_HISTORY).clear();
+    const stores = [STORE_HISTORY, STORE_TTS_AUDIO, STORE_IMAGE_CACHE];
+    const tx = db.transaction(stores, "readwrite");
+    for (const name of stores) {
+      tx.objectStore(name).clear();
+    }
     await idbTx(tx);
     db.close();
-    console.log("[History] Cleared");
+    console.log("[History] Cleared all entries + TTS audio + images");
   } catch (err) {
     logWarn("History", "UNKNOWN", "Failed to clear history", { error: err });
   }

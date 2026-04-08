@@ -12,6 +12,7 @@ import { IconHistory, IconClipboard, IconSettings, IconX } from "./components/Ic
 import { RhythmDebugPanel } from "./components/RhythmDebugPanel";
 import { ScriptInspector } from "./components/ScriptInspector";
 import { CostModal } from "./components/CostModal";
+import { StoragePanel } from "./components/StoragePanel";
 import { useAppState } from "./hooks/useAppState";
 import type { MountConfig } from "./types";
 import "./styles.css";
@@ -29,6 +30,11 @@ const IconGenerate = () => (
 const IconDollar = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+  </svg>
+);
+const IconStorage = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
   </svg>
 );
 
@@ -61,6 +67,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [costOpen, setCostOpen] = useState(false);
+  const [storageOpen, setStorageOpen] = useState(false);
 
   const sceneCount = script?.scenes?.length ?? 0;
 
@@ -94,6 +101,9 @@ export const App: React.FC<AppProps> = ({ config }) => {
           <button className="rm-nav-item" onClick={() => setCostOpen(true)}>
             <IconDollar /> Cost
           </button>
+          <button className="rm-nav-item" onClick={() => setStorageOpen(true)}>
+            <IconStorage /> Storage
+          </button>
           <button className="rm-nav-item" onClick={() => setSettingsOpen(true)}>
             <IconSettings size={16} /> Settings
           </button>
@@ -116,8 +126,8 @@ export const App: React.FC<AppProps> = ({ config }) => {
                 <span className="rm-badge rm-badge-success">✓ Generated</span>
                 <span className="rm-badge rm-badge-neutral">{sceneCount} scenes</span>
                 {lastCost && lastCost.totalUsd > 0 && (
-                  <span className="rm-badge rm-badge-neutral" title={`Agent: $${lastCost.breakdown.agent.toFixed(3)} | SVG: $${lastCost.breakdown.svgGen.toFixed(3)} | TTS: $${lastCost.breakdown.tts.toFixed(3)} | BGM: $${lastCost.breakdown.bgm.toFixed(3)} | Image: $${lastCost.breakdown.imageGen.toFixed(3)}`}>
-                    ${lastCost.totalUsd < 0.01 ? lastCost.totalUsd.toFixed(4) : lastCost.totalUsd.toFixed(2)}
+                  <span className="rm-badge rm-badge-neutral" title={`Agent: US$${lastCost.breakdown.agent.toFixed(3)} | SVG: US$${lastCost.breakdown.svgGen.toFixed(3)} | TTS: US$${lastCost.breakdown.tts.toFixed(3)} | BGM: US$${lastCost.breakdown.bgm.toFixed(3)} | Image: US$${lastCost.breakdown.imageGen.toFixed(3)}${lastCost.breakdown.grounding > 0 ? ` | Grounding: US$${lastCost.breakdown.grounding.toFixed(3)}` : ""}`}>
+                    US${lastCost.totalUsd < 0.01 ? lastCost.totalUsd.toFixed(4) : lastCost.totalUsd.toFixed(2)}
                   </span>
                 )}
               </>
@@ -274,6 +284,7 @@ export const App: React.FC<AppProps> = ({ config }) => {
       <LogModal open={logOpen} onClose={() => setLogOpen(false)} />
       <ScriptInspector open={inspectorOpen} onClose={() => setInspectorOpen(false)} script={script} />
       <CostModal open={costOpen} onClose={() => setCostOpen(false)} currentCost={lastCost} />
+      <StoragePanel open={storageOpen} onClose={() => setStorageOpen(false)} />
       <HistoryPanel
         open={historyOpen}
         onClose={() => setHistoryOpen(false)}
