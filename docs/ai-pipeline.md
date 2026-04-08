@@ -4,42 +4,70 @@
 
 The AI pipeline uses the OODAE pattern (Observe → Orient → Decide → Act → Evaluate) implemented as a multi-turn agent loop with Gemini function calling. The AI agent decides its own workflow — no hardcoded call sequence.
 
-## Pipeline Stages
+## Pipeline Stages (6 stages)
+
+```
+generateScript.ts orchestrates:
+  Agent Loop → Evaluate → SVG Gen → TTS → BGM → Image Gen
+  (26%)        (0%)       (8%)     (43%)  (12%)  (11%)
+```
 
 ### Stage 1: Agent Loop (`agentLoop.ts`)
 
-The agent loop runs up to **12 iterations**. Each iteration:
+The agent loop runs up to **12 iterations** (single-agent) or **9+4** (multi-agent: 4 storyboard + 9 director + retries). Each iteration:
 
 1. Send conversation + tool definitions to Gemini
 2. Gemini returns text, function calls, or both
 3. If function call → execute tool → send result back → continue
 4. If `produce_script` called → extract VideoScript → **terminate loop**
 
-```
-Iteration 1: AI calls analyze_data → computes rankings, percentages
-Iteration 2: AI calls Google Search → finds industry context
-Iteration 3: AI calls draft_storyboard → plans story arc
-Iteration 4: AI calls get_element_catalog → reviews available elements
-Iteration 5: AI calls generate_palette → gets cohesive color palette (REQUIRED)
-Iteration 6: AI calls produce_script → outputs final JSON → DONE
-```
+**Multi-agent mode** (default): Storyboard Agent (Flash Lite) → Visual Director Agent (Pro) → Quality Reviewer (Flash Lite). Each agent has its own tool set and system prompt.
 
 The AI may use fewer or more iterations. It may skip tools or call them multiple times.
 
-### Stage 2: Evaluate (`evaluate.ts`)
+### Stage 2: Evaluate (inside agent loop)
 
-A separate Gemini call reviews the generated script for:
-- Data accuracy (no invented numbers)
-- Data completeness (no ignored data)
-- Scene integrity (startFrame math)
-- Visual variety
-- **Narration↔Visual sync** — every data point in narration must appear in a visual element (metric, chart, callout) in the same scene, and every chart/metric must be referenced in narration
+Quality checks now run inside the agent loop (RM-155):
+- **Deterministic gates** (`agentHooks.ts`): data accuracy, SVG complexity, element variety, layout conformance
+- **AI reviewer** (`evaluate.ts`): narration↔visual sync, "So What?" test, hook quality
+- Issues trigger retry within the same agent loop (max 2 retries)
 
-If issues are found, the evaluator returns a corrected VideoScript.
+### Stage 3: SVG Post-Generation (`svgGen.ts`) — RM-197
 
-### Stage 3: TTS (`tts.ts`)
+SVG diagrams are generated in a **separate focused pipeline stage**, not inline in `produce_script`. This solves the attention dilution problem where SVG quality dropped when competing with JSON structure generation.
 
-Each scene's `narration` field is sent to Gemini 2.5 Flash TTS. Scene timings are adjusted to match audio duration (TTS-first timing).
+Flow:
+1. Agent outputs `{ type: "svg", svgPrompt: "description..." }` (no markup)
+2. After parse, `svgGen.ts` scans for SVG elements with `svgPrompt` but no `markup`
+3. Each SVG gets a **focused Gemini call** with dedicated SVG system prompt
+4. Generated markup is injected back into the script
+5. Also regenerates SVGs with existing markup that has < 10 visual elements
+
+Result: SVG quality jumped from 3-5 to 50+ visual elements.
+
+### Stage 4: TTS (`tts.ts`)
+
+Each scene's `narration` field is sent to Gemini 2.5 Flash TTS. Scene timings are adjusted to match audio duration (TTS-first timing). Concurrent pool (default 2 parallel).
+
+### Stage 5: BGM (`bgMusic.ts`)
+
+Background music generated via Lyria 3 Clip API. 30-second loop, mood-based prompt. Fixed cost $0.04/clip.
+
+### Stage 6: Image Generation (`imageGen.ts`)
+
+AI-generated background images for scenes with `imagePrompt`. Concurrent pool (max 2 parallel). Images rendered as subtle background layer behind elements.
+
+## Cost Tracking (RM-198/200)
+
+Every API call records real token usage from Gemini's `usageMetadata` response field. Cost is calculated from a pricing table in `costTracker.ts`.
+
+```
+[Cost] Total: $0.345 (20 calls 183.7K in 9.9K out) | agent:$0.206 tts:$0.021 bgm:$0.040 imageGen:$0.078
+```
+
+- **UI**: Preview header badge + sidebar Cost modal with per-category breakdown
+- **Persistence**: saved to localStorage (refresh recovery) + IndexedDB history per entry
+- **Categories**: agent, svgGen, tts, bgm, imageGen, other
 
 ## Agent Tools
 
@@ -136,16 +164,26 @@ Constraints: max 1 hero element per scene, max 3 content elements, spotlight onl
 
 | File | Purpose |
 |------|---------|
-| `services/agentLoop.ts` | OODAE loop engine (max 12 iterations) |
+| `services/generateScript.ts` | **Orchestrator**: 6-stage pipeline (agent → eval → svg → tts → bgm → image) |
+| `services/agentLoop.ts` | OODAE loop engine — routes to single or multi-agent mode |
+| `services/agentLoopMulti.ts` | Multi-agent: Storyboard → Visual Director → Quality Reviewer |
+| `services/agentLoopSingle.ts` | Single-agent mode (Flash Lite, all tools in one agent) |
+| `services/agentPhase.ts` | Agent phase executor (shared by multi-agent roles) |
 | `services/agentTools.ts` | Tool registry: declarations + executors |
-| `services/gemini.ts` | Gemini API client with function calling support |
-| `services/prompt.ts` | Legacy unified agent system prompt (OODAE-aware, "So What?" rule, narration↔visual sync) |
+| `services/agentHooks.ts` | Deterministic quality gates (data accuracy, SVG complexity, layout) |
+| `services/agentHooksData.ts` | Data accuracy checker with coreDigitsMatch fallback |
+| `services/svgGen.ts` | **SVG post-generation** — focused Gemini calls for high-quality SVG |
+| `services/costTracker.ts` | **Cost tracking** — real token counts from API usageMetadata |
+| `services/gemini.ts` | Gemini API client with function calling + cost recording |
+| `services/tts.ts` | TTS audio generation (Gemini 2.5 Flash TTS) |
+| `services/bgMusic.ts` | Background music (Lyria 3 Clip API) |
+| `services/imageGen.ts` | AI image generation (Gemini 2.5 Flash Image) |
+| `services/prompt.ts` | Legacy unified agent system prompt |
 | `services/promptStoryboard.ts` | Storyboard Agent prompt — Apple 6-beat narrative contract |
-| `services/promptVisualDirector.ts` | Visual Director Agent prompt — Apple visual grammar per beat |
-| `services/promptAgents.ts` | Multi-agent prompt builders, handoff formatting, scene plan parsing |
-| `services/generateScript.ts` | Orchestrator: agent loop → evaluate → TTS |
-| `services/evaluate.ts` | 1+1 AI self-check (data accuracy + narration↔visual sync) |
+| `services/promptVisualDirector.ts` | Visual Director Agent prompt — Apple visual grammar + svgPrompt |
+| `services/evaluate.ts` | AI quality reviewer (narration↔visual sync, "So What?" test) |
 | `services/parseScript.ts` | VideoScript JSON validation |
+| `components/CostModal.tsx` | Cost breakdown modal (per-category bars + cumulative history) |
 
 ## Gemini API Integration
 
@@ -180,43 +218,42 @@ Configured via Settings panel or `.env.local`:
 - Legacy fallback: 0.7
 - Force output: 0.5 (more deterministic)
 
-## SVG Generation Quality
+## SVG Post-Generation Architecture (RM-197)
 
-SVG diagrams (flowcharts, org charts, mind maps) are the highest-complexity output from the AI pipeline. See `docs/svg-quality-analysis.md` for the full quality analysis.
+SVG diagrams are the highest-complexity visual output. Since RM-197, SVG generation is **decoupled from produce_script** into a separate focused pipeline stage.
 
-### How SVG is Generated
+### How SVG is Generated (Current)
 
-Phase 2 (Visual Director) generates SVG markup embedded in the `produce_script` JSON:
-
+1. **Agent loop**: AI outputs `svgPrompt` description instead of inline markup:
 ```json
 {
   "type": "svg",
-  "markup": "<svg viewBox='0 0 800 500'>...full SVG...</svg>",
+  "svgPrompt": "3-stage supply chain flowchart with gradient cards, arrow connectors...",
   "animation": "draw"
 }
 ```
 
-The Visual Director runs on the Pro model override (`getSvgModel()`) with 11 SVG quality rules in its system prompt.
+2. **Post-generation** (`svgGen.ts`): Focused Gemini call with dedicated SVG system prompt:
+   - No JSON structure concerns — model focuses 100% on SVG quality
+   - Transparent background (integrates as video element, no self-contained title/grid)
+   - Only uses data from scene narration (no fabricated numbers)
+   - Concurrent generation (max 2 parallel SVGs)
+
+3. **Quality**: 50+ visual elements per diagram (was 3-5 with inline approach)
 
 ### Quality Gate (agentHooks.ts)
 
-Deterministic checks after `produce_script`:
-- Visual elements (rect, circle, path, text, etc.) ≥ 10
-- Has `<defs>` block with gradients
-- `linearGradient` or `radialGradient` present
+- SVG elements with `svgPrompt` **skip** complexity check (post-gen will fill markup)
+- SVGs with existing markup still checked: ≥ 10 visual elements + `<defs>` with gradients
+- Annotation removed from personality/rich-visual sets (RM-196) — no gaming quality gates
 
-### Known Bottlenecks
+### SVG Rendering Pipeline
 
-1. **Title scene SVG dilution** — AI sometimes uses `svg` for title scenes (2-4 elements), triggering quality gate failures meant for diagram SVGs.
-2. **Retry loses model override** — `retryPhaseWithFeedback()` does not forward `modelOverride`, falling back to Flash model for SVG-critical retries.
-3. **Budget pressure reduces quality** — T=0.5 under pressure produces shorter SVGs, but SVG quality rules in the prompt compensate well.
-4. **Multi-scene output budget** — SVGs compete with narration and other elements for output token budget in a single API call.
-
-### Test Scripts
-
-```bash
-npx vite-node test/svg-quality-smoke.ts     # Isolated SVG quality (3 scenarios)
-npx vite-node test/svg-pipeline-smoke.ts    # Pipeline condition comparison (4 scenarios)
+```
+svgGen.ts → el.markup → svgSanitize.ts → SvgElement.tsx (dangerouslySetInnerHTML)
+                          ↑
+                   Security: whitelist tags, remove scripts/events
+                   Sizing: width=100%, height=100%, preserveAspectRatio
 ```
 
 ## Fallback
@@ -225,14 +262,26 @@ If the agent loop fails at any point, `generateScript.ts` catches the error and 
 
 ## Progress Reporting
 
-The agent reports progress at each iteration:
+The pipeline reports progress through 6 stages:
 
 ```
-[1/12] Thinking...
-[2/12] Analyzing data...
-[3/12] Writing storyboard...
-[4/12] Reviewing elements...
-[5/12] Producing video script...
+Step 1/6 · AI Scripting     — agent loop iterations
+Step 2/6 · Quality Check    — (runs inside agent loop)
+Step 3/6 · SVG Generation   — focused SVG calls
+Step 4/6 · Narration        — TTS generation per scene
+Step 5/6 · Background Music — Lyria clip generation
+Step 6/6 · Image Generation — AI background images
 ```
 
-This is displayed in the UI via the `onProgress` callback.
+Displayed in the UI via `GenerationProgressBar` component. After completion, cost badge shows in Preview header.
+
+## Cache & Restore (RM-201)
+
+On page refresh, `useAppState` restores:
+1. Script JSON from IndexedDB (`cache.ts`)
+2. TTS blob URLs from IndexedDB (`ttsCache.ts` → `restoreTTSAudio`)
+3. BGM blob URL from IndexedDB (`ttsCache.ts` → `restoreBGMAudio`)
+4. Image blob URLs from IndexedDB (`imageCache.ts` → `restoreImageBlobs`)
+5. Cost data from localStorage (`costTracker.ts` → `loadCostFromCache`)
+
+History restore follows the same flow — tries cache first, only regenerates TTS for scenes with missing audio.

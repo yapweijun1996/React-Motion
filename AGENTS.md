@@ -55,12 +55,16 @@ End user watches, presents, studies, or shares the generated story/presentation
 - `src/index.tsx` — widget bootstrap, exposes `window.ReactMotion.mount(el, config)`.
 - `src/App.tsx` — main shell: prompt input, settings, preview surface, export controls.
 - `src/services/gemini.ts` — Gemini API client with function calling and Google Search grounding.
-- `src/services/generateScript.ts` — OODAE agent loop: prompt → Gemini → parse → evaluate → VideoScript.
+- `src/services/generateScript.ts` — 6-stage pipeline: Agent Loop → Evaluate → SVG Gen → TTS → BGM → Image Gen.
+- `src/services/svgGen.ts` — SVG post-generation: focused Gemini calls for high-quality SVG diagrams (RM-197).
+- `src/services/costTracker.ts` — real-time cost tracking from Gemini API usageMetadata (RM-198).
 - `src/services/prompt.ts` — system prompt and user message builder.
 - `src/services/parseScript.ts` — VideoScript JSON parser with type validation.
-- `src/services/evaluate.ts` — 1+1 synchronous AI self-check after generation.
+- `src/services/evaluate.ts` — AI quality reviewer (narration↔visual sync, "So What?" test).
 - `src/services/tts.ts` — Gemini TTS integration (narration → PCM → WAV per scene).
-- `src/services/exportVideo.ts` — frame-by-frame capture + FFmpeg.wasm encoding (single/multi-thread with auto-fallback).
+- `src/services/bgMusic.ts` — Background music generation (Lyria 3 Clip API).
+- `src/services/imageGen.ts` — AI image generation (Gemini 2.5 Flash Image).
+- `src/services/exportVideo.ts` — frame-by-frame capture + FFmpeg.wasm / WebCodecs encoding.
 - `src/services/exportAudio.ts` — FFmpeg.wasm audio muxing (adelay + amix + AAC).
 - `src/services/exportPptx.ts` — PPT export via pptxgenjs (VideoScript → PPTX with native charts, narration as speaker notes).
 - `src/services/cache.ts` — IndexedDB caching for generated scripts.
@@ -105,11 +109,12 @@ End user watches, presents, studies, or shares the generated story/presentation
 - co-located in `App.tsx` via `useState`/`useCallback`/`useRef`
 - IndexedDB caching via `services/cache.ts` for persistence
 
-### AI pipeline (implemented — OODAE Agent Loop)
-- `src/services/generateScript.ts` → `gemini.ts` → `parseScript.ts` → `evaluate.ts`
-- OODAE loop with function calling (max 10 iterations) + Google Search grounding
-- agent tools: analyze_data, draft_storyboard, get_element_catalog, generate_palette (mandatory), produce_script
-- retry with error feedback (max 3 attempts)
+### AI pipeline (implemented — OODAE Agent Loop, 6-stage)
+- `generateScript.ts` → agent loop → evaluate → svgGen → tts → bgm → imageGen
+- Multi-agent mode: Storyboard Agent (Flash Lite) → Visual Director (Pro) → Quality Reviewer (Flash Lite)
+- SVG post-generation: `svgGen.ts` generates high-quality SVG in focused calls (50+ visual elements)
+- Cost tracking: `costTracker.ts` records real API token usage → UI badge + modal + history
+- agent tools: analyze_data, draft_storyboard, plan_visual_rhythm, direct_visuals, get_element_catalog, generate_palette, produce_script, refine_scene
 
 ### Preview pipeline (implemented)
 - `VideoPlayer` consumes `VideoScript` directly via `VideoProvider` context
