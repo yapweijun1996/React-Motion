@@ -23,6 +23,8 @@ export type ImageGenResult = {
   /** Object URL — caller must revoke when no longer needed */
   blobUrl: string;
   mimeType: string;
+  /** Prompt input tokens from usageMetadata (for composite cost tracking) */
+  promptTokenCount?: number;
 };
 
 type ImageGenResponse = {
@@ -37,6 +39,11 @@ type ImageGenResponse = {
       }[];
     };
   }[];
+  usageMetadata?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
 };
 
 // ============================================================
@@ -65,17 +72,17 @@ export async function generateImage(
   const t0 = performance.now();
 
   try {
-    const { data, mimeType } = await callImageGenWithRetry(prompt);
+    const { data, mimeType, promptTokenCount } = await callImageGenWithRetry(prompt);
     const blob = base64ToBlob(data, mimeType);
     const blobUrl = URL.createObjectURL(blob);
 
     const elapsed = Math.round(performance.now() - t0);
-    console.log(`[ImageGen] Generated in ${elapsed}ms, type: ${mimeType}`);
+    console.log(`[ImageGen] Generated in ${elapsed}ms, type: ${mimeType}, promptTokens: ${promptTokenCount ?? "n/a"}`);
 
     trackEvent("imageGen", true, elapsed, { promptLen: prompt.length });
     onProgress?.("Image ready");
 
-    return { blobUrl, mimeType };
+    return { blobUrl, mimeType, promptTokenCount };
   } catch (err) {
     const elapsed = Math.round(performance.now() - t0);
     trackEvent("imageGen", false, elapsed, { error: String(err) });
@@ -90,7 +97,7 @@ export async function generateImage(
 
 async function callImageGen(
   prompt: string,
-): Promise<{ data: string; mimeType: string; text?: string }> {
+): Promise<{ data: string; mimeType: string; text?: string; promptTokenCount?: number }> {
   const { geminiApiKey } = loadSettings();
   if (!geminiApiKey) throw new Error("Gemini API key not configured");
 
@@ -147,6 +154,7 @@ async function callImageGen(
     data: imgData,
     mimeType: mime ?? "image/png",
     text: textPart?.text,
+    promptTokenCount: responseData?.usageMetadata?.promptTokenCount,
   };
 }
 
@@ -156,7 +164,7 @@ async function callImageGen(
 
 async function callImageGenWithRetry(
   prompt: string,
-): Promise<{ data: string; mimeType: string; text?: string }> {
+): Promise<{ data: string; mimeType: string; text?: string; promptTokenCount?: number }> {
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= IMAGE_GEN_MAX_RETRIES; attempt++) {

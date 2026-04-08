@@ -13,7 +13,7 @@
  */
 
 import { callGeminiRaw, type GeminiMessage } from "./gemini";
-import type { VideoScript, VideoScene, SceneElement } from "../types";
+import type { VideoScript, VideoScene } from "../types";
 import { loadSettings } from "./settingsStore";
 
 // ═══════════════════════════════════════════════════════════════════

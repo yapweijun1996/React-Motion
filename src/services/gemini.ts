@@ -3,7 +3,7 @@ import { ClassifiedError, classifyHttpStatus, logError } from "./errors";
 import { addLogEntry } from "./geminiLog";
 import { GEMINI_API_BASE } from "./apiConfig";
 import { TEMP_DEFAULT } from "./agentConfig";
-import { recordTokenCost } from "./costTracker";
+import { recordTokenCost, recordGroundingCost } from "./costTracker";
 
 function getApiKey(): string {
   const { geminiApiKey } = loadSettings();
@@ -58,12 +58,19 @@ export type UsageMetadata = {
   totalTokenCount?: number;
 };
 
+type GroundingMetadata = {
+  webSearchQueries?: string[];
+  groundingChunks?: unknown[];
+  groundingSupports?: unknown[];
+};
+
 type GeminiResponse = {
   candidates?: {
     content?: {
       parts?: GeminiResponsePart[];
     };
     finishReason?: string;
+    groundingMetadata?: GroundingMetadata;
   }[];
   usageMetadata?: UsageMetadata;
   modelVersion?: string;
@@ -93,10 +100,12 @@ export type CallGeminiOptions = {
 export async function callGemini(
   systemPrompt: string,
   messages: GeminiMessage[],
+  options?: Pick<CallGeminiOptions, "costCategory">,
 ): Promise<string> {
   const result = await callGeminiRaw(systemPrompt, messages, {
     jsonOutput: true,
     temperature: TEMP_DEFAULT,
+    costCategory: options?.costCategory,
   });
   const text = result.parts.find((p) => p.text)?.text;
   if (!text) throw new ClassifiedError("API_EMPTY_RESPONSE", "Gemini returned no text in response");
@@ -213,6 +222,17 @@ export async function callGeminiRaw(
       usage.promptTokenCount ?? 0,
       usage.candidatesTokenCount ?? 0,
     );
+  }
+
+  // Auto-record grounding surcharge if grounding actually occurred
+  const grounding = candidate?.groundingMetadata;
+  if (options.costCategory && grounding) {
+    const hadEvidence = (grounding.groundingChunks?.length ?? 0) > 0
+      || (grounding.groundingSupports?.length ?? 0) > 0;
+    const queries = grounding.webSearchQueries ?? [];
+    if (hadEvidence || queries.length > 0) {
+      recordGroundingCost(data.modelVersion ?? model, queries, hadEvidence);
+    }
   }
 
   return {

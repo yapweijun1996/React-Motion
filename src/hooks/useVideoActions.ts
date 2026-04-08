@@ -10,6 +10,7 @@ import { exportToMp4, downloadBlob, type ExportProgress } from "../services/expo
 import { saveToHistory } from "../services/historyStore";
 import { saveExportRecord } from "../services/exportStore";
 import { getUserMessage, logError, logWarn } from "../services/errors";
+import { computeTotalDuration } from "../video/sceneTimeline";
 import type { PlayerHandle } from "../video/PlayerHandle";
 import type { BusinessData, VideoScript } from "../types";
 
@@ -37,15 +38,19 @@ export function useGenerate(opts: GenerateOptions) {
     try {
       // Old blob URLs are revoked by App's useEffect cleanup when script changes
       let lastCost: { totalUsd: number; breakdown: Record<string, number> } | undefined;
+      let lastCostSummary: import("../services/costTracker").CostSummary | undefined;
       const result = await generateScript(opts.prompt, opts.data, (p: GenerationProgress) => {
         opts.onStatus(p);
-        if (p.costSummary) lastCost = { totalUsd: p.costSummary.totalUsd, breakdown: p.costSummary.breakdown };
+        if (p.costSummary) {
+          lastCost = { totalUsd: p.costSummary.totalUsd, breakdown: p.costSummary.breakdown };
+          lastCostSummary = p.costSummary;
+        }
       });
       opts.onScript(result);
 
       try {
         await saveScript(result, opts.prompt);
-        await saveToHistory(opts.prompt, result, lastCost);
+        await saveToHistory(opts.prompt, result, lastCost, lastCostSummary);
       } catch (cacheErr) {
         logWarn("App", "CACHE_SAVE_FAILED", "Script generated but cache save failed", { error: cacheErr });
       }
@@ -89,11 +94,15 @@ export function useExport(opts: ExportOptions) {
         throw new Error("Export surface is not ready");
       }
 
+      // Use effective total duration (with transition overlap compression)
+      // to match what SceneRenderer actually renders on screen.
+      const effectiveTotalFrames = computeTotalDuration(script.scenes);
+
       const mp4Blob = await exportToMp4(
         opts.exportPlayerRef.current,
         opts.exportSurfaceRef.current,
         script.width, script.height,
-        script.durationInFrames, script.fps,
+        effectiveTotalFrames, script.fps,
         (p) => opts.onProgress(p),
         script.scenes,
         script.bgMusicUrl,

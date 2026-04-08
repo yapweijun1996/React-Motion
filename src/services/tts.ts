@@ -193,19 +193,6 @@ function sleep(ms: number): Promise<void> {
 
 // --- Gemini TTS API ---
 
-type TTSResponse = {
-  candidates?: {
-    content?: {
-      parts?: {
-        inlineData?: {
-          mimeType?: string;
-          data?: string;
-        };
-      }[];
-    };
-  }[];
-};
-
 async function callGeminiTTS(
   text: string,
   voiceName?: string,

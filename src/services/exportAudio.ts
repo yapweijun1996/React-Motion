@@ -1,6 +1,7 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 import type { VideoScene } from "../types";
+import { computeEffectiveStarts } from "../video/sceneTimeline";
 import { logError, logWarn } from "./errors";
 
 type AudioEntry = {
@@ -39,13 +40,20 @@ export async function muxAudioIntoVideo(
 
   console.log(`[ExportAudio] Muxing: ${audioScenes.length} TTS tracks, BGM: ${hasBGM}`);
 
+  // Compute effective starts (with transition overlap compression) to match
+  // the visual timeline used by SceneRenderer during export frame capture.
+  const effectiveStarts = computeEffectiveStarts(scenes);
+
   // Write each TTS WAV to FFmpeg FS
   const entries: AudioEntry[] = [];
 
   for (let i = 0; i < audioScenes.length; i++) {
     const scene = audioScenes[i];
     const filename = `audio_${i}.wav`;
-    const delayMs = Math.round(((scene.startFrame ?? 0) / fps) * 1000);
+    // Find this scene's index in the full scenes array to get correct effective start
+    const fullIndex = scenes.indexOf(scene);
+    const effectiveStart = fullIndex >= 0 ? effectiveStarts[fullIndex] : (scene.startFrame ?? 0);
+    const delayMs = Math.round((effectiveStart / fps) * 1000);
 
     try {
       const response = await fetch(scene.ttsAudioUrl!);
@@ -239,11 +247,15 @@ function buildBgmDuckingFilter(
   fps: number,
   bgmInputIdx: number,
 ): string {
+  // Use effective starts to match video timeline (with transition overlap)
+  const effectiveStarts = computeEffectiveStarts(scenes);
+
   const narrationRanges = scenes
-    .filter((s) => s.ttsAudioUrl)
-    .map((s) => {
-      const startSec = (s.startFrame / fps).toFixed(3);
-      const endSec = ((s.startFrame + s.durationInFrames) / fps).toFixed(3);
+    .map((s, i) => ({ scene: s, effectiveStart: effectiveStarts[i] }))
+    .filter(({ scene }) => scene.ttsAudioUrl)
+    .map(({ scene, effectiveStart }) => {
+      const startSec = (effectiveStart / fps).toFixed(3);
+      const endSec = ((effectiveStart + scene.durationInFrames) / fps).toFixed(3);
       return { startSec, endSec };
     });
 

@@ -426,16 +426,6 @@ function waitFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 
-/**
- * Lightweight DOM flush — wait for React to commit state update.
- * html-to-image reads from live DOM (getComputedStyle), doesn't need browser paint.
- * setTimeout(0) is enough for React to flush synchronous setState.
- * ~0-4ms vs waitFrame's ~16ms → saves ~12ms per frame.
- */
-function waitMicrotask(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

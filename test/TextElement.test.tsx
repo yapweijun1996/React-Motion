@@ -55,13 +55,14 @@ describe("TextElement", () => {
       const { container: lightBg } = render(
         <TextElement el={makeEl({ color: undefined })} index={0} dark={false} />,
       );
-      // jsdom normalizes hex to rgb()
-      expect((lightBg.firstElementChild as HTMLElement).style.color).toBe("rgb(30, 41, 59)");
+      // jsdom normalizes hex to rgb() — readableColor returns #1C1917 (stone-950) for light bg
+      expect((lightBg.firstElementChild as HTMLElement).style.color).toBe("rgb(28, 25, 23)");
 
       const { container: darkBg } = render(
         <TextElement el={makeEl({ color: undefined })} index={0} dark={true} />,
       );
-      expect((darkBg.firstElementChild as HTMLElement).style.color).toBe("rgb(241, 245, 249)");
+      // readableColor returns #F5F5F4 (stone-100) for dark bg
+      expect((darkBg.firstElementChild as HTMLElement).style.color).toBe("rgb(245, 245, 244)");
     });
   });
 

@@ -67,9 +67,10 @@ const TIERED_PRICING: Record<string, TieredPricing> = {
   },
 };
 
-/** Model alias resolution — maps common short names to exact model IDs */
+/** Model alias resolution — only official confirmed aliases */
 const MODEL_ALIASES: Record<string, string> = {
-  "gemini-2.5-flash-lite-preview": "gemini-2.0-flash",  // alias used in older configs
+  // No confirmed aliases at this time — all models use their exact IDs.
+  // Add entries here only when Google officially documents an alias.
 };
 
 /** Fixed per-unit pricing */
@@ -123,14 +124,14 @@ export type CostSummary = {
 // ═══════════════════════════════════════════════════════════════════
 
 let entries: CostEntry[] = [];
-let warnings: string[] = [];
+let warnings: Set<string> = new Set();
 
 const COST_CACHE_KEY = "rm_last_cost";
 
 /** Reset tracker for a new generation run */
 export function resetCostTracker(): void {
   entries = [];
-  warnings = [];
+  warnings = new Set();
 }
 
 /** Persist last cost summary to localStorage for page refresh recovery */
@@ -167,7 +168,7 @@ export function recordTokenCost(
 
   if (!pricing) {
     // Unknown model — record tokens but zero cost, mark partial
-    warnings.push(`Unknown model "${model}" — cost excluded from total`);
+    warnings.add(`Unknown model "${model}" — cost excluded from total`);
     entries.push({
       category,
       model: normalizeModelName(resolved),
@@ -218,9 +219,9 @@ export function recordBgmCost(): void {
   recordUnitCost("bgm", "lyria-3-clip-preview", 1, FIXED_PRICING.bgmPerUnit);
 }
 
-/** Convenience: record image generation cost (per-image output surcharge only) */
+/** Convenience: record image generation per-image output surcharge (not a separate API call) */
 export function recordImageCost(imageCount: number = 1): void {
-  recordUnitCost("imageGen", "gemini-2.5-flash-image", imageCount, FIXED_PRICING.imagePerUnit);
+  recordUnitCost("imageGen", "gemini-2.5-flash-image", imageCount, FIXED_PRICING.imagePerUnit, false);
 }
 
 /**
@@ -245,7 +246,7 @@ export function recordGroundingCost(
     const uniqueQueries = [...new Set(webSearchQueries.filter(q => q.trim()))];
     if (uniqueQueries.length === 0) {
       // Grounded but no query metadata — cannot compute surcharge
-      warnings.push("Grounding surcharge excluded due to missing query metadata");
+      warnings.add("Grounding surcharge excluded due to missing query metadata");
       return;
     }
     const cost = uniqueQueries.length * GROUNDING_PRICING.perQueryRate;
@@ -297,7 +298,7 @@ export function getCostSummary(): CostSummary {
     if (e.countTowardApiCall !== false) apiCallCount++;
   }
 
-  const hasWarnings = warnings.length > 0;
+  const hasWarnings = warnings.size > 0;
   const hasUnpricedEntries = entries.some(e => e.costUsd === 0 && e.inputTokens > 0);
 
   return {
@@ -313,12 +314,12 @@ export function getCostSummary(): CostSummary {
   };
 }
 
-/** Format cost for display: "$0.0234" or "< $0.001" */
+/** Format cost for display: "US$0.0234" or "< US$0.001" */
 export function formatCost(usd: number): string {
-  if (usd < 0.001) return "< $0.001";
-  if (usd < 0.01) return `$${usd.toFixed(4)}`;
-  if (usd < 1) return `$${usd.toFixed(3)}`;
-  return `$${usd.toFixed(2)}`;
+  if (usd < 0.001) return "< US$0.001";
+  if (usd < 0.01) return `US$${usd.toFixed(4)}`;
+  if (usd < 1) return `US$${usd.toFixed(3)}`;
+  return `US$${usd.toFixed(2)}`;
 }
 
 /** Format cost summary as a single-line log string */

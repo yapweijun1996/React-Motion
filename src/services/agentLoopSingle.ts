@@ -90,7 +90,7 @@ export async function runSingleAgentLoop(
     const result: GeminiCallResult = await callGeminiRaw(
       systemPrompt,
       messages,
-      { tools: isUnderPressure ? toolsMinimal : tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL },
+      { tools: isUnderPressure ? toolsMinimal : tools, temperature: isUnderPressure ? TEMP_PRESSURE : TEMP_NORMAL, costCategory: "agent" },
     );
 
     // RM-143e: Record model output tokens
@@ -265,6 +265,7 @@ export async function runSingleAgentLoop(
   const finalResult = await callGeminiRaw(systemPrompt, messages, {
     temperature: TEMP_PRESSURE,
     jsonOutput: true,
+    costCategory: "agent",
   });
 
   const finalText = finalResult.parts.find((p) => p.text)?.text;

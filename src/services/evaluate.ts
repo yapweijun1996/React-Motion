@@ -273,7 +273,7 @@ async function runEval(
     },
   ];
 
-  const raw = await callGemini(EVALUATE_SYSTEM, messages);
+  const raw = await callGemini(EVALUATE_SYSTEM, messages, { costCategory: "agent" });
   console.log("[Eval] Response length:", raw.length, "chars");
 
   try {

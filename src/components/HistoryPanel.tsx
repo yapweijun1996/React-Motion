@@ -18,7 +18,7 @@ import type { TTSMetadata } from "../services/historyStore";
 type HistoryPanelProps = {
   open: boolean;
   onClose: () => void;
-  onRestore: (script: VideoScript, prompt: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>) => void;
+  onRestore: (script: VideoScript, prompt: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>, costSummary?: import("../services/costTracker").CostSummary, historyId?: number) => void;
   disabled?: boolean;
 };
 
@@ -40,7 +40,7 @@ export function HistoryPanel({ open, onClose, onRestore, disabled }: HistoryPane
   if (!open) return null;
 
   const handleRestore = (entry: HistoryEntry) => {
-    onRestore(entry.script, entry.prompt, entry.ttsMetadata, entry.costUsd, entry.costBreakdown);
+    onRestore(entry.script, entry.prompt, entry.ttsMetadata, entry.costUsd, entry.costBreakdown, entry.costSummary, entry.id);
     onClose();
   };
 
@@ -139,7 +139,7 @@ function HistoryTab({ entries, onRestore, onDelete, onClear, disabled }: History
               {entry.script.scenes.length} scenes
               {entry.ttsMetadata.length > 0 && ` · ${entry.ttsMetadata.length} TTS`}
               {` · ${(entry.script.durationInFrames / entry.script.fps).toFixed(1)}s`}
-              {entry.costUsd != null && ` · $${entry.costUsd < 0.01 ? entry.costUsd.toFixed(4) : entry.costUsd.toFixed(2)}`}
+              {entry.costUsd != null && ` · US$${entry.costUsd < 0.01 ? entry.costUsd.toFixed(4) : entry.costUsd.toFixed(2)}`}
             </div>
             <div className="rm-history-actions">
               <button

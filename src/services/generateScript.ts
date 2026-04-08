@@ -13,7 +13,7 @@ import { trackEvent } from "./metrics";
 import { getImageHints } from "./agentToolRegistry";
 import { JSON_PARSE_MAX_RETRIES } from "./agentConfig";
 import { formatAgentMessage, concurrentPool } from "./generateScriptHelpers";
-import { resetCostTracker, getCostSummary, formatCostLog, recordBgmCost, recordImageCost, saveCostToCache } from "./costTracker";
+import { resetCostTracker, getCostSummary, formatCostLog, recordBgmCost, recordImageCost, recordTokenCost, saveCostToCache } from "./costTracker";
 
 export type GenerationProgress = {
   stage: "agent" | "evaluate" | "svgGen" | "tts" | "bgm" | "imageGen" | "done";
@@ -235,6 +235,10 @@ export async function generateScript(
         try {
           const result = await generateImage(scene.imagePrompt!);
           scene.imageUrl = result.blobUrl;
+          // Composite cost: prompt input tokens + per-image output surcharge
+          if (result.promptTokenCount) {
+            recordTokenCost("imageGen", "gemini-2.5-flash-image", result.promptTokenCount, 0);
+          }
           recordImageCost();
           console.log(`[ImageGen] Scene "${scene.id}" done`);
         } catch (err) {
@@ -279,7 +283,7 @@ async function legacyGenerate(
   ];
 
   for (let attempt = 0; attempt <= MAX_PARSE_RETRIES; attempt++) {
-    const raw = await callGemini(systemPrompt, messages);
+    const raw = await callGemini(systemPrompt, messages, { costCategory: "agent" });
     try {
       return JSON.parse(raw);
     } catch {

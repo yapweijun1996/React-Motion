@@ -119,13 +119,19 @@ export function useAppState(config: MountConfig) {
     [handleGenerate],
   );
 
-  const handleRestore = useCallback((s: VideoScript, p: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>) => {
-    // Restore cost from history entry, or clear if not available
-    if (costUsd != null && costBreakdown) {
+  const handleRestore = useCallback((s: VideoScript, p: string, ttsMetadata: TTSMetadata[], costUsd?: number, costBreakdown?: Record<string, number>, costSummary?: CostSummary, historyId?: number) => {
+    // Restore cost from history entry — prefer full v2 summary, fallback to legacy fields
+    if (costSummary) {
+      setLastCost(costSummary);
+    } else if (costUsd != null && costBreakdown) {
+      // Legacy history entry — construct a v2-shaped summary marked as legacy
       setLastCost({
+        version: 2,
         totalUsd: costUsd,
-        breakdown: costBreakdown as CostSummary["breakdown"],
+        breakdown: { agent: 0, svgGen: 0, tts: 0, bgm: 0, imageGen: 0, grounding: 0, other: 0, ...costBreakdown } as CostSummary["breakdown"],
         totalInputTokens: 0, totalOutputTokens: 0, callCount: 0, entries: [],
+        estimateStatus: "legacy",
+        warnings: ["Restored from pre-v2 history — pricing may differ from current rates"],
       });
     } else {
       setLastCost(null);
@@ -145,13 +151,17 @@ export function useAppState(config: MountConfig) {
     setPrompt(p);
     setError(null);
 
-    // Try to restore TTS/BGM/images from IndexedDB cache first (avoids API calls)
+    // Restore blobs from the correct IndexedDB namespace.
+    // History entries use "history-{id}", while quick restore uses "cache".
+    const restorePrefix = historyId != null ? `history-${historyId}` : "cache";
+
+    // Try to restore TTS/BGM/images from IndexedDB first (avoids API calls)
     (async () => {
       let scenes = restoredScript.scenes;
       try {
-        scenes = await restoreTTSAudio("cache", scenes);
-        const withBGM = await restoreBGMAudio("cache", { ...restoredScript, scenes });
-        scenes = await restoreImageBlobs("cache", withBGM.scenes);
+        scenes = await restoreTTSAudio(restorePrefix, scenes);
+        const withBGM = await restoreBGMAudio(restorePrefix, { ...restoredScript, scenes });
+        scenes = await restoreImageBlobs(restorePrefix, withBGM.scenes);
         restoredScript = { ...withBGM, scenes };
       } catch { /* non-fatal */ }
 
